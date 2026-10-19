@@ -1,0 +1,202 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>BestCarWash - เลือกประเภทบัญชี</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              "spacing": {
+                      "margin-mobile": "1rem",
+                      "gutter": "1rem",
+                      "touch-target-min": "3rem",
+                      "stack-sm": "0.5rem",
+                      "stack-md": "1rem",
+                      "stack-lg": "1.5rem"
+              },
+              "fontFamily": {
+                      "sans": ["Prompt", "Inter", "sans-serif"]
+              },
+            }
+          }
+        }
+      </script>
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid #e2e8f0;
+        }
+        .glow-effect {
+            box-shadow: 0 0 45px rgba(37, 99, 235, 0.15);
+        }
+        .metallic-highlight {
+            box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .role-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .role-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(37, 99, 235, 0.4);
+        }
+        .role-card.selected {
+            border-color: #2563eb;
+            background: rgba(37, 99, 235, 0.12);
+            box-shadow: 0 0 25px rgba(37, 99, 235, 0.25);
+        }
+
+        /* Crisp white inputs with dark bold readable text */
+        input, select, textarea, .input-field {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid #cbd5e1 !important;
+            font-weight: 500;
+        }
+        input::placeholder, textarea::placeholder, .input-field::placeholder {
+            color: #94a3b8 !important;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface min-h-[100dvh] flex flex-col items-center justify-center py-6 px-4 sm:py-10 sm:px-6 relative overflow-x-hidden font-sans selection:bg-primary-container selection:text-on-primary-container">
+    
+    <!-- Background Elements -->
+    <div class="fixed inset-0 w-full h-full pointer-events-none opacity-30 z-0">
+        <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary-container blur-[100px] mix-blend-screen"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-secondary-container blur-[100px] mix-blend-screen"></div>
+    </div>
+
+    <!-- Top Navigation (Back Button) -->
+    <div class="w-full max-w-xl md:max-w-2xl lg:max-w-3xl xl:max-w-4xl mb-3 sm:mb-0 sm:absolute sm:top-8 sm:left-8 z-20">
+        <a href="login.html" class="inline-flex items-center gap-2 text-sm md:text-base lg:text-lg text-on-surface hover:text-primary transition-colors py-2 px-3.5 rounded-lg hover:bg-surface-container/60">
+            <span class="material-symbols-outlined text-[20px] sm:text-[24px]">arrow_back</span>
+            <span class="font-medium">กลับไปหน้าเข้าสู่ระบบ</span>
+        </a>
+    </div>
+
+    <!-- Main Content Canvas (Extra Large Card Web & App Container) -->
+    <main class="w-full max-w-lg sm:max-w-xl md:max-w-2xl lg:max-w-3xl xl:max-w-4xl z-10 glass-panel rounded-2xl sm:rounded-3xl p-7 sm:p-11 md:p-14 flex flex-col gap-7 sm:gap-9 shadow-2xl relative glow-effect border border-outline-variant/30 my-auto">
+        
+        <!-- Header -->
+        <header class="flex flex-col items-center gap-2 text-center">
+            <div class="w-14 h-14 sm:w-18 sm:h-18 md:w-22 md:h-22 rounded-2xl bg-primary-container/20 border border-primary-container/30 flex items-center justify-center text-primary mb-1 shadow-md">
+                <span class="material-symbols-outlined text-[32px] sm:text-[42px] md:text-[50px]">local_car_wash</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-primary tracking-tight">เข้าร่วม BestCarWash</h1>
+            <p class="text-sm sm:text-base md:text-lg text-on-surface/80 max-w-lg">เลือกประเภทบัญชีของคุณเพื่อเริ่มต้นการใช้งาน</p>
+        </header>
+
+        <!-- Role Selection -->
+        <div class="flex flex-col gap-4 sm:gap-6">
+            
+            <!-- Customer Card -->
+            <div class="role-card glass-panel rounded-xl sm:rounded-2xl md:rounded-3xl p-5 sm:p-7 md:p-8 flex items-center gap-5 sm:gap-6 md:gap-7 border border-outline-variant/50 hover:border-primary/50 transition-all" data-role="customer" onclick="selectRole('customer')">
+                <div class="w-14 h-14 sm:w-18 sm:h-18 md:w-22 md:h-22 rounded-2xl bg-primary-container/20 flex items-center justify-center border border-primary-container/30 flex-shrink-0 shadow-inner">
+                    <span class="material-symbols-outlined text-primary text-3xl sm:text-4xl md:text-5xl" style="font-variation-settings: 'FILL' 1;">person</span>
+                </div>
+                <div class="flex flex-col text-left flex-grow">
+                    <h3 class="text-lg sm:text-2xl md:text-3xl font-bold text-primary">ลูกค้าทั่วไป</h3>
+                    <p class="text-xs sm:text-base md:text-lg text-on-surface/80 mt-1 leading-relaxed">ค้นหา เปรียบเทียบ และจองคิวบริการล้างรถใกล้คุณ</p>
+                </div>
+                <div class="selection-indicator opacity-0 transition-opacity flex-shrink-0">
+                    <span class="material-symbols-outlined text-primary text-[26px] sm:text-[32px] md:text-[38px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                </div>
+            </div>
+
+            <!-- Shop Owner Card -->
+            <div class="role-card glass-panel rounded-xl sm:rounded-2xl md:rounded-3xl p-5 sm:p-7 md:p-8 flex items-center gap-5 sm:gap-6 md:gap-7 border border-outline-variant/50 hover:border-primary/50 transition-all" data-role="owner" onclick="selectRole('owner')">
+                <div class="w-14 h-14 sm:w-18 sm:h-18 md:w-22 md:h-22 rounded-2xl bg-primary-container/20 flex items-center justify-center border border-primary-container/30 flex-shrink-0 shadow-inner">
+                    <span class="material-symbols-outlined text-primary text-3xl sm:text-4xl md:text-5xl" style="font-variation-settings: 'FILL' 1;">storefront</span>
+                </div>
+                <div class="flex flex-col text-left flex-grow">
+                    <h3 class="text-lg sm:text-2xl md:text-3xl font-bold text-primary">เจ้าของร้านคาร์แคร์</h3>
+                    <p class="text-xs sm:text-base md:text-lg text-on-surface/80 mt-1 leading-relaxed">ลงทะเบียนร้านค้า จัดการคิวบริการ และขยายธุรกิจของคุณ</p>
+                </div>
+                <div class="selection-indicator opacity-0 transition-opacity flex-shrink-0">
+                    <span class="material-symbols-outlined text-primary text-[26px] sm:text-[32px] md:text-[38px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Action Button -->
+        <button id="continueBtn" class="w-full h-14 sm:h-16 md:h-18 bg-surface-container-highest/60 text-on-surface font-bold rounded-xl sm:rounded-2xl flex items-center justify-center gap-3 transition-all duration-200 mt-2 opacity-50 cursor-not-allowed text-base sm:text-xl md:text-2xl" disabled onclick="handleContinue()">
+            <span>ดำเนินการต่อ</span>
+            <span class="material-symbols-outlined text-[22px] sm:text-[28px]">arrow_forward</span>
+        </button>
+
+    </main>
+
+    <script>
+        let selectedRole = null;
+
+        function selectRole(role) {
+            selectedRole = role;
+            
+            // Reset all cards
+            document.querySelectorAll('.role-card').forEach(card => {
+                card.classList.remove('selected');
+                card.querySelector('.selection-indicator').classList.remove('opacity-100');
+                card.querySelector('.selection-indicator').classList.add('opacity-0');
+            });
+
+            // Highlight selected card
+            const activeCard = document.querySelector(`.role-card[data-role="${role}"]`);
+            activeCard.classList.add('selected');
+            activeCard.querySelector('.selection-indicator').classList.remove('opacity-0');
+            activeCard.querySelector('.selection-indicator').classList.add('opacity-100');
+
+            // Enable Continue button
+            const continueBtn = document.getElementById('continueBtn');
+            continueBtn.disabled = false;
+            continueBtn.classList.remove('bg-surface-container-high', 'opacity-50', 'cursor-not-allowed');
+            continueBtn.classList.add('bg-primary-container', 'text-on-primary-container', 'metallic-highlight', 'hover:opacity-90', 'active:scale-95', 'glow-effect');
+        }
+
+        function handleContinue() {
+            if (!selectedRole) return;
+            
+            if (selectedRole === 'customer') {
+                window.location.href = 'signup.html';
+            } else if (selectedRole === 'owner') {
+                window.location.href = 'owner-signup.html';
+            }
+        }
+    </script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,618 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>BestCarWash - สมัครบัญชีลูกค้า</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="../supabase-client.js"></script>
+    <script>
+        // Inline Fallback in case external script was blocked or path was mismatched
+        if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
+            var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+            var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+        var supabaseClient = window.supabaseClient;
+    </script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              "spacing": {
+                      "margin-mobile": "1rem",
+                      "gutter": "1rem",
+                      "touch-target-min": "3rem",
+                      "stack-sm": "0.5rem",
+                      "stack-md": "1rem",
+                      "stack-lg": "1.5rem"
+              },
+              "fontFamily": {
+                      "sans": ["Prompt", "Inter", "sans-serif"]
+              },
+            }
+          }
+        }
+      </script>
+    <style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid #e2e8f0;
+        }
+        .glow-effect {
+            box-shadow: 0 0 45px rgba(37, 99, 235, 0.15);
+        }
+        /* Crisp white inputs with dark bold readable text */
+        input, select, textarea, .input-field {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid #cbd5e1 !important;
+            font-weight: 500;
+        }
+        input::placeholder, textarea::placeholder, .input-field::placeholder {
+            color: #94a3b8 !important;
+        }
+        input:focus, select:focus, textarea:focus, .input-field:focus {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border-color: #2563eb !important;
+            outline: none !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25) !important;
+        }
+        .input-error {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+        }
+        
+        /* Step Logic */
+        .step-content {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+        .step-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-[100dvh] flex flex-col items-center justify-center py-6 px-4 sm:py-10 sm:px-6 relative overflow-x-hidden font-sans selection:bg-primary-container selection:text-on-primary-container">
+    
+    <!-- Background Elements -->
+    <div class="fixed inset-0 w-full h-full pointer-events-none opacity-30 z-0">
+        <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary-container blur-[100px] mix-blend-screen"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-secondary-container blur-[100px] mix-blend-screen"></div>
+    </div>
+
+    <!-- Top Navigation -->
+    <div class="w-full max-w-xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl mb-3 sm:mb-0 sm:absolute sm:top-8 sm:left-8 z-20">
+        <a href="role-selection.html" class="inline-flex items-center gap-2 text-sm md:text-base lg:text-lg text-on-surface hover:text-primary transition-colors py-2 px-3.5 rounded-lg hover:bg-surface-container/60">
+            <span class="material-symbols-outlined text-[20px] sm:text-[24px]">arrow_back</span>
+            <span class="font-medium">ย้อนกลับ</span>
+        </a>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 sm:top-6 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 opacity-0 -translate-y-10 pointer-events-none max-w-sm w-full px-4">
+        <div id="toastContent" class="glass-panel bg-secondary-container/20 border-secondary-container text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm">
+            <span id="toastIcon" class="material-symbols-outlined text-green-400 text-[20px]">check_circle</span>
+            <span class="font-medium" id="toastMessage">สร้างบัญชีสำเร็จ! กำลังเปลี่ยนหน้า...</span>
+        </div>
+    </div>
+
+    <!-- Main Content Canvas (Extra Large Card Web & App Container) -->
+    <main class="w-full max-w-xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl z-10 glass-panel rounded-2xl sm:rounded-3xl p-7 sm:p-11 md:p-14 flex flex-col shadow-2xl relative glow-effect border border-outline-variant/30 my-auto">
+        
+        <!-- Header -->
+        <header class="flex flex-col items-center gap-1.5 text-center mb-6 sm:mb-8 border-b border-outline-variant/20 pb-5 sm:pb-6">
+            <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-primary tracking-tight">สร้างบัญชีลูกค้า</h1>
+            <p class="text-xs sm:text-base md:text-lg text-on-surface/80 max-w-md">ลงทะเบียนเพื่อเริ่มต้นค้นหาและจองบริการล้างรถ</p>
+        </header>
+
+        <!-- 2-Step Progress Indicator (App & Web Responsive) -->
+        <div class="flex justify-between items-center mb-6 sm:mb-8 md:mb-10 relative px-10 sm:px-28 md:px-44">
+            <div class="absolute top-1/2 left-10 right-10 sm:left-28 sm:right-28 md:left-44 md:right-44 h-1 bg-outline-variant/30 -translate-y-1/2 rounded-full z-0 overflow-hidden">
+                <div id="progressBar" class="absolute top-0 left-0 h-full bg-primary rounded-full transition-all duration-500" style="width: 0%;"></div>
+            </div>
+            
+            <!-- Step 1 -->
+            <div class="step-indicator flex flex-col items-center relative z-10" data-step="1">
+                <div class="w-9 h-9 sm:w-11 sm:h-11 md:w-13 md:h-13 rounded-full bg-primary text-background font-bold text-xs sm:text-base md:text-lg flex items-center justify-center border-4 border-background transition-colors duration-300 shadow-md">1</div>
+                <span class="text-xs sm:text-sm md:text-base mt-1.5 sm:mt-2 font-semibold text-primary">บัญชีผู้ใช้</span>
+            </div>
+            
+            <!-- Step 2 -->
+            <div class="step-indicator flex flex-col items-center relative z-10" data-step="2">
+                <div class="w-9 h-9 sm:w-11 sm:h-11 md:w-13 md:h-13 rounded-full bg-surface-container-highest text-on-surface-variant font-bold text-xs sm:text-base md:text-lg flex items-center justify-center border-4 border-background transition-colors duration-300">2</div>
+                <span class="text-xs sm:text-sm md:text-base mt-1.5 sm:mt-2 font-medium text-on-surface-variant">ยานพาหนะ</span>
+            </div>
+        </div>
+
+        <form id="customerRegistrationForm" novalidate>
+            
+            <!-- STEP 1: Account Credentials -->
+            <section id="step1" class="step-content active">
+                <h2 class="text-lg sm:text-2xl md:text-3xl font-bold text-primary mb-5 sm:mb-6 flex items-center gap-2.5">
+                    <span class="material-symbols-outlined text-[26px] sm:text-[32px]">person</span> ข้อมูลส่วนตัว
+                </h2>
+                
+                <div class="space-y-4 sm:space-y-6">
+                    <!-- Profile Photo -->
+                    <div class="flex flex-col items-center justify-center space-y-2 mb-4 sm:mb-6">
+                        <div class="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36">
+                            <input type="file" id="profileImageInput" accept="image/*" class="hidden" onchange="previewProfileImage(this)">
+                            <div onclick="document.getElementById('profileImageInput').click()" class="w-full h-full rounded-full border-2 border-dashed border-outline-variant/60 bg-surface-container-low/50 flex flex-col items-center justify-center text-on-surface-variant cursor-pointer hover:bg-surface-container hover:text-primary transition-colors overflow-hidden group relative">
+                                <img id="profileImagePreview" src="" class="w-full h-full object-cover hidden absolute inset-0 z-10" alt="Profile Preview">
+                                <span id="profileImagePlaceholder" class="material-symbols-outlined text-3xl sm:text-4xl group-hover:scale-110 transition-transform z-0">add_a_photo</span>
+                            </div>
+                        </div>
+                        <p class="text-xs sm:text-sm text-on-surface-variant">อัปโหลดรูปโปรไฟล์ (ไม่บังคับ)</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">ชื่อ-นามสกุล <span class="text-error">*</span></label>
+                        <input type="text" id="fullName" required class="input-field w-full rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="สมชาย ใจดี">
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                        <div>
+                            <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">อีเมล <span class="text-error">*</span></label>
+                            <input type="email" id="email" required class="input-field w-full rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="somchai@example.com">
+                        </div>
+                        <div>
+                            <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">เบอร์โทรศัพท์ <span class="text-error">*</span></label>
+                            <input type="tel" id="phone" required class="input-field w-full rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="081-234-5678">
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                        <div class="relative">
+                            <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">รหัสผ่าน <span class="text-error">*</span></label>
+                            <input type="password" id="password" required minlength="8" class="input-field w-full rounded-xl pl-4 sm:pl-5 pr-12 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="••••••••">
+                            <button type="button" class="absolute right-3.5 top-[38px] sm:top-[44px] md:top-[48px] text-slate-500 hover:text-slate-800 focus:outline-none p-1.5" onclick="togglePassword('password', 'eyeIcon1')">
+                                <span id="eyeIcon1" class="material-symbols-outlined text-[22px] sm:text-[24px]">visibility_off</span>
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">ยืนยันรหัสผ่าน <span class="text-error">*</span></label>
+                            <input type="password" id="confirmPassword" required minlength="8" class="input-field w-full rounded-xl pl-4 sm:pl-5 pr-12 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="••••••••">
+                            <button type="button" class="absolute right-3.5 top-[38px] sm:top-[44px] md:top-[48px] text-slate-500 hover:text-slate-800 focus:outline-none p-1.5" onclick="togglePassword('confirmPassword', 'eyeIcon2')">
+                                <span id="eyeIcon2" class="material-symbols-outlined text-[22px] sm:text-[24px]">visibility_off</span>
+                            </button>
+                            <p id="passwordError" class="text-error text-xs sm:text-sm mt-1.5 hidden">รหัสผ่านไม่ตรงกัน</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- STEP 2: Vehicle Details -->
+            <section id="step2" class="step-content">
+                <h2 class="text-lg sm:text-2xl md:text-3xl font-bold text-primary mb-5 sm:mb-6 flex items-center gap-2.5">
+                    <span class="material-symbols-outlined text-[26px] sm:text-[32px]">directions_car</span> ข้อมูลยานพาหนะ
+                </h2>
+                
+                <div class="space-y-4 sm:space-y-6">
+                    <p class="text-sm sm:text-base md:text-lg text-on-surface-variant mb-2">ข้อมูลรถคันแรกของคุณ (สามารถเพิ่มคันอื่นได้ในภายหลัง)</p>
+                    
+                    <div>
+                        <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">ยี่ห้อและรุ่นรถ <span class="text-error">*</span></label>
+                        <input type="text" id="carModel" required class="input-field w-full rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="เช่น Honda Civic, Toyota Camry">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">ป้ายทะเบียน <span class="text-error">*</span></label>
+                        <input type="text" id="licensePlate" required class="input-field w-full rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="เช่น กข 1234 กทม">
+                    </div>
+
+                    <!-- Terms -->
+                    <div class="mt-6 sm:mt-8 p-4 sm:p-5 border border-outline-variant/30 rounded-xl bg-surface-container-low/20">
+                        <label class="flex items-start gap-3.5 cursor-pointer group">
+                            <div class="relative flex items-center pt-0.5 flex-shrink-0">
+                                <input type="checkbox" id="termsCheckbox" required class="peer sr-only">
+                                <div class="w-5 h-5 sm:w-6 sm:h-6 rounded border border-outline-variant bg-surface-container-high peer-checked:bg-primary-container peer-checked:border-primary-container transition-colors flex items-center justify-center group-hover:border-primary/50">
+                                    <span class="material-symbols-outlined text-white text-sm sm:text-base opacity-0 peer-checked:opacity-100 font-bold" style="font-variation-settings: 'FILL' 1;">check</span>
+                                </div>
+                            </div>
+                            <span class="text-xs sm:text-sm md:text-base opacity-90 leading-relaxed">
+                                ฉันยอมรับ <a href="../info/terms-of-service.html" class="text-primary hover:underline font-semibold" target="_blank">เงื่อนไขการให้บริการ</a> และ <a href="../info/privacy-policy.html" class="text-primary hover:underline font-semibold" target="_blank">นโยบายความเป็นส่วนตัว</a> ของ BestCarWash
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Navigation Buttons -->
+            <div class="flex justify-between items-center mt-7 sm:mt-9 md:mt-11 pt-6 sm:pt-7 border-t border-outline-variant/30 gap-3">
+                <button type="button" id="prevBtn" class="px-6 sm:px-8 md:px-10 py-3 sm:py-3.5 md:py-4 rounded-xl font-bold text-sm sm:text-base md:text-lg text-on-surface bg-surface-container-highest hover:bg-surface-variant transition-colors invisible">
+                    ย้อนกลับ
+                </button>
+                <button type="button" id="nextBtn" class="px-7 sm:px-10 md:px-12 py-3 sm:py-3.5 md:py-4 rounded-xl font-bold text-sm sm:text-base md:text-lg text-background bg-primary hover:bg-primary-container transition-colors shadow-lg shadow-primary/20 flex items-center gap-2.5 ml-auto">
+                    ถัดไป <span class="material-symbols-outlined text-[20px] sm:text-[22px]">arrow_forward</span>
+                </button>
+                <button type="submit" id="submitBtn" class="hidden px-7 sm:px-10 md:px-12 py-3 sm:py-3.5 md:py-4 rounded-xl font-bold text-sm sm:text-base md:text-lg text-white bg-primary-container hover:bg-blue-600 transition-colors shadow-lg shadow-primary-container/20 flex items-center gap-2.5 ml-auto">
+                    สร้างบัญชี <span class="material-symbols-outlined text-[20px] sm:text-[22px]">check_circle</span>
+                </button>
+            </div>
+            
+            <!-- Bottom Link (Only in Step 1) -->
+            <div id="loginLinkContainer" class="text-center mt-6">
+                <p class="text-sm sm:text-base md:text-lg opacity-80">
+                    มีบัญชีอยู่แล้ว? <a href="login.html" class="text-primary font-semibold hover:underline">เข้าสู่ระบบที่นี่</a>
+                </p>
+            </div>
+
+        </form>
+    </main>
+
+    <script>
+        let uploadedCustomerAvatarBase64 = null;
+
+        // Profile Image Preview with Canvas Compression
+        function previewProfileImage(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const maxDim = 320;
+                        let w = img.width;
+                        let h = img.height;
+                        if (w > h && w > maxDim) {
+                            h = Math.round((h * maxDim) / w);
+                            w = maxDim;
+                        } else if (h > maxDim) {
+                            w = Math.round((w * maxDim) / h);
+                            h = maxDim;
+                        }
+                        canvas.width = w;
+                        canvas.height = h;
+                        ctx.drawImage(img, 0, 0, w, h);
+                        uploadedCustomerAvatarBase64 = canvas.toDataURL('image/jpeg', 0.72);
+
+                        const preview = document.getElementById('profileImagePreview');
+                        const placeholder = document.getElementById('profileImagePlaceholder');
+                        if (preview) {
+                            preview.src = uploadedCustomerAvatarBase64;
+                            preview.classList.remove('hidden');
+                        }
+                        if (placeholder) {
+                            placeholder.classList.add('hidden');
+                        }
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Password Toggle
+        function togglePassword(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.textContent = 'visibility';
+            } else {
+                input.type = 'password';
+                icon.textContent = 'visibility_off';
+            }
+        }
+
+        // Wizard Navigation Logic
+        let currentStep = 1;
+        const totalSteps = 2;
+        
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const form = document.getElementById('customerRegistrationForm');
+        const loginLinkContainer = document.getElementById('loginLinkContainer');
+
+        function updateUI() {
+            // Content visibility
+            document.querySelectorAll('.step-content').forEach((el, index) => {
+                if (index + 1 === currentStep) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+
+            // Progress Bar & Indicators
+            const progressPercentage = ((currentStep - 1) / (totalSteps - 1)) * 100;
+            document.getElementById('progressBar').style.width = `${progressPercentage}%`;
+
+            document.querySelectorAll('.step-indicator').forEach((el) => {
+                const step = parseInt(el.dataset.step);
+                const circle = el.querySelector('div');
+                const text = el.querySelector('span');
+                
+                if (step < currentStep) {
+                    // Completed
+                    circle.className = 'w-9 h-9 sm:w-11 sm:h-11 md:w-13 md:h-13 rounded-full bg-primary text-background font-bold text-xs sm:text-base md:text-lg flex items-center justify-center border-4 border-background transition-colors duration-300 shadow-md';
+                    circle.innerHTML = '<span class="material-symbols-outlined text-[18px] sm:text-[22px] md:text-[26px]">check</span>';
+                    text.className = 'text-xs sm:text-sm md:text-base mt-1.5 sm:mt-2 font-semibold text-primary';
+                } else if (step === currentStep) {
+                    // Active
+                    circle.className = 'w-9 h-9 sm:w-11 sm:h-11 md:w-13 md:h-13 rounded-full bg-primary text-background font-bold text-xs sm:text-base md:text-lg flex items-center justify-center border-4 border-background transition-colors duration-300 shadow-md';
+                    circle.innerHTML = step;
+                    text.className = 'text-xs sm:text-sm md:text-base mt-1.5 sm:mt-2 font-semibold text-primary';
+                } else {
+                    // Future
+                    circle.className = 'w-9 h-9 sm:w-11 sm:h-11 md:w-13 md:h-13 rounded-full bg-surface-container-highest text-on-surface-variant font-bold text-xs sm:text-base md:text-lg flex items-center justify-center border-4 border-background transition-colors duration-300';
+                    circle.innerHTML = step;
+                    text.className = 'text-xs sm:text-sm md:text-base mt-1.5 sm:mt-2 font-medium text-on-surface-variant';
+                }
+            });
+
+            // Buttons visibility
+            prevBtn.classList.toggle('invisible', currentStep === 1);
+            loginLinkContainer.style.display = currentStep === 1 ? 'block' : 'none';
+
+            if (currentStep === totalSteps) {
+                nextBtn.classList.add('hidden');
+                submitBtn.classList.remove('hidden');
+            } else {
+                nextBtn.classList.remove('hidden');
+                submitBtn.classList.add('hidden');
+            }
+        }
+
+        function validateStep() {
+            const currentSection = document.getElementById(`step${currentStep}`);
+            const inputs = currentSection.querySelectorAll('input[required]');
+            let isValid = true;
+            
+            // Basic HTML5 validation
+            inputs.forEach(input => {
+                if (!input.checkValidity()) {
+                    input.reportValidity();
+                    isValid = false;
+                }
+            });
+
+            // Password Matching
+            if (currentStep === 1 && isValid) {
+                const pwd = document.getElementById('password');
+                const confirm = document.getElementById('confirmPassword');
+                const err = document.getElementById('passwordError');
+                if (pwd.value !== confirm.value) {
+                    confirm.classList.add('input-error');
+                    err.classList.remove('hidden');
+                    isValid = false;
+                } else {
+                    confirm.classList.remove('input-error');
+                    err.classList.add('hidden');
+                }
+            }
+
+            // Check terms checkbox on step 2
+            if (currentStep === 2 && isValid) {
+                const terms = document.getElementById('termsCheckbox');
+                if (terms && !terms.checked) {
+                    showToast('กรุณายอมรับเงื่อนไขการให้บริการก่อนสร้างบัญชี', false);
+                    isValid = false;
+                }
+            }
+
+            return isValid;
+        }
+
+        nextBtn.addEventListener('click', () => {
+            if (validateStep()) {
+                currentStep++;
+                updateUI();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (currentStep > 1) {
+                currentStep--;
+                updateUI();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+
+        // Toast helper
+        function showToast(message, isSuccess = true) {
+            const toast = document.getElementById('toast');
+            const toastContent = toast.querySelector('div');
+            const icon = toast.querySelector('.material-symbols-outlined');
+            const text = toast.querySelector('span.font-medium');
+            
+            text.textContent = message;
+            if (isSuccess) {
+                toastContent.className = 'glass-panel bg-secondary-container/20 border border-secondary text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3';
+                icon.className = 'material-symbols-outlined text-green-400 text-[20px]';
+                icon.textContent = 'check_circle';
+            } else {
+                toastContent.className = 'glass-panel bg-red-950/80 border border-red-500/50 text-red-200 px-6 py-3 rounded-xl shadow-lg flex items-center gap-3';
+                icon.className = 'material-symbols-outlined text-red-400 text-[20px]';
+                icon.textContent = 'error';
+            }
+            
+            toast.classList.remove('opacity-0', '-translate-y-10', 'pointer-events-none');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', '-translate-y-10', 'pointer-events-none');
+            }, 3500);
+        }
+
+        function formatAuthError(msg) {
+            if (!msg) return 'การสมัครสมาชิกล้มเหลว กรุณาลองใหม่อีกครั้ง';
+            const lower = msg.toLowerCase();
+            if (lower.includes('already registered') || lower.includes('user already exists')) {
+                return 'อีเมลนี้ถูกลงทะเบียนไว้ในระบบแล้ว';
+            }
+            if (lower.includes('password should be at least')) {
+                return 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร';
+            }
+            if (lower.includes('invalid email')) {
+                return 'รูปแบบอีเมลไม่ถูกต้อง';
+            }
+            return msg;
+        }
+
+        // Form Submit
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!validateStep()) return;
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> กำลังดำเนินการ...';
+            
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const fullName = document.getElementById('fullName').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const carModel = document.getElementById('carModel')?.value.trim() || '';
+            const licensePlate = document.getElementById('licensePlate')?.value.trim() || '';
+
+            // Ensure Supabase client is ready
+            let client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (!client && window.supabase && typeof window.supabase.createClient === 'function') {
+                const SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+                const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+                client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                window.supabaseClient = client;
+            }
+
+            if (!client || !client.auth) {
+                showToast('ไม่สามารถเชื่อมต่อระบบฐานข้อมูลได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง', false);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'สร้างบัญชี <span class="material-symbols-outlined text-[20px]">check_circle</span>';
+                return;
+            }
+
+            try {
+                const { data, error } = await client.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            full_name: fullName,
+                            phone_number: phone,
+                            role: 'CUSTOMER',
+                            avatar_url: uploadedCustomerAvatarBase64 || null,
+                            vehicle_model: carModel,
+                            license_plate: licensePlate
+                        }
+                    }
+                });
+
+                if (error) throw error;
+                if (!data?.user) throw new Error('ไม่สามารถสร้างบัญชีผู้ใช้ได้ กรุณาลองใหม่อีกครั้ง');
+
+                // 1.5 Update profile avatar in public.profiles directly if provided
+                if (uploadedCustomerAvatarBase64) {
+                    try {
+                        await client.from('profiles').update({ avatar_url: uploadedCustomerAvatarBase64 }).eq('id', data.user.id);
+                    } catch (profErr) {
+                        console.warn('Customer profile avatar update notice:', profErr);
+                    }
+                }
+
+                // Ensure vehicle is recorded even if trigger was skipped
+                if (carModel) {
+                    try {
+                        const { data: existingVehicles } = await client
+                            .from('vehicles')
+                            .select('id')
+                            .eq('customer_id', data.user.id);
+
+                        if (!existingVehicles || existingVehicles.length === 0) {
+                            await client.from('vehicles').insert({
+                                customer_id: data.user.id,
+                                brand_model: carModel,
+                                plate_number: licensePlate || '-',
+                                is_default: true
+                            });
+                        }
+                    } catch (vErr) {
+                        console.warn('Vehicle check warning:', vErr);
+                    }
+                }
+
+                // Store in customerProfile cache
+                localStorage.setItem('customerProfile', JSON.stringify({
+                    fullName,
+                    phone,
+                    email,
+                    avatar: uploadedCustomerAvatarBase64 || null
+                }));
+
+                // Sign out and clear any old session cache
+                try {
+                    await client.auth.signOut();
+                } catch (soErr) {
+                    console.warn('Signout after signup notice:', soErr);
+                }
+                ['customerProfile', 'customerCars', 'ownerProfileAvatar', 'ownerShopName',
+                 'ownerProfileName', 'appBookingsList', 'activeCustomerBooking', 'favoriteShopIds'].forEach(k => localStorage.removeItem(k));
+
+                showToast('สร้างบัญชีสำเร็จ! กำลังเปลี่ยนหน้าไปเข้าสู่ระบบ...', true);
+                submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">check</span> สำเร็จ';
+                submitBtn.classList.replace('bg-primary-container', 'bg-emerald-600');
+
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 1500);
+
+            } catch (err) {
+                console.error('Customer signup error:', err);
+                showToast(formatAuthError(err.message || 'เกิดข้อผิดพลาดในการลงทะเบียน'), false);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'สร้างบัญชี <span class="material-symbols-outlined text-[20px]">check_circle</span>';
+            }
+        });
+
+        // Initialize UI
+        updateUI();
+    </script>
+</body>
+</html>
+
+
+

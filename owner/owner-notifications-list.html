@@ -1,0 +1,208 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>BestCarWash - การแจ้งเตือน</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="../supabase-client.js"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              "spacing": {
+                      "margin-mobile": "1rem",
+                      "gutter": "1rem",
+                      "touch-target-min": "3rem",
+                      "stack-sm": "0.5rem",
+                      "stack-md": "1rem",
+                      "stack-lg": "1.5rem"
+              },
+              "fontFamily": {
+                      "sans": ["Prompt", "Inter", "sans-serif"]
+              }
+            }
+          }
+        }
+      </script>
+</head>
+<body class="bg-background text-on-background min-h-screen font-sans">
+    
+<!-- Top Bar -->
+<header class="fixed top-0 w-full z-50 bg-background/90 backdrop-blur-md border-b border-outline-variant/30 shadow-sm shadow-secondary/10 px-4 md:px-8 lg:px-10 h-20 flex items-center justify-between">
+    <a href="Owner%20Dashboard.html" class="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/40 transition-all active:scale-95 group" title="กลับไปหน้าหลัก">
+        <span class="material-symbols-outlined text-[22px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+    </a>
+    <h1 class="text-lg md:text-xl font-bold text-on-surface tracking-tight">การแจ้งเตือน</h1>
+    <div class="flex justify-end">
+        <button onclick="markAllAsRead()" class="text-secondary text-sm md:text-base font-semibold hover:text-secondary-fixed transition-colors">อ่านทั้งหมด</button>
+    </div>
+</header>
+
+<main class="pt-28 px-4 md:px-8 max-w-3xl mx-auto flex flex-col gap-3.5 pb-12">
+    
+    <div id="notifications-container" class="flex flex-col gap-3.5">
+        <!-- Dynamically loaded from Supabase notifications table -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="hidden flex-col items-center justify-center py-20 text-center">
+        <div class="w-20 h-20 bg-surface-container rounded-full flex items-center justify-center mb-4 border border-outline-variant/30 shadow-inner">
+            <span class="material-symbols-outlined text-[40px] text-outline-variant">notifications_off</span>
+        </div>
+        <h3 class="text-base md:text-lg font-bold text-on-surface mb-1">ไม่มีการแจ้งเตือน</h3>
+        <p class="text-xs md:text-sm text-on-surface-variant">คุณยังไม่มีรายการแจ้งเตือนในขณะนี้</p>
+    </div>
+
+</main>
+
+<script>
+    function formatTimeAgo(dateString) {
+        if (!dateString) return 'เมื่อสักครู่';
+        const d = new Date(dateString);
+        const diffMs = Date.now() - d.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) return 'เพิ่งส่งมา';
+        if (diffMins < 60) return `${diffMins} นาทีที่แล้ว`;
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours} ชม. ที่แล้ว`;
+        const diffDays = Math.floor(diffHours / 24);
+        return `${diffDays} วันที่แล้ว`;
+    }
+
+    function showEmptyState(show) {
+        const emptyState = document.getElementById('empty-state');
+        const container = document.getElementById('notifications-container');
+        if (show) {
+            container.innerHTML = '';
+            emptyState.classList.remove('hidden');
+            emptyState.classList.add('flex');
+        } else {
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+        }
+    }
+
+    function renderOwnerNotifications(list) {
+        const container = document.getElementById('notifications-container');
+        if (!list || list.length === 0) {
+            showEmptyState(true);
+            return;
+        }
+
+        showEmptyState(false);
+        container.innerHTML = list.map(item => {
+            const isUnread = !item.is_read;
+            const isBooking = (item.type && item.type.toLowerCase().includes('booking'));
+            const icon = isBooking ? 'event_available' : 'task_alt';
+            const iconBg = isBooking ? 'bg-secondary-container/20 text-secondary' : 'bg-surface-variant text-on-surface-variant';
+
+            return `
+                <div class="${isUnread ? 'bg-surface-container/80 border-secondary/30' : 'bg-surface-container-low border-outline-variant/20 opacity-80'} hover:bg-surface-container-highest transition-colors rounded-xl p-4 flex gap-4 cursor-pointer relative overflow-hidden border">
+                    ${isUnread ? '<div class="absolute top-0 left-0 w-1 h-full bg-secondary"></div>' : ''}
+                    <div class="w-12 h-12 rounded-full ${iconBg} flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined">${icon}</span>
+                    </div>
+                    <div class="flex flex-col gap-1 flex-1">
+                        <div class="flex justify-between items-start">
+                            <span class="font-bold text-on-surface text-base flex items-center gap-2">
+                                ${item.title || 'การแจ้งเตือน'}
+                                ${isUnread ? '<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>' : ''}
+                            </span>
+                            <span class="text-xs text-outline font-medium">${formatTimeAgo(item.created_at)}</span>
+                        </div>
+                        <p class="text-sm text-on-surface-variant leading-relaxed">
+                            ${item.message || ''}
+                        </p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function loadOwnerNotifications() {
+        try {
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (!client?.auth) {
+                showEmptyState(true);
+                return;
+            }
+
+            const { data: { user } } = await client.auth.getUser();
+            if (!user) {
+                showEmptyState(true);
+                return;
+            }
+
+            const { data: notifs, error } = await client
+                .from('notifications')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.warn('Owner notifications fetch error:', error);
+                showEmptyState(true);
+                return;
+            }
+
+            renderOwnerNotifications(notifs || []);
+        } catch(e) {
+            console.warn('Owner notifications exception:', e);
+            showEmptyState(true);
+        }
+    }
+
+    async function markAllAsRead() {
+        try {
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (client?.auth) {
+                const { data: { user } } = await client.auth.getUser();
+                if (user) {
+                    await client.from('notifications').update({ is_read: true }).eq('user_id', user.id);
+                    await loadOwnerNotifications();
+                }
+            }
+        } catch(e) {
+            console.warn('Owner mark read error:', e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadOwnerNotifications();
+    });
+</script>
+
+</body>
+</html>
+
+
+

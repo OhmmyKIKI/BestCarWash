@@ -1,0 +1,180 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BestCarWash - เงื่อนไขการให้บริการสำหรับพาร์ทเนอร์</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              "spacing": {
+                      "margin-mobile": "1rem",
+                      "gutter": "1rem",
+                      "touch-target-min": "3rem",
+                      "stack-sm": "0.5rem",
+                      "stack-md": "1rem",
+                      "stack-lg": "1.5rem"
+              },
+              "fontFamily": {
+                      "sans": ["Prompt", "Inter", "sans-serif"]
+              },
+            }
+          }
+        }
+      </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(23, 31, 51, 0.5); /* surface-container with opacity */
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(141, 144, 160, 0.4); /* outline with opacity */
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(180, 197, 255, 0.6); /* primary with opacity */
+        }
+    </style>
+</head>
+<body class="antialiased flex flex-col h-screen overflow-hidden bg-background text-on-background"> <!-- Lock body scroll -->
+
+<!-- Top Header (App Bar) -->
+<header class="sticky top-0 w-full shrink-0 z-50 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md">
+    <div class="w-full px-4 md:px-8 h-20 flex items-center justify-between">
+        <!-- Left: Back Button & Page Identification -->
+        <div class="flex items-center gap-3.5">
+            <a href="../owner/Owner%20Profile.html" class="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/40 transition-all active:scale-95 group" title="กลับไปโปรไฟล์">
+                <span class="material-symbols-outlined text-[22px] md:text-[24px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+            </a>
+            <h1 class="text-lg md:text-xl font-bold text-on-surface tracking-tight flex items-center gap-2.5">
+                <span class="material-symbols-outlined text-secondary text-[26px]">gavel</span>
+                <span>เงื่อนไขการให้บริการสำหรับพาร์ทเนอร์</span>
+            </h1>
+        </div>
+
+        <!-- Right: Badge / Actions -->
+        <div class="flex items-center gap-2.5 sm:gap-3.5">
+            <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface-container border border-outline-variant/40 text-xs md:text-sm font-medium text-on-surface-variant">
+                <span class="w-2 h-2 rounded-full bg-secondary"></span>
+                <span class="hidden sm:inline">มีผลบังคับใช้</span> 2026
+            </span>
+        </div>
+    </div>
+</header>
+
+<main class="w-full max-w-3xl flex-1 mx-auto pb-6 px-4 flex flex-col overflow-hidden">
+    
+    <!-- Last Updated Note -->
+    <div class="py-4 text-center flex-shrink-0">
+        <p class="text-xs font-semibold text-outline tracking-wider uppercase">อัปเดตล่าสุด: สิงหาคม 2026</p>
+    </div>
+
+    <!-- Legal Content Container (Scrollable) -->
+    <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl shadow-lg flex-grow overflow-y-auto custom-scrollbar p-6 md:p-8 relative">
+        
+        <!-- Document Content -->
+        <article class="prose prose-invert prose-sm md:prose-base max-w-none space-y-8 text-on-surface-variant leading-relaxed">
+            
+            <p class="text-sm">
+                ข้อตกลงและเงื่อนไขฉบับนี้ ("ข้อตกลง") เป็นข้อผูกพันทางกฎหมายระหว่างผู้ใช้ ("ร้านค้า" "พาร์ทเนอร์" หรือ "คุณ") และ BestCarWash ("แพลตฟอร์ม" "เรา" หรือ "บริษัท") โปรดอ่านข้อกำหนดเหล่านี้อย่างละเอียดก่อนดำเนินการสมัครเป็นพาร์ทเนอร์บนแอปพลิเคชัน BestCarWash
+            </p>
+
+            <section class="space-y-4">
+                <h2 class="text-lg font-bold text-primary flex items-center gap-2 border-b border-outline-variant/30 pb-2">
+                    <span class="material-symbols-outlined">storefront</span>
+                    1. ข้อตกลงพาร์ทเนอร์และการตั้งค่าบัญชี
+                </h2>
+                <ul class="list-disc pl-5 space-y-2 text-sm">
+                    <li><strong class="text-on-surface">การสมัครและให้ข้อมูล:</strong> ร้านค้าตกลงที่จะให้ข้อมูลที่เป็นความจริง ถูกต้อง และเป็นปัจจุบันทั้งหมดเกี่ยวกับการทำธุรกิจ (เช่น ชื่อร้านค้า, ที่อยู่, เวลาทำการ, และรายละเอียดบริการ) แก่แพลตฟอร์ม</li>
+                    <li><strong class="text-on-surface">ความรับผิดชอบของร้านค้า:</strong> คุณมีหน้าที่รักษาความปลอดภัยของบัญชีผู้ใช้และรหัสผ่าน การกระทำใดๆ ที่เกิดขึ้นภายใต้บัญชีของคุณถือเป็นความรับผิดชอบของร้านค้าแต่เพียงผู้เดียว</li>
+                    <li><strong class="text-on-surface">การรักษามาตรฐาน:</strong> ร้านค้าตกลงที่จะให้บริการด้วยความเป็นมืออาชีพ และรักษาความสะอาดรวมถึงมาตรฐานความปลอดภัยของเครื่องมือและน้ำยาที่ใช้ทำความสะอาดรถยนต์ทุกประเภท</li>
+                </ul>
+            </section>
+
+            <section class="space-y-4">
+                <h2 class="text-lg font-bold text-primary flex items-center gap-2 border-b border-outline-variant/30 pb-2">
+                    <span class="material-symbols-outlined">payments</span>
+                    2. ค่าคอมมิชชัน, การเรียกเก็บเงิน และการเบิกจ่าย
+                </h2>
+                <ul class="list-disc pl-5 space-y-2 text-sm">
+                    <li><strong class="text-on-surface">ค่าธรรมเนียมแพลตฟอร์ม (Commission Fee):</strong> แพลตฟอร์มมีสิทธิ์หักค่าคอมมิชชันในอัตราที่ได้ตกลงกันไว้ (ปัจจุบันอยู่ที่ 15% - 20% ขึ้นอยู่กับระดับพาร์ทเนอร์) จากยอดการจองที่สำเร็จทุกรายการ</li>
+                    <li><strong class="text-on-surface">การประมวลผลการชำระเงิน:</strong> เงินค่าบริการที่ลูกค้าชำระผ่านช่องทางออนไลน์ จะถูกพักไว้ในระบบของ BestCarWash และจะทำการกระทบยอดบัญชีเพื่อให้เบิกจ่ายได้หลังบริการเสร็จสิ้น</li>
+                    <li><strong class="text-on-surface">การเบิกจ่าย (Payouts):</strong> ร้านค้าสามารถกดคำร้องขอเบิกจ่ายเงิน (Request Payout) ได้ตลอดเวลา โดยระบบจะโอนเงินเข้าบัญชีธนาคารที่ลงทะเบียนไว้ภายใน 1-3 วันทำการ (ไม่รวมวันหยุดนักขัตฤกษ์)</li>
+                    <li><strong class="text-on-surface">ภาษีมูลค่าเพิ่ม:</strong> ร้านค้ามีหน้าที่รับผิดชอบในการนำส่งภาษีที่เกี่ยวข้องกับการให้บริการตามกฎหมายกำหนด</li>
+                </ul>
+            </section>
+
+            <section class="space-y-4">
+                <h2 class="text-lg font-bold text-primary flex items-center gap-2 border-b border-outline-variant/30 pb-2">
+                    <span class="material-symbols-outlined">gavel</span>
+                    3. คุณภาพการบริการ, ความรับผิดชอบต่อลูกค้า และข้อพิพาท
+                </h2>
+                <ul class="list-disc pl-5 space-y-2 text-sm">
+                    <li><strong class="text-on-surface">ความเสียหายต่อทรัพย์สิน (Vehicle Damage):</strong> ในกรณีที่เกิดความเสียหายต่อรถยนต์ของลูกค้าไม่ว่าทางตรงหรือทางอ้อม อันเกิดจากการให้บริการของร้านค้า (เช่น รอยขีดข่วนจากเครื่องมือ หรือสีด่างจากน้ำยา) ร้านค้าจะเป็นผู้รับผิดชอบค่าเสียหายทั้งหมด BestCarWash เป็นเพียงตัวกลางและขอปฏิเสธความรับผิดชอบต่อความเสียหายดังกล่าว</li>
+                    <li><strong class="text-on-surface">นโยบายการไม่แสดงตัว (No-Show):</strong> หากลูกค้าไม่มาตามนัดเกิน 15 นาที ร้านค้ามีสิทธิ์ยกเลิกคิวโดยไม่เสียค่าปรับ หากร้านค้าเป็นฝ่ายยกเลิกคิวบ่อยครั้งโดยไม่มีเหตุผลอันควร อาจส่งผลกระทบต่อคะแนนและการแสดงผลร้านค้าในแอป</li>
+                    <li><strong class="text-on-surface">การระงับข้อพิพาท:</strong> หากเกิดข้อพิพาทระหว่างลูกค้าและร้านค้า ทั้งสองฝ่ายควรเจรจาตกลงกันก่อน หากไม่สามารถหาข้อสรุปได้ ทีมงาน BestCarWash อาจเข้ามาเป็นสื่อกลางเพื่อประนีประนอม แต่คำตัดสินใจของแพลตฟอร์มถือเป็นที่สิ้นสุด</li>
+                </ul>
+            </section>
+
+            <section class="space-y-4">
+                <h2 class="text-lg font-bold text-primary flex items-center gap-2 border-b border-outline-variant/30 pb-2">
+                    <span class="material-symbols-outlined">block</span>
+                    4. สิทธิ์ของแพลตฟอร์มและการยกเลิกบัญชี
+                </h2>
+                <ul class="list-disc pl-5 space-y-2 text-sm">
+                    <li><strong class="text-on-surface">สิทธิ์ในการแก้ไขเนื้อหา:</strong> BestCarWash สงวนสิทธิ์ในการแก้ไข หรือระงับการแสดงโปรโมชัน และข้อมูลร้านค้า หากพบว่ามีการละเมิดข้อกำหนด ขัดต่อศีลธรรมอันดี หรือมีเจตนาหลอกลวงผู้บริโภค</li>
+                    <li><strong class="text-on-surface">การระงับหรือแบนบัญชี (Account Termination):</strong> แพลตฟอร์มอาจระงับการใช้งานบัญชีร้านค้าทันที หากมีการกระทำผิดกฎหมาย, การทุจริต, การได้รับคะแนนรีวิวย่ำแย่สะสมเป็นจำนวนมาก, หรือการไม่ปฏิบัติตามข้อตกลงพาร์ทเนอร์ข้อใดข้อหนึ่ง</li>
+                    <li><strong class="text-on-surface">การขอปิดบัญชี:</strong> ร้านค้าสามารถยกเลิกการเป็นพาร์ทเนอร์ได้ตลอดเวลา โดยการแจ้งล่วงหน้าอย่างน้อย 7 วันทำการ เพื่อให้ระบบจัดการเคลียร์ยอดหนี้หรือยอดเบิกจ่ายคงค้างให้เสร็จสิ้น</li>
+                </ul>
+            </section>
+
+            <p class="text-sm font-semibold text-center text-on-surface pt-4 border-t border-outline-variant/20 mt-8">
+                การที่ท่านใช้งานแอปพลิเคชัน BestCarWash ในฐานะพาร์ทเนอร์ ถือว่าท่านได้ยอมรับข้อตกลงและเงื่อนไขเหล่านี้อย่างครบถ้วน
+            </p>
+
+        </article>
+    </div>
+</main>
+
+</body>
+</html>
+
+
+

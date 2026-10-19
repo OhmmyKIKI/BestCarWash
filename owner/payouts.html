@@ -1,0 +1,832 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BestCarWash - รายรับและบัญชีธนาคาร</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<!-- Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="../supabase-client.js"></script>
+<script>
+    if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
+        var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+        var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+    var supabaseClient = window.supabaseClient;
+</script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              "spacing": {
+                      "margin-mobile": "1rem",
+                      "gutter": "1rem",
+                      "touch-target-min": "3rem",
+                      "stack-sm": "0.5rem",
+                      "stack-md": "1rem",
+                      "stack-lg": "1.5rem"
+              },
+              "fontFamily": {
+                      "sans": ["Prompt", "Inter", "sans-serif"]
+              },
+            }
+          }
+        }
+      </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Toast notification */
+        #toast {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+            transform: translateY(20px);
+        }
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Modal transitions */
+        #bankModalOverlay {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        #bankModalOverlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        #bankModalContent {
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #bankModalOverlay.show #bankModalContent {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="antialiased flex flex-col min-h-screen relative bg-background text-on-background pb-20">
+
+<!-- Top Header (App Bar) -->
+<header class="sticky top-0 w-full z-50 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md">
+    <div class="w-full px-4 md:px-8 lg:px-10 h-20 flex items-center justify-between">
+        <!-- Left: Back Button & Page Identification -->
+        <div class="flex items-center gap-3.5">
+            <a href="Owner%20Profile.html" class="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/40 transition-all active:scale-95 group" title="กลับไปโปรไฟล์">
+                <span class="material-symbols-outlined text-[22px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+            </a>
+            <h1 class="text-lg md:text-xl font-bold text-on-surface tracking-tight flex items-center gap-2.5">
+                <span class="material-symbols-outlined text-secondary text-[26px]">account_balance_wallet</span>
+                <span>บัญชีรับเงินมัดจำ &amp; พร้อมเพย์</span>
+            </h1>
+        </div>
+
+        <!-- Right: Action Buttons -->
+        <div class="flex items-center gap-2.5 sm:gap-3">
+            <button type="button" onclick="document.getElementById('openBankModalBtn')?.click()" class="h-11 sm:h-12 px-4 sm:px-5 rounded-xl bg-surface-container hover:bg-surface-variant border border-outline-variant/40 text-on-surface text-sm sm:text-base font-semibold flex items-center gap-2 transition-all hover:border-secondary/40 active:scale-95" title="แก้ไขบัญชี">
+                <span class="material-symbols-outlined text-[20px] text-secondary">edit</span>
+                <span>แก้ไขบัญชี</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<main class="w-full max-w-3xl px-4 pt-6 pb-20 mx-auto space-y-6 flex-1">
+    
+    <!-- Balance Overview Card -->
+    <div class="bg-surface-container/80 backdrop-blur-xl border border-secondary/30 p-6 rounded-3xl shadow-[0_8px_30px_rgba(37,99,235,0.15)] relative overflow-hidden group">
+        <div class="absolute -top-20 -right-20 w-48 h-48 bg-secondary/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-secondary/10 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div class="relative z-10 flex flex-col items-center text-center space-y-2 mb-2">
+            <span class="text-sm font-medium text-on-surface-variant uppercase tracking-widest">ยอดเงินมัดจำสะสม (฿50/คิว)</span>
+            <div class="flex items-start justify-center text-on-surface">
+                <span class="text-2xl font-bold mt-2 text-secondary">฿</span>
+                <span id="totalDepositAmount" class="text-[48px] font-black tracking-tighter leading-none">0<span class="text-2xl text-on-surface-variant">.00</span></span>
+            </div>
+            <p id="totalDepositCountText" class="text-xs text-on-surface-variant/80">กำลังโหลดข้อมูลคิว...</p>
+        </div>
+    </div>
+
+    <!-- Bank Account Information Section -->
+    <div class="space-y-3">
+        <h2 class="text-xs font-bold text-outline uppercase tracking-widest px-2">ข้อมูลบัญชีธนาคาร &amp; QR พร้อมเพย์สำหรับรับมัดจำ</h2>
+        <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 p-5 rounded-2xl shadow-lg relative overflow-hidden flex flex-col gap-4">
+            
+            <div class="flex items-center gap-4">
+                <div id="bankIconWrapper" class="w-12 h-12 rounded-xl bg-[#118B42]/10 border border-[#118B42]/30 flex items-center justify-center flex-shrink-0 shadow-inner">
+                    <span id="bankIconSymbol" class="material-symbols-outlined text-[#4edea3] text-[28px]">account_balance</span>
+                </div>
+                <div class="flex flex-col flex-grow min-w-0">
+                    <div class="flex items-center gap-2">
+                        <span id="displayBankTitle" class="text-sm font-semibold text-on-surface truncate">บัญชีรับเงินของร้านค้า</span>
+                        <span id="bankBadge" class="hidden text-[10px] px-2 py-0.5 rounded font-bold uppercase"></span>
+                    </div>
+                    <span id="displayAccountName" class="text-xs text-on-surface-variant mt-0.5 truncate">ยังไม่ได้ตั้งค่าบัญชี</span>
+                    <span id="displayAccountNumber" class="text-base sm:text-lg font-bold text-on-surface tracking-widest mt-1 font-mono truncate">XXX-X-XXXXX-X</span>
+                </div>
+                <div id="displayQrBox" class="w-16 h-16 bg-white p-1 rounded-lg flex items-center justify-center border border-outline-variant shadow-sm shrink-0 overflow-hidden cursor-pointer" title="คลิกเพื่อแก้ไขหรือดู QR Code">
+                    <span class="material-symbols-outlined text-black text-[32px]">qr_code_2</span>
+                </div>
+            </div>
+
+            <button id="openBankModalBtn" class="w-full h-10 bg-surface-container-highest border border-outline-variant text-on-surface text-sm font-semibold rounded-xl hover:bg-surface-variant hover:border-secondary/50 transition-colors active:scale-[0.98] flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">edit</span> แก้ไขข้อมูลบัญชี &amp; พร้อมเพย์
+            </button>
+        </div>
+    </div>
+
+    <!-- Payout History Section -->
+    <div class="space-y-3">
+        <h2 class="text-xs font-bold text-outline uppercase tracking-widest px-2">ประวัติการรับเงินมัดจำล่าสุด</h2>
+        
+        <div id="payoutHistoryContainer" class="space-y-3">
+            <div class="bg-surface-container/60 border border-outline-variant/30 rounded-2xl p-8 text-center flex flex-col items-center justify-center">
+                <span class="material-symbols-outlined text-3xl text-outline mb-2 animate-spin">progress_activity</span>
+                <p class="text-xs text-on-surface-variant">กำลังดึงประวัติการรับเงินมัดจำ...</p>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Edit Bank Info Modal Overlay -->
+<div id="bankModalOverlay" class="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
+    
+    <!-- Modal Content -->
+    <div id="bankModalContent" class="bg-surface-container w-full max-w-md rounded-t-3xl sm:rounded-3xl border border-outline-variant/30 shadow-2xl p-6 relative">
+        
+        <!-- Close Button -->
+        <button id="closeModalBtn" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-surface-variant text-outline hover:text-on-surface transition-colors active:scale-95">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+
+        <h2 class="text-xl font-bold text-secondary mb-6 pr-8">แก้ไขข้อมูลบัญชีธนาคาร</h2>
+        
+        <form id="editBankForm" class="space-y-4">
+            
+            <div class="space-y-1">
+                <label for="bankName" class="text-xs font-medium text-on-surface-variant pl-1">ธนาคาร / ช่องทาง</label>
+                <div class="relative">
+                    <select id="bankName" required class="w-full h-12 pl-10 pr-10 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-sm focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary transition-colors shadow-inner appearance-none">
+                        <option value="ธนาคารกสิกรไทย (KBank)">ธนาคารกสิกรไทย (KBank)</option>
+                        <option value="ธนาคารไทยพาณิชย์ (SCB)">ธนาคารไทยพาณิชย์ (SCB)</option>
+                        <option value="ธนาคารกรุงเทพ (BBL)">ธนาคารกรุงเทพ (BBL)</option>
+                        <option value="ธนาคารกรุงไทย (KTB)">ธนาคารกรุงไทย (KTB)</option>
+                        <option value="พร้อมเพย์ (PromptPay)">พร้อมเพย์ (PromptPay)</option>
+                    </select>
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">account_balance</span>
+                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">arrow_drop_down</span>
+                </div>
+            </div>
+
+            <div class="space-y-1">
+                <label for="accountName" class="text-xs font-medium text-on-surface-variant pl-1">ชื่อบัญชี</label>
+                <div class="relative">
+                    <input type="text" id="accountName" required placeholder="ชื่อบัญชีของคุณตามหน้าสมุดบัญชี"
+                        class="w-full h-12 pl-10 pr-4 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface placeholder-outline-variant focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors shadow-inner text-sm">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">badge</span>
+                </div>
+            </div>
+
+            <div class="space-y-1">
+                <label for="accountNumber" class="text-xs font-medium text-on-surface-variant pl-1">เลขที่บัญชี / พร้อมเพย์</label>
+                <div class="relative">
+                    <input type="text" id="accountNumber" required placeholder="เลขที่บัญชีหรือเบอร์พร้อมเพย์"
+                        class="w-full h-12 pl-10 pr-4 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface placeholder-outline-variant focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors shadow-inner text-sm font-mono">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">pin</span>
+                </div>
+                <p class="text-[10px] text-outline mt-1 pl-1">* โปรดตรวจสอบเลขบัญชีให้ถูกต้องเพื่อป้องกันการโอนผิดพลาด</p>
+            </div>
+
+            <div class="space-y-1 mt-3">
+                <label class="text-xs font-medium text-on-surface-variant pl-1">คิวอาร์โค้ดรับเงิน (QR Code)</label>
+                <label class="w-full h-28 border-2 border-dashed border-outline-variant/50 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-surface-bright hover:border-secondary transition-colors group relative overflow-hidden bg-surface-container-highest">
+                    <input type="file" id="qrFileInput" class="hidden" accept="image/*" onchange="previewQRCode(this)">
+                    <div id="qrPlaceholder" class="flex flex-col items-center gap-1">
+                        <span class="material-symbols-outlined text-outline group-hover:text-secondary transition-colors text-[24px]">qr_code_scanner</span>
+                        <span class="text-xs text-outline group-hover:text-secondary transition-colors">คลิกเพื่ออัปโหลด QR Code</span>
+                    </div>
+                    <img id="qrPreview" src="" alt="QR Preview" class="absolute inset-0 w-full h-full object-contain hidden bg-white">
+                </label>
+            </div>
+
+            <button type="submit" id="saveBankBtn" class="w-full h-12 mt-4 bg-secondary text-on-secondary-container font-bold rounded-xl hover:bg-secondary/90 transition-colors active:scale-[0.98] shadow-lg shadow-secondary/20">
+                บันทึกข้อมูลธนาคาร
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-secondary-container text-on-secondary-container px-6 py-3 rounded-full shadow-lg border border-secondary/30 flex items-center gap-2 z-[60]">
+    <span class="material-symbols-outlined" id="toastIcon">check_circle</span>
+    <span class="font-medium text-sm" id="toastMessage">สำเร็จ!</span>
+</div>
+
+<script>
+    let currentUserId = null;
+    let currentShopId = null;
+    let currentQrBase64 = null;
+
+    const showToast = (message) => {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        if (!toast || !toastMessage) return;
+        toastMessage.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    };
+
+    function updateBankBrandStyle(bankName) {
+        const iconWrapper = document.getElementById('bankIconWrapper');
+        const iconSymbol = document.getElementById('bankIconSymbol');
+        const badge = document.getElementById('bankBadge');
+        if (!iconWrapper) return;
+
+        const lower = (bankName || '').toLowerCase();
+        if (lower.includes('กสิกร') || lower.includes('kbank')) {
+            iconWrapper.className = 'w-12 h-12 rounded-xl bg-[#138f2d]/15 border border-[#138f2d]/40 flex items-center justify-center flex-shrink-0 shadow-inner';
+            if (iconSymbol) {
+                iconSymbol.className = 'material-symbols-outlined text-[#22c55e] text-[28px]';
+                iconSymbol.textContent = 'account_balance';
+            }
+            if (badge) {
+                badge.className = 'text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-[#138f2d]/20 text-[#4edea3] border border-[#138f2d]/40';
+                badge.textContent = 'KBank';
+                badge.classList.remove('hidden');
+            }
+        } else if (lower.includes('ไทยพาณิชย์') || lower.includes('scb')) {
+            iconWrapper.className = 'w-12 h-12 rounded-xl bg-[#4e2a84]/20 border border-[#6c3483]/50 flex items-center justify-center flex-shrink-0 shadow-inner';
+            if (iconSymbol) {
+                iconSymbol.className = 'material-symbols-outlined text-[#a855f7] text-[28px]';
+                iconSymbol.textContent = 'account_balance';
+            }
+            if (badge) {
+                badge.className = 'text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-[#4e2a84]/30 text-[#c084fc] border border-[#6c3483]/40';
+                badge.textContent = 'SCB';
+                badge.classList.remove('hidden');
+            }
+        } else if (lower.includes('กรุงเทพ') || lower.includes('bbl')) {
+            iconWrapper.className = 'w-12 h-12 rounded-xl bg-[#1e3a8a]/20 border border-[#2563eb]/40 flex items-center justify-center flex-shrink-0 shadow-inner';
+            if (iconSymbol) {
+                iconSymbol.className = 'material-symbols-outlined text-[#60a5fa] text-[28px]';
+                iconSymbol.textContent = 'account_balance';
+            }
+            if (badge) {
+                badge.className = 'text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-[#1e3a8a]/30 text-[#93c5fd] border border-[#2563eb]/40';
+                badge.textContent = 'BBL';
+                badge.classList.remove('hidden');
+            }
+        } else if (lower.includes('กรุงไทย') || lower.includes('ktb')) {
+            iconWrapper.className = 'w-12 h-12 rounded-xl bg-[#0284c7]/20 border border-[#0284c7]/40 flex items-center justify-center flex-shrink-0 shadow-inner';
+            if (iconSymbol) {
+                iconSymbol.className = 'material-symbols-outlined text-[#38bdf8] text-[28px]';
+                iconSymbol.textContent = 'account_balance';
+            }
+            if (badge) {
+                badge.className = 'text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-[#0284c7]/30 text-[#7dd3fc] border border-[#0284c7]/40';
+                badge.textContent = 'KTB';
+                badge.classList.remove('hidden');
+            }
+        } else if (lower.includes('พร้อมเพย์') || lower.includes('promptpay')) {
+            iconWrapper.className = 'w-12 h-12 rounded-xl bg-[#005088]/20 border border-[#0070ba]/40 flex items-center justify-center flex-shrink-0 shadow-inner';
+            if (iconSymbol) {
+                iconSymbol.className = 'material-symbols-outlined text-[#38bdf8] text-[28px]';
+                iconSymbol.textContent = 'qr_code_2';
+            }
+            if (badge) {
+                badge.className = 'text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-[#005088]/30 text-[#7dd3fc] border border-[#0070ba]/40';
+                badge.textContent = 'PromptPay';
+                badge.classList.remove('hidden');
+            }
+        } else {
+            iconWrapper.className = 'w-12 h-12 rounded-xl bg-[#118B42]/10 border border-[#118B42]/30 flex items-center justify-center flex-shrink-0 shadow-inner';
+            if (iconSymbol) {
+                iconSymbol.className = 'material-symbols-outlined text-secondary text-[28px]';
+                iconSymbol.textContent = 'account_balance';
+            }
+            if (badge) badge.classList.add('hidden');
+        }
+    }
+
+    function updateQrDisplay(dataUrl) {
+        const qrBox = document.getElementById('displayQrBox');
+        if (qrBox) {
+            if (dataUrl) {
+                qrBox.innerHTML = `<img src="${dataUrl}" class="w-full h-full object-contain" alt="QR Code">`;
+            } else {
+                qrBox.innerHTML = `<span class="material-symbols-outlined text-black text-[32px]">qr_code_2</span>`;
+            }
+        }
+    }
+
+    window.previewQRCode = function(input) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const maxDim = 350; // Optimized size to prevent Supabase payload limit errors
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > height && width > maxDim) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else if (height > maxDim) {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const compressed = canvas.toDataURL('image/jpeg', 0.75);
+
+                    currentQrBase64 = compressed;
+                    const preview = document.getElementById('qrPreview');
+                    const placeholder = document.getElementById('qrPlaceholder');
+                    if (preview && placeholder) {
+                        preview.src = compressed;
+                        preview.classList.remove('hidden');
+                        placeholder.classList.add('hidden');
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    function loadBankInformation(user) {
+        const metaBank = user?.user_metadata?.bank_info || {};
+        const uid = user?.id;
+
+        const savedBank = (uid ? localStorage.getItem('ownerBankName_' + uid) : null) || 
+                          localStorage.getItem('ownerBankName') || 
+                          metaBank.bank_name;
+
+        const savedAcc = (uid ? localStorage.getItem('ownerAccountNumber_' + uid) : null) || 
+                         localStorage.getItem('ownerAccountNumber') || 
+                         localStorage.getItem('ownerPromptPay') || 
+                         metaBank.account_number;
+
+        const savedName = (uid ? localStorage.getItem('ownerAccountName_' + uid) : null) || 
+                          localStorage.getItem('ownerAccountName') || 
+                          localStorage.getItem('shopAccountName') || 
+                          metaBank.account_name;
+
+        const savedQr = (uid ? localStorage.getItem('ownerQrCode_' + uid) : null) || 
+                        localStorage.getItem('ownerQrCode') || 
+                        localStorage.getItem('shopPromptPayQr') || 
+                        metaBank.qr_code;
+
+        if (savedBank) {
+            const bankSelect = document.getElementById('bankName');
+            if (bankSelect) bankSelect.value = savedBank;
+            const dispTitle = document.getElementById('displayBankTitle');
+            if (dispTitle) dispTitle.textContent = savedBank;
+            updateBankBrandStyle(savedBank);
+        }
+
+        if (savedAcc) {
+            const accInput = document.getElementById('accountNumber');
+            if (accInput) accInput.value = savedAcc;
+            const dispAcc = document.getElementById('displayAccountNumber');
+            if (dispAcc) dispAcc.textContent = savedAcc;
+        }
+
+        if (savedName) {
+            const nameInput = document.getElementById('accountName');
+            if (nameInput) nameInput.value = savedName;
+            const dispName = document.getElementById('displayAccountName');
+            if (dispName) dispName.textContent = savedName;
+        }
+
+        if (savedQr) {
+            currentQrBase64 = savedQr;
+            const preview = document.getElementById('qrPreview');
+            const placeholder = document.getElementById('qrPlaceholder');
+            if (preview && placeholder) {
+                preview.src = savedQr;
+                preview.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            }
+            updateQrDisplay(savedQr);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const modalOverlay = document.getElementById('bankModalOverlay');
+        const openModalBtn = document.getElementById('openBankModalBtn');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const editBankForm = document.getElementById('editBankForm');
+        const bankSelect = document.getElementById('bankName');
+
+        // Instant synchronous render from localStorage to eliminate UI flicker
+        loadBankInformation(null);
+
+        if (bankSelect) {
+            bankSelect.addEventListener('change', () => {
+                updateBankBrandStyle(bankSelect.value);
+            });
+        }
+
+        // Open Modal
+        if (openModalBtn) {
+            openModalBtn.addEventListener('click', () => {
+                modalOverlay.classList.add('show');
+                document.body.style.overflow = 'hidden'; 
+            });
+        }
+
+        // Close Modal function
+        const closeModal = () => {
+            modalOverlay.classList.remove('show');
+            document.body.style.overflow = ''; 
+        };
+
+        if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+        if (modalOverlay) {
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) closeModal();
+            });
+        }
+
+        // Click QR box to view full size preview if available
+        const qrBox = document.getElementById('displayQrBox');
+        if (qrBox) {
+            qrBox.addEventListener('click', () => {
+                if (currentQrBase64) {
+                    modalOverlay.classList.add('show');
+                    document.body.style.overflow = 'hidden';
+                } else if (openModalBtn) {
+                    openModalBtn.click();
+                }
+            });
+        }
+
+        // Connect Supabase
+        const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+        if (!client?.auth) {
+            console.warn('Supabase client unavailable, running in local mode');
+            await loadShopAndDeposits(null, null);
+            return;
+        }
+
+        let user = null;
+        try {
+            const { data: sessData } = await client.auth.getSession();
+            user = sessData?.session?.user || null;
+            if (!user) {
+                const res = await client.auth.getUser();
+                user = res?.data?.user || null;
+            }
+        } catch(e) {
+            console.warn('Auth check notice:', e);
+        }
+
+        const fallbackUserId = localStorage.getItem('lastLoggedInUserId');
+        const effectiveUserId = user?.id || fallbackUserId;
+
+        if (effectiveUserId) {
+            currentUserId = effectiveUserId;
+            if (user) loadBankInformation(user);
+            await loadShopAndDeposits(client, effectiveUserId);
+        } else {
+            console.log('No active user session in payouts, loading cached data');
+            await loadShopAndDeposits(client, null);
+        }
+
+        // Form submission logic (Save Bank)
+        if (editBankForm) {
+            editBankForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const bankName = document.getElementById('bankName')?.value || 'ธนาคารกสิกรไทย (KBank)';
+                const accNum = document.getElementById('accountNumber')?.value.trim();
+                const accName = document.getElementById('accountName')?.value.trim();
+                const qrImg = currentQrBase64 || (currentUserId ? localStorage.getItem('ownerQrCode_' + currentUserId) : null) || localStorage.getItem('ownerQrCode');
+
+                const saveBtn = document.getElementById('saveBankBtn');
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> กำลังบันทึก...';
+
+                try {
+                    // 1. Save user-scoped keys
+                    if (currentUserId) {
+                        localStorage.setItem('ownerBankName_' + currentUserId, bankName);
+                        localStorage.setItem('ownerAccountNumber_' + currentUserId, accNum);
+                        localStorage.setItem('ownerAccountName_' + currentUserId, accName);
+                        if (qrImg) localStorage.setItem('ownerQrCode_' + currentUserId, qrImg);
+                    }
+
+                    // 2. Save global keys for customer booking and service screen
+                    localStorage.setItem('ownerBankName', bankName);
+                    localStorage.setItem('ownerAccountNumber', accNum);
+                    localStorage.setItem('ownerAccountName', accName);
+                    localStorage.setItem('ownerPromptPay', accNum);
+                    localStorage.setItem('shopPromptPay', accNum);
+                    localStorage.setItem('shopAccountName', accName);
+                    if (qrImg) {
+                        localStorage.setItem('ownerQrCode', qrImg);
+                        localStorage.setItem('shopPromptPayQr', qrImg);
+                    }
+
+                    // 3. Update UI immediately
+                    const dispTitle = document.getElementById('displayBankTitle');
+                    if (dispTitle) dispTitle.textContent = bankName;
+                    const dispAcc = document.getElementById('displayAccountNumber');
+                    if (dispAcc) dispAcc.textContent = accNum;
+                    const dispName = document.getElementById('displayAccountName');
+                    if (dispName) dispName.textContent = accName;
+                    if (qrImg) updateQrDisplay(qrImg);
+                    updateBankBrandStyle(bankName);
+
+                    // 4. Save to Supabase auth user_metadata if authenticated
+                    if (client?.auth && currentUserId) {
+                        try {
+                            await client.auth.updateUser({
+                                data: {
+                                    bank_info: {
+                                        bank_name: bankName,
+                                        account_number: accNum,
+                                        account_name: accName,
+                                        qr_code: qrImg
+                                    }
+                                }
+                            });
+                        } catch(authErr) {
+                            console.warn('Supabase auth metadata update notice:', authErr);
+                        }
+                    }
+
+                    // 5. If shop exists, also update phone_number / payment info in shops table
+                    if (client && currentShopId && currentShopId !== 'local-shop') {
+                        try {
+                            const digits = accNum.replace(/[^0-9]/g, '');
+                            if (digits.length >= 9 && digits.length <= 13) {
+                                await client.from('shops').update({ phone_number: digits }).eq('id', currentShopId);
+                            }
+                        } catch(shopErr) {
+                            console.warn('Shop phone_number sync notice:', shopErr);
+                        }
+                    }
+
+                    closeModal();
+                    showToast('บันทึกข้อมูลบัญชีและพร้อมเพย์เรียบร้อยแล้ว');
+                } catch (err) {
+                    console.error('Save bank error:', err);
+                    closeModal();
+                    showToast('บันทึกข้อมูลเรียบร้อยแล้ว');
+                } finally {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = 'บันทึกข้อมูลธนาคาร';
+                }
+            });
+        }
+    });
+
+    async function loadShopAndDeposits(client, userId) {
+        const container = document.getElementById('payoutHistoryContainer');
+        const depositAmountEl = document.getElementById('totalDepositAmount');
+        const depositCountEl = document.getElementById('totalDepositCountText');
+
+        try {
+            let shop = null;
+
+            // Step 1: Lookup shop by owner_id in Supabase
+            if (client && userId) {
+                const { data } = await client
+                    .from('shops')
+                    .select('id, name')
+                    .eq('owner_id', userId)
+                    .maybeSingle();
+                if (data) shop = data;
+            }
+
+            // Step 2: Fallback lookup by stored shop ID
+            if (!shop && client) {
+                const storedShopId = localStorage.getItem('currentShopId') || localStorage.getItem('selectedShopId') || localStorage.getItem('ownerShopId');
+                if (storedShopId) {
+                    const { data } = await client
+                        .from('shops')
+                        .select('id, name')
+                        .eq('id', storedShopId)
+                        .maybeSingle();
+                    if (data) shop = data;
+                }
+            }
+
+            // Step 3: Fallback lookup by shop name in Supabase
+            if (!shop && client) {
+                const storedShopName = localStorage.getItem('ownerShopName') || localStorage.getItem('userShopName');
+                if (storedShopName) {
+                    const { data } = await client
+                        .from('shops')
+                        .select('id, name')
+                        .ilike('name', `%${storedShopName}%`)
+                        .limit(1)
+                        .maybeSingle();
+                    if (data) shop = data;
+                }
+            }
+
+            // Step 4: Fallback to local storage shop info if DB offline or not yet linked
+            if (!shop) {
+                const localShopName = localStorage.getItem('ownerShopName') || localStorage.getItem('userShopName');
+                const localShopId = localStorage.getItem('selectedShopId') || localStorage.getItem('ownerShopId');
+                if (localShopName || localShopId) {
+                    shop = {
+                        id: localShopId || 'local-shop',
+                        name: localShopName || 'ร้านคาร์แคร์ของฉัน'
+                    };
+                }
+            }
+
+            // If still completely no shop registered
+            if (!shop) {
+                if (depositAmountEl) depositAmountEl.innerHTML = `0<span class="text-2xl text-on-surface-variant">.00</span>`;
+                if (depositCountEl) depositCountEl.textContent = 'ยังไม่พบข้อมูลร้านค้าในระบบ';
+                if (container) {
+                    container.innerHTML = `
+                        <div class="bg-surface-container/60 border border-outline-variant/30 rounded-2xl p-8 text-center flex flex-col items-center justify-center">
+                            <div class="w-16 h-16 rounded-full bg-surface-container-highest flex items-center justify-center mb-3">
+                                <span class="material-symbols-outlined text-3xl text-outline">storefront</span>
+                            </div>
+                            <p class="text-on-surface font-semibold text-sm">ยังไม่ได้ลงทะเบียนร้านค้า</p>
+                            <p class="text-xs text-on-surface-variant mt-1 mb-4">กรุณาตั้งค่าข้อมูลร้านค้าที่หน้าจัดการร้านเพื่อเริ่มรับเงินมัดจำ</p>
+                            <a href="manage-shop.html" class="px-4 py-2 bg-secondary text-on-secondary-container font-semibold rounded-xl text-xs hover:bg-secondary/90 transition-all">ไปที่หน้าจัดการร้านค้า</a>
+                        </div>
+                    `;
+                }
+                return;
+            }
+
+            currentShopId = shop.id;
+
+            // Fetch live bookings for this specific shop from Supabase
+            let bookings = [];
+            if (client && shop.id && shop.id !== 'local-shop') {
+                try {
+                    const { data, error } = await client
+                        .from('bookings')
+                        .select('*')
+                        .eq('shop_id', shop.id)
+                        .order('created_at', { ascending: false });
+                    if (!error && Array.isArray(data)) {
+                        bookings = data;
+                    }
+                } catch(bErr) {
+                    console.warn('Supabase bookings fetch error:', bErr);
+                }
+            }
+
+            // Fallback to local storage bookings if Supabase returns 0
+            if (bookings.length === 0) {
+                try {
+                    const localB = JSON.parse(localStorage.getItem('ownerBookings') || localStorage.getItem('bookings') || '[]');
+                    if (Array.isArray(localB) && localB.length > 0) {
+                        bookings = localB;
+                    }
+                } catch(e) {}
+            }
+
+            // Filter out cancelled / declined bookings for deposit calculation
+            const validDeposits = bookings.filter(b => b.status !== 'declined' && b.status !== 'cancelled');
+            const totalSum = validDeposits.reduce((sum, b) => {
+                const dep = parseFloat(b.deposit_amount) || 50;
+                return sum + (b.status === 'refunded' ? 0 : dep);
+            }, 0);
+
+            if (depositAmountEl) {
+                depositAmountEl.innerHTML = `${totalSum.toLocaleString('th-TH')}<span class="text-2xl text-on-surface-variant">.00</span>`;
+            }
+            if (depositCountEl) {
+                depositCountEl.textContent = `จากทั้งหมด ${validDeposits.length} รายการมัดจำที่สำเร็จ`;
+            }
+
+            if (validDeposits.length === 0) {
+                if (container) {
+                    container.innerHTML = `
+                        <div class="bg-surface-container/60 border border-outline-variant/30 rounded-2xl p-8 text-center flex flex-col items-center justify-center">
+                            <div class="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mb-3">
+                                <span class="material-symbols-outlined text-3xl text-secondary">savings</span>
+                            </div>
+                            <p class="text-on-surface font-semibold text-sm">ยังไม่มีรายการเงินมัดจำใหม่</p>
+                            <p class="text-xs text-on-surface-variant mt-1 max-w-xs">เมื่อลูกค้าจองคิวและชำระค่ามัดจำบริการผ่านพร้อมเพย์ ยอดเงินและรายละเอียดจะถูกบันทึกที่นี่โดยอัตโนมัติ</p>
+                        </div>
+                    `;
+                }
+                return;
+            }
+
+            // Render live booking deposit transactions
+            if (container) {
+                container.innerHTML = validDeposits.map(b => {
+                    const isRefunded = b.status === 'refunded';
+                    const dateStr = b.booking_date || (b.created_at ? new Date(b.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : 'วันนี้');
+                    const timeStr = b.booking_time ? `${b.booking_time} น.` : '';
+                    const shortTxn = b.id ? String(b.id).slice(0, 8).toUpperCase() : Math.random().toString(36).slice(2, 10).toUpperCase();
+                    const depAmount = parseFloat(b.deposit_amount) || 50;
+
+                    return `
+                        <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 p-4 rounded-2xl shadow-sm flex flex-col gap-2 transition-all hover:bg-surface-container">
+                            <div class="flex justify-between items-start">
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-bold text-on-surface">มัดจำ - ${escapeHtml(b.service_name || b.service || b.notes || 'บริการล้างรถ')} (${escapeHtml(b.customer_name || b.vehicle_info || b.plate_number || 'ลูกค้า')})</span>
+                                    <span class="text-xs text-on-surface-variant">${dateStr} ${timeStr}</span>
+                                </div>
+                                <span class="text-base font-bold ${isRefunded ? 'text-amber-400' : 'text-secondary'}">
+                                    ${isRefunded ? 'คืนมัดจำ -฿' + depAmount.toFixed(2) : '+฿' + depAmount.toFixed(2)}
+                                </span>
+                            </div>
+                            <div class="flex justify-between items-end mt-1 border-t border-outline-variant/20 pt-2">
+                                <span class="text-[10px] text-outline font-mono">TXN: #DEP-${shortTxn}</span>
+                                <span class="px-2 py-0.5 rounded ${isRefunded ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-secondary-container/30 text-[#4edea3] border border-secondary/30'} text-[10px] font-bold tracking-wide">
+                                    ${isRefunded ? 'คืนเงินแล้ว' : 'มัดจำสำเร็จ'}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+        } catch (e) {
+            console.error('Load deposits error:', e);
+            renderFallbackUI();
+        }
+    }
+
+    function renderFallbackUI() {
+        const depositAmountEl = document.getElementById('totalDepositAmount');
+        const depositCountEl = document.getElementById('totalDepositCountText');
+        const container = document.getElementById('payoutHistoryContainer');
+        if (depositAmountEl) depositAmountEl.innerHTML = `0<span class="text-2xl text-on-surface-variant">.00</span>`;
+        if (depositCountEl) depositCountEl.textContent = 'จากทั้งหมด 0 รายการมัดจำ';
+        if (container) {
+            container.innerHTML = `
+                <div class="bg-surface-container/60 border border-outline-variant/30 rounded-2xl p-8 text-center flex flex-col items-center justify-center">
+                    <div class="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mb-3">
+                        <span class="material-symbols-outlined text-3xl text-secondary">savings</span>
+                    </div>
+                    <p class="text-on-surface font-semibold text-sm">ยังไม่มีรายการเงินมัดจำใหม่</p>
+                    <p class="text-xs text-on-surface-variant mt-1 max-w-xs">เมื่อลูกค้าจองคิวและชำระค่ามัดจำบริการผ่านพร้อมเพย์ ยอดเงินและรายละเอียดจะถูกบันทึกที่นี่โดยอัตโนมัติ</p>
+                </div>
+            `;
+        }
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+</script>
+</body>
+</html>
+
+
+

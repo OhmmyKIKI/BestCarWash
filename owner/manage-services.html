@@ -1,0 +1,1166 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>BestCarWash - จัดการบริการ</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="../supabase-client.js"></script>
+    <script>
+        if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
+            var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+            var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+    </script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              fontFamily: {
+                sans: ["Prompt", "Inter", "sans-serif"]
+              }
+            }
+          }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #0f172a;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+        }
+        .glass-card:hover {
+            border-color: #cbd5e1;
+        }
+        #toast {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+            transform: translateY(20px);
+        }
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #4edea3;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #4edea3;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        /* Dark Theme overrides for form inputs to prevent Tailwind forms white default */
+        input[type="text"], input[type="tel"], input[type="number"], select, textarea {
+            background-color: #2d3449 !important;
+            color: #0f172a; !important;
+        }
+        input.price-input, input.bg-transparent, .price-input {
+            background-color: transparent !important;
+            color: inherit !important;
+        }
+        input:focus, select:focus, textarea:focus {
+            background-color: #2d3449 !important;
+        }
+        input.price-input:focus, input.bg-transparent:focus {
+            background-color: transparent !important;
+        }
+        #editPricingServiceSection input {
+            background-color: #171f33 !important;
+        }
+        #editPricingServiceSection input:focus {
+            background-color: #171f33 !important;
+        }
+    </style>
+</head>
+<body class="antialiased flex flex-col min-h-screen bg-background text-on-background pb-28 md:pb-12">
+
+<!-- Top Header (App Bar) -->
+<header class="sticky top-0 w-full z-50 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md">
+    <div class="w-full px-4 md:px-8 lg:px-10 h-20 flex items-center justify-between">
+        <!-- Left: Back Button & Page Identification -->
+        <div class="flex items-center gap-3.5">
+            <a href="Owner%20Profile.html" class="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/40 transition-all active:scale-95 group" title="กลับไปโปรไฟล์">
+                <span class="material-symbols-outlined text-[22px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+            </a>
+            <div>
+                <h1 class="text-lg md:text-xl font-bold text-on-surface tracking-tight flex items-center gap-2.5">
+                    <span class="material-symbols-outlined text-secondary text-[26px]">local_car_wash</span>
+                    <span>จัดการบริการ & ราคา</span>
+                </h1>
+                <div id="cloud-sync-badge" class="flex items-center gap-1.5 text-[11px] font-medium text-primary transition-all duration-500 mt-0.5">
+                    <span class="material-symbols-outlined text-[14px] animate-spin">sync</span>
+                    <span id="cloud-sync-text">กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Action Buttons -->
+        <div class="flex items-center gap-2.5 sm:gap-3">
+            <a href="public-shop-preview.html" class="h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl bg-surface-container hover:bg-surface-variant border border-outline-variant/40 text-on-surface text-sm sm:text-base font-semibold flex items-center gap-2 transition-all hover:border-secondary/40 active:scale-95" title="ดูตัวอย่างที่ลูกค้าเห็น">
+                <span class="material-symbols-outlined text-[20px] text-secondary">visibility</span>
+                <span class="hidden sm:inline">ดูตัวอย่าง</span>
+            </a>
+            <button form="servicesForm" type="submit" class="h-11 sm:h-12 px-4 sm:px-6 rounded-xl bg-secondary hover:bg-secondary-fixed text-on-secondary-container text-sm sm:text-base font-bold flex items-center gap-2 shadow-lg shadow-secondary/20 transition-all active:scale-95">
+                <span class="material-symbols-outlined text-[20px]">save</span>
+                <span>บันทึก</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- Main Content -->
+<main class="w-full max-w-4xl px-4 sm:px-6 pt-6 mx-auto flex-1 pb-16">
+    <form id="servicesForm" class="space-y-6">
+
+            <!-- Category Header & Stats Bar -->
+            <div class="glass-card rounded-2xl p-4 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-secondary/15 border border-secondary/30 flex items-center justify-center text-secondary">
+                        <span class="material-symbols-outlined text-[22px]">wash</span>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-on-surface flex items-center gap-2">
+                            รายการบริการทั้งหมด (<span id="singleCount">4</span>)
+                        </h2>
+                        <p class="text-xs text-outline">จัดการเมนูบริการและราคาตามขนาดรถ (S, M, L, XL)</p>
+                    </div>
+                </div>
+
+                <!-- Add Button -->
+                <button type="button" id="openAddModalBtn" class="w-full sm:w-auto px-5 py-2.5 bg-secondary hover:bg-secondary-fixed text-on-secondary-container font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-md shadow-secondary/20 transition-all active:scale-95">
+                    <span class="material-symbols-outlined text-[20px]">add_circle</span>
+                    <span id="addBtnText">เพิ่มบริการใหม่</span>
+                </button>
+            </div>
+
+            <!-- Single Services Container -->
+            <div id="view-single" class="space-y-4">
+                <div id="service-list" class="space-y-4">
+                    <!-- Loading Skeleton -->
+                    <div id="services-loading-state" class="glass-card rounded-2xl p-10 text-center flex flex-col items-center justify-center">
+                        <span class="material-symbols-outlined text-[36px] text-secondary animate-spin mb-3">progress_activity</span>
+                        <p class="font-bold text-on-surface">กำลังโหลดรายการบริการของร้านคุณ...</p>
+                        <p class="text-xs text-outline mt-1">ดึงข้อมูลรายการและราคาจากฐานข้อมูล</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Desktop Bottom Actions -->
+            <div class="hidden md:flex justify-end gap-3 pt-2">
+                <a href="Owner%20Profile.html" class="px-6 py-3 rounded-xl bg-surface-container hover:bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm font-semibold transition-colors">
+                    ยกเลิก
+                </a>
+                <button type="submit" class="px-8 py-3 rounded-xl bg-secondary hover:bg-secondary-fixed text-on-secondary-container text-sm font-bold shadow-lg shadow-secondary/20 flex items-center gap-2 transition-all active:scale-95">
+                    <span class="material-symbols-outlined text-[20px]">save</span>
+                    บันทึกรายการบริการ
+                </button>
+            </div>
+    </form>
+</main>
+
+<!-- Add Modal -->
+<div id="addModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-black/75 backdrop-blur-md p-4 opacity-0 transition-opacity duration-300">
+    <div class="glass-card w-full max-w-md rounded-3xl p-6 shadow-2xl transform scale-95 transition-transform duration-300 border border-outline-variant/40 relative m-auto max-h-[90vh] overflow-y-auto" id="addModalContent">
+        <div class="flex justify-between items-center pb-3 border-b border-outline-variant/30 mb-4">
+            <h3 id="modalTitle" class="font-bold text-base text-on-surface flex items-center gap-2">
+                <span class="material-symbols-outlined text-secondary">add_circle</span>
+                เพิ่มบริการใหม่
+            </h3>
+            <button type="button" id="closeModalBtn" class="text-outline hover:text-error p-1 rounded-lg">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div class="space-y-4">
+            <!-- Icon Picker -->
+            <div class="space-y-1.5">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-medium text-on-surface-variant flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[15px] text-on-surface-variant">category</span>
+                        เลือกไอคอนบริการ
+                    </label>
+                    <span id="addIconLabel" class="text-[11px] text-on-surface font-semibold">ล้างรถ</span>
+                </div>
+                <input type="hidden" id="modalInputIcon" value="local_car_wash">
+                <div id="addIconPickerContainer" class="grid grid-cols-5 gap-1.5 p-2 bg-surface-container-highest/60 rounded-2xl border border-outline-variant/30">
+                    <!-- Dynamic icon buttons -->
+                </div>
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-xs font-medium text-on-surface-variant flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[15px] text-secondary">label</span>
+                    ชื่อบริการ
+                </label>
+                <input type="text" id="modalInputName" placeholder="เช่น เคลือบแก้วเซรามิก" class="w-full h-11 px-4 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-sm focus:border-secondary focus:outline-none">
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-xs font-medium text-on-surface-variant flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[15px] text-secondary">description</span>
+                    คำอธิบายสั้นๆ
+                </label>
+                <input type="text" id="modalInputDesc" placeholder="รายละเอียดขั้นตอนหรือผลิตภัณฑ์ที่ใช้" class="w-full h-11 px-4 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-sm focus:border-secondary focus:outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1">
+                    <label class="text-xs font-medium text-on-surface-variant flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[15px] text-secondary">payments</span>
+                        ราคาเริ่มต้น (ไซส์ M)
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">฿</span>
+                        <input type="text" inputmode="numeric" id="modalInputPrice" placeholder="300" class="w-full h-11 pl-8 pr-4 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-sm focus:border-secondary focus:outline-none">
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-xs font-medium text-on-surface-variant flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[15px] text-secondary">timer</span>
+                        ระยะเวลาโดยประมาณ
+                    </label>
+                    <select id="modalInputDuration" class="w-full h-11 px-3 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-sm focus:border-secondary focus:outline-none">
+                        <option value="15 นาที">15 นาที</option>
+                        <option value="20 นาที">20 นาที</option>
+                        <option value="30 นาที">30 นาที</option>
+                        <option value="40 นาที">40 นาที</option>
+                        <option value="45 นาที" selected>45 นาที</option>
+                        <option value="60 นาที">60 นาที (1 ชม.)</option>
+                        <option value="90 นาที">90 นาที (1.5 ชม.)</option>
+                        <option value="120 นาที">120 นาที (2 ชม.)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-3 mt-6 pt-4 border-t border-outline-variant/30">
+            <button type="button" id="cancelModalBtn" class="flex-1 py-2.5 rounded-xl font-medium text-on-surface-variant hover:bg-surface-container-highest transition-colors text-sm">ยกเลิก</button>
+            <button type="button" id="confirmAddBtn" class="flex-1 py-2.5 rounded-xl font-bold bg-secondary text-on-secondary-container hover:bg-secondary-fixed transition-colors text-sm shadow-md shadow-secondary/20 flex items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-[18px]">add</span>
+                เพิ่มรายการ
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-black/75 backdrop-blur-md p-4 opacity-0 transition-opacity duration-300">
+    <div class="glass-card w-full max-w-md rounded-3xl p-6 shadow-2xl transform scale-95 transition-transform duration-300 border border-outline-variant/40 relative m-auto max-h-[90vh] overflow-y-auto" id="editModalContent">
+        <div class="flex justify-between items-center pb-3 border-b border-outline-variant/30 mb-4">
+            <h3 id="editModalTitle" class="font-bold text-base text-on-surface flex items-center gap-2">
+                <span class="material-symbols-outlined text-secondary">edit_note</span>
+                แก้ไขรายการบริการ
+            </h3>
+            <button type="button" id="closeEditModalBtn" class="text-outline hover:text-error p-1 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div class="space-y-4">
+            <!-- Icon Picker -->
+            <div class="space-y-1.5">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-medium text-on-surface-variant flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[15px] text-on-surface-variant">category</span>
+                        เลือกไอคอนบริการ
+                    </label>
+                    <span id="editIconLabel" class="text-[11px] text-on-surface font-semibold">ล้างรถ</span>
+                </div>
+                <input type="hidden" id="editInputIcon" value="local_car_wash">
+                <div id="editIconPickerContainer" class="grid grid-cols-5 gap-1.5 p-2 bg-surface-container-highest/60 rounded-2xl border border-outline-variant/30">
+                    <!-- Dynamic icon buttons -->
+                </div>
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-xs font-medium text-on-surface-variant flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[15px] text-secondary">label</span>
+                    ชื่อบริการ
+                </label>
+                <input type="text" id="editInputName" placeholder="ชื่อบริการ" class="w-full h-11 px-4 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-sm focus:border-secondary focus:outline-none">
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-xs font-medium text-on-surface-variant flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[15px] text-secondary">description</span>
+                    คำอธิบายสั้นๆ
+                </label>
+                <input type="text" id="editInputDesc" placeholder="รายละเอียดบริการ" class="w-full h-11 px-4 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-sm focus:border-secondary focus:outline-none">
+            </div>
+
+            <div class="space-y-1" id="editDurationGroup">
+                <label class="text-xs font-medium text-on-surface-variant flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[15px] text-secondary">timer</span>
+                    ระยะเวลาให้บริการ
+                </label>
+                <select id="editInputDuration" class="w-full h-11 px-3 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-sm focus:border-secondary focus:outline-none">
+                    <option value="15 นาที">15 นาที</option>
+                    <option value="20 นาที">20 นาที</option>
+                    <option value="30 นาที">30 นาที</option>
+                    <option value="40 นาที">40 นาที</option>
+                    <option value="45 นาที">45 นาที</option>
+                    <option value="60 นาที">60 นาที (1 ชม.)</option>
+                    <option value="90 นาที">90 นาที (1.5 ชม.)</option>
+                    <option value="120 นาที">120 นาที (2 ชม.)</option>
+                </select>
+            </div>
+
+            <!-- Single Service Vehicle Pricing Section -->
+            <div id="editPricingServiceSection" class="space-y-2 pt-1 border-t border-outline-variant/30">
+                <label class="text-xs font-bold text-on-surface-variant flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px] text-secondary">directions_car</span>
+                    ราคาตามขนาดรถ (บาท)
+                </label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div class="bg-surface-container-highest/60 rounded-xl p-2.5 border border-outline-variant/40 text-center">
+                        <span class="text-[10px] text-outline font-bold block mb-1">ไซส์ S (เล็ก/ECO)</span>
+                        <div class="flex items-center justify-center gap-1">
+                            <span class="text-outline text-xs">฿</span>
+                            <input type="number" id="editInputPriceS" class="w-16 h-8 text-center bg-surface-container border border-outline-variant/60 rounded-lg text-on-surface font-mono font-bold text-sm focus:border-secondary focus:outline-none p-0">
+                        </div>
+                    </div>
+                    <div class="bg-surface-container-highest/60 rounded-xl p-2.5 border border-outline-variant/40 text-center">
+                        <span class="text-[10px] text-outline font-bold block mb-1">ไซส์ M (เก๋งมาตรฐาน)</span>
+                        <div class="flex items-center justify-center gap-1">
+                            <span class="text-outline text-xs">฿</span>
+                            <input type="number" id="editInputPriceM" class="w-16 h-8 text-center bg-surface-container border border-outline-variant/60 rounded-lg text-on-surface font-mono font-bold text-sm focus:border-secondary focus:outline-none p-0">
+                        </div>
+                    </div>
+                    <div class="bg-surface-container-highest/60 rounded-xl p-2.5 border border-outline-variant/40 text-center">
+                        <span class="text-[10px] text-outline font-bold block mb-1">ไซส์ L (SUV/กระบะ)</span>
+                        <div class="flex items-center justify-center gap-1">
+                            <span class="text-outline text-xs">฿</span>
+                            <input type="number" id="editInputPriceL" class="w-16 h-8 text-center bg-surface-container border border-outline-variant/60 rounded-lg text-on-surface font-mono font-bold text-sm focus:border-secondary focus:outline-none p-0">
+                        </div>
+                    </div>
+                    <div class="bg-surface-container-highest/60 rounded-xl p-2.5 border border-outline-variant/40 text-center">
+                        <span class="text-[10px] text-outline font-bold block mb-1">ไซส์ XL (ตู้/VIP)</span>
+                        <div class="flex items-center justify-center gap-1">
+                            <span class="text-outline text-xs">฿</span>
+                            <input type="number" id="editInputPriceXL" class="w-16 h-8 text-center bg-surface-container border border-outline-variant/60 rounded-lg text-on-surface font-mono font-bold text-sm focus:border-secondary focus:outline-none p-0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-3 mt-6 pt-4 border-t border-outline-variant/30">
+            <button type="button" id="cancelEditModalBtn" class="flex-1 py-2.5 rounded-xl font-medium text-on-surface-variant hover:bg-surface-container-highest transition-colors text-sm">ยกเลิก</button>
+            <button type="button" id="confirmEditBtn" class="flex-1 py-2.5 rounded-xl font-bold bg-secondary text-on-secondary-container hover:bg-secondary-fixed transition-colors text-sm shadow-md shadow-secondary/20 flex items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-[18px]">check</span>
+                บันทึกการแก้ไข
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Mobile Bottom Fixed Save Bar -->
+<div class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-background/90 backdrop-blur-xl border-t border-outline-variant/30 py-3 px-4 flex gap-3 shadow-[0_-4px_25px_rgba(0,0,0,0.6)]">
+    <a href="Owner%20Profile.html" class="w-1/3 h-12 bg-surface-container border border-outline-variant/30 text-on-surface font-semibold rounded-xl flex items-center justify-center text-sm">
+        ยกเลิก
+    </a>
+    <button type="submit" form="servicesForm" class="flex-1 h-12 bg-secondary text-on-secondary-container font-bold rounded-xl hover:bg-secondary/90 transition-all active:scale-[0.98] shadow-lg shadow-secondary/25 flex items-center justify-center gap-2 text-sm">
+        <span class="material-symbols-outlined text-[20px]">save</span>
+        บันทึกบริการ
+    </button>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-24 md:bottom-8 left-1/2 transform -translate-x-1/2 bg-secondary-container text-on-secondary-container px-6 py-3 rounded-full shadow-2xl border border-secondary/40 flex items-center gap-2 z-50 pointer-events-none">
+    <span class="material-symbols-outlined text-secondary-fixed">check_circle</span>
+    <span class="font-bold text-sm">บันทึกข้อมูลบริการเรียบร้อยแล้ว!</span>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('servicesForm');
+        const toast = document.getElementById('toast');
+
+        // Service Icons Configuration
+        const SERVICE_ICONS = [
+            { icon: 'local_car_wash', label: 'ล้างรถ' },
+            { icon: 'water_drop', label: 'ล้างโฟม' },
+            { icon: 'cleaning_services', label: 'ดูดฝุ่น' },
+            { icon: 'auto_awesome', label: 'เคลือบแว็กซ์' },
+            { icon: 'diamond', label: 'เคลือบแก้ว' },
+            { icon: 'airline_seat_recline_extra', label: 'ฟอกเบาะ' },
+            { icon: 'shield', label: 'ปกป้องสี' },
+            { icon: 'mode_fan', label: 'อบโอโซน' },
+            { icon: 'tire_repair', label: 'ดูแลล้อ' },
+            { icon: 'speed', label: 'ล้างด่วน' }
+        ];
+
+        function renderIconPicker(containerId, inputId, labelId, initialIcon = 'local_car_wash') {
+            const container = document.getElementById(containerId);
+            const input = document.getElementById(inputId);
+            const label = document.getElementById(labelId);
+            if (!container || !input) return;
+
+            container.innerHTML = '';
+            input.value = initialIcon;
+
+            SERVICE_ICONS.forEach(item => {
+                const isSelected = item.icon === initialIcon;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.dataset.icon = item.icon;
+                btn.dataset.label = item.label;
+                btn.className = `icon-picker-btn flex flex-col items-center justify-center p-2 rounded-xl transition-all cursor-pointer ${
+                    isSelected 
+                    ? 'bg-surface-variant border-2 border-primary text-on-surface ring-2 ring-primary/20 scale-105 shadow-sm' 
+                    : 'bg-surface-container border border-outline-variant/40 text-outline hover:text-on-surface hover:border-outline hover:bg-surface-container-high'
+                }`;
+                btn.innerHTML = `
+                    <span class="material-symbols-outlined text-[22px] leading-none mb-1">${item.icon}</span>
+                    <span class="text-[10px] font-medium leading-none truncate max-w-full">${item.label}</span>
+                `;
+
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    input.value = item.icon;
+                    if (label) label.textContent = item.label;
+
+                    container.querySelectorAll('.icon-picker-btn').forEach(b => {
+                        b.className = 'icon-picker-btn flex flex-col items-center justify-center p-2 rounded-xl transition-all cursor-pointer bg-surface-container border border-outline-variant/40 text-outline hover:text-on-surface hover:border-outline hover:bg-surface-container-high';
+                    });
+                    btn.className = 'icon-picker-btn flex flex-col items-center justify-center p-2 rounded-xl transition-all cursor-pointer bg-surface-variant border-2 border-primary text-on-surface ring-2 ring-primary/20 scale-105 shadow-sm';
+                });
+
+                container.appendChild(btn);
+            });
+
+            const currentItem = SERVICE_ICONS.find(i => i.icon === initialIcon);
+            if (label && currentItem) {
+                label.textContent = currentItem.label;
+            }
+        }
+
+        function setPickerIcon(containerId, inputId, labelId, iconName) {
+            const targetIcon = SERVICE_ICONS.some(i => i.icon === iconName) ? iconName : 'local_car_wash';
+            renderIconPicker(containerId, inputId, labelId, targetIcon);
+        }
+
+        // Initialize icon pickers
+        renderIconPicker('addIconPickerContainer', 'modalInputIcon', 'addIconLabel', 'local_car_wash');
+        renderIconPicker('editIconPickerContainer', 'editInputIcon', 'editIconLabel', 'local_car_wash');
+
+        // Add Modal Elements
+        const openAddModalBtn = document.getElementById('openAddModalBtn');
+        const addModal = document.getElementById('addModal');
+        const addModalContent = document.getElementById('addModalContent');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const cancelModalBtn = document.getElementById('cancelModalBtn');
+        const confirmAddBtn = document.getElementById('confirmAddBtn');
+
+        // Edit Modal Elements
+        const editModal = document.getElementById('editModal');
+        const editModalContent = document.getElementById('editModalContent');
+        const closeEditModalBtn = document.getElementById('closeEditModalBtn');
+        const cancelEditModalBtn = document.getElementById('cancelEditModalBtn');
+        const confirmEditBtn = document.getElementById('confirmEditBtn');
+        const editModalTitle = document.getElementById('editModalTitle');
+
+        const editInputName = document.getElementById('editInputName');
+        const editInputDesc = document.getElementById('editInputDesc');
+        const editInputDuration = document.getElementById('editInputDuration');
+
+        const editInputPriceS = document.getElementById('editInputPriceS');
+        const editInputPriceM = document.getElementById('editInputPriceM');
+        const editInputPriceL = document.getElementById('editInputPriceL');
+        const editInputPriceXL = document.getElementById('editInputPriceXL');
+
+        let currentEditingCard = null;
+        let currentShopId = null;
+        let currentUserId = null;
+
+        const serviceListEl = document.getElementById('service-list');
+
+        function getServiceIcon(name) {
+            if (!name) return 'local_car_wash';
+            const lower = name.toLowerCase();
+            if (lower.includes('ดูดฝุ่น') || lower.includes('ภายใน') || lower.includes('vacuum')) return 'cleaning_services';
+            if (lower.includes('เคลือบ') || lower.includes('แว็กซ์') || lower.includes('wax') || lower.includes('coating')) return 'diamond';
+            if (lower.includes('เครื่อง') || lower.includes('engine')) return 'speed';
+            if (lower.includes('ขัด') || lower.includes('detail')) return 'auto_awesome';
+            return 'local_car_wash';
+        }
+
+        function createServiceCardHtml(srv) {
+            const pNum = Math.round(srv.price) || 250;
+            const pS = Math.round(pNum * 0.8);
+            const pM = pNum;
+            const pL = Math.round(pNum * 1.2);
+            const pXL = Math.round(pNum * 1.5);
+            const icon = getServiceIcon(srv.name);
+            const duration = `${srv.duration_minutes || 30} นาที`;
+
+            return `
+                <div class="service-card glass-card rounded-2xl p-5 shadow-lg relative transition-all duration-300" data-id="${srv.id}">
+                    <div class="flex items-start justify-between gap-3 mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-11 h-11 rounded-xl bg-surface-variant border border-outline-variant/30 flex items-center justify-center text-on-surface-variant shrink-0">
+                                <span class="material-symbols-outlined text-[24px] card-icon">${icon}</span>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-on-surface card-title">${srv.name}</h3>
+                                <p class="text-xs text-outline card-desc">${srv.description || 'บริการมาตรฐาน'}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-outline font-medium hidden sm:inline">เปิดบริการ</span>
+                                <div class="relative inline-block w-10 align-middle select-none">
+                                    <input type="checkbox" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200" checked/>
+                                    <label class="toggle-label block overflow-hidden h-5 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200"></label>
+                                </div>
+                            </div>
+                            <button type="button" class="edit-btn text-outline hover:text-secondary p-1.5 rounded-lg hover:bg-surface-container-highest transition-colors" title="แก้ไขบริการ">
+                                <span class="material-symbols-outlined text-[20px]">edit</span>
+                            </button>
+                            <button type="button" class="delete-btn text-outline hover:text-error p-1.5 rounded-lg hover:bg-surface-container-highest transition-colors" title="ลบบริการ">
+                                <span class="material-symbols-outlined text-[20px]">delete</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bg-surface-container-low rounded-xl p-3 border border-outline-variant/30">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-on-surface-variant flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-[16px] text-on-surface-variant">directions_car</span>
+                                ราคาตามขนาดรถ (บาท)
+                            </span>
+                            <div class="flex items-center gap-2 text-xs text-outline">
+                                <span class="material-symbols-outlined text-[14px]">timer</span>
+                                <span>ระยะเวลา: <strong class="card-duration">${duration}</strong></span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            <div class="bg-surface-container-highest/60 rounded-lg p-2 text-center border border-outline-variant/30">
+                                <span class="text-[10px] text-outline font-bold block">ไซส์ S (เล็ก/ECO)</span>
+                                <div class="flex items-center justify-center gap-0.5 mt-1 font-mono font-bold text-on-surface text-sm">
+                                    <span>฿</span>
+                                    <input type="text" value="${pS}" class="w-14 text-center bg-transparent border-b border-outline-variant focus:border-secondary focus:outline-none p-0 text-sm price-input">
+                                </div>
+                            </div>
+                            <div class="bg-surface-container-highest/60 rounded-lg p-2 text-center border border-outline-variant/30">
+                                <span class="text-[10px] text-outline font-bold block">ไซส์ M (เก๋งมาตรฐาน)</span>
+                                <div class="flex items-center justify-center gap-0.5 mt-1 font-mono font-bold text-on-surface text-sm">
+                                    <span>฿</span>
+                                    <input type="text" value="${pM}" class="w-14 text-center bg-transparent border-b border-outline-variant focus:border-secondary focus:outline-none p-0 text-sm price-input price-base">
+                                </div>
+                            </div>
+                            <div class="bg-surface-container-highest/60 rounded-lg p-2 text-center border border-outline-variant/30">
+                                <span class="text-[10px] text-outline font-bold block">ไซส์ L (SUV/กระบะ)</span>
+                                <div class="flex items-center justify-center gap-0.5 mt-1 font-mono font-bold text-on-surface text-sm">
+                                    <span>฿</span>
+                                    <input type="text" value="${pL}" class="w-14 text-center bg-transparent border-b border-outline-variant focus:border-secondary focus:outline-none p-0 text-sm price-input">
+                                </div>
+                            </div>
+                            <div class="bg-surface-container-highest/60 rounded-lg p-2 text-center border border-outline-variant/30">
+                                <span class="text-[10px] text-outline font-bold block">ไซส์ XL (ตู้/VIP)</span>
+                                <div class="flex items-center justify-center gap-0.5 mt-1 font-mono font-bold text-on-surface text-sm">
+                                    <span>฿</span>
+                                    <input type="text" value="${pXL}" class="w-14 text-center bg-transparent border-b border-outline-variant focus:border-secondary focus:outline-none p-0 text-sm price-input">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateCounts() {
+            const singleCount = document.querySelectorAll('#service-list .service-card').length;
+            const sc = document.getElementById('singleCount');
+            if (sc) sc.textContent = singleCount;
+        }
+
+        function syncCurrentCardsToLocalStorage() {
+            const cards = document.querySelectorAll('#service-list .service-card');
+            const items = [];
+            cards.forEach(card => {
+                const id = card.getAttribute('data-id');
+                const title = card.querySelector('.card-title')?.textContent.trim() || '';
+                const desc = card.querySelector('.card-desc')?.textContent.trim() || '';
+                const durText = card.querySelector('.card-duration')?.textContent.trim() || '30 นาที';
+                const baseInput = card.querySelector('.price-base') || card.querySelectorAll('.price-input')[1];
+                const price = parseFloat(baseInput?.value) || 200;
+                const durMinutes = parseInt(durText) || 30;
+                if (title) {
+                    items.push({
+                        id: id || ('srv_' + Date.now()),
+                        name: title,
+                        description: desc,
+                        price: price,
+                        duration_minutes: durMinutes
+                    });
+                }
+            });
+            if (items.length > 0) {
+                localStorage.setItem('ownerServices', JSON.stringify(items));
+            }
+        }
+
+        // Cloud Sync Status Controller
+        function setCloudSyncStatus(status, customText) {
+            const badge = document.getElementById('cloud-sync-badge');
+            if (!badge) return;
+            badge.classList.remove('opacity-0', 'text-primary', 'text-secondary', 'text-amber-400');
+
+            if (status === 'syncing') {
+                badge.classList.add('text-primary');
+                badge.innerHTML = `
+                    <span class="material-symbols-outlined text-[14px] animate-spin text-primary">sync</span>
+                    <span id="cloud-sync-text">${customText || 'กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...'}</span>
+                `;
+            } else if (status === 'synced') {
+                badge.classList.add('text-secondary');
+                badge.innerHTML = `
+                    <span class="material-symbols-outlined text-[14px] text-secondary">cloud_done</span>
+                    <span id="cloud-sync-text">${customText || 'ข้อมูลเป็นปัจจุบันแล้ว'}</span>
+                `;
+                setTimeout(() => {
+                    badge.classList.add('opacity-0');
+                }, 1800);
+            } else if (status === 'offline') {
+                badge.classList.add('text-amber-400');
+                badge.innerHTML = `
+                    <span class="material-symbols-outlined text-[14px] text-amber-400">cloud_off</span>
+                    <span id="cloud-sync-text">${customText || 'แสดงผลจากข้อมูลในเครื่อง (ออฟไลน์)'}</span>
+                `;
+                setTimeout(() => {
+                    badge.classList.add('opacity-0');
+                }, 2500);
+            }
+        }
+
+        // Dual-Layer Loading: Cache-First (0ms Instant Display) + Fast-Track Background Sync
+        async function loadServices() {
+            // Layer 1: INSTANT 0ms RENDER from LocalStorage (Stale-While-Revalidate)
+            let hasRenderedCache = false;
+            try {
+                const localServices = localStorage.getItem('ownerServices');
+                if (localServices) {
+                    const parsed = JSON.parse(localServices);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        serviceListEl.innerHTML = parsed.map(s => createServiceCardHtml(s)).join('');
+                        updateCounts();
+                        hasRenderedCache = true;
+                    }
+                }
+            } catch (cErr) {
+                console.warn('Local services cache notice:', cErr);
+            }
+
+            setCloudSyncStatus('syncing', hasRenderedCache ? 'กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...' : 'กำลังโหลดรายการบริการ...');
+
+            // Layer 2: Fast-Track Background Sync with Supabase (Parallel Execution)
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (!client) {
+                    if (!hasRenderedCache) {
+                        const fallback = [
+                            { id: 'srv_1', name: 'ล้างสีภายนอก', price: 150, duration_minutes: 30, description: 'ล้างทำความสะอาดภายนอก ฉีดโฟม เคลือบเงายาง' },
+                            { id: 'srv_2', name: 'ทำความสะอาดพรีเมียม (ภายใน+ภายนอก)', price: 400, duration_minutes: 60, description: 'ล้างสีรอบคัน + ดูดฝุ่น เช็ดคอนโซล แผงประตู สะอาดลึก' },
+                            { id: 'srv_3', name: 'ดูดฝุ่น & สปาภายในห้องโดยสาร', price: 250, duration_minutes: 45, description: 'ดูดฝุ่น ฟอกเบาะผ้า เช็ดคอนโซล ฆ่าเชื้อแบคทีเรีย' },
+                            { id: 'srv_4', name: 'เคลือบแว็กซ์สีรถ & กระจก', price: 350, duration_minutes: 45, description: 'ลงน้ำยาเคลือบสีพรีเมียม เพิ่มความเงา ป้องกันคราบน้ำ' }
+                        ];
+                        serviceListEl.innerHTML = fallback.map(s => createServiceCardHtml(s)).join('');
+                        updateCounts();
+                    }
+                    setCloudSyncStatus('offline', 'ระบบออฟไลน์ (ใช้ข้อมูลในเครื่อง)');
+                    return;
+                }
+
+                const savedShopId = localStorage.getItem('currentShopId');
+                const fallbackUserId = localStorage.getItem('lastLoggedInUserId');
+
+                // FAST-TRACK: If shop ID is cached, query services immediately in parallel with session!
+                let fastServicesPromise = null;
+                if (savedShopId && savedShopId.length > 20) {
+                    currentShopId = savedShopId;
+                    fastServicesPromise = client
+                        .from('services')
+                        .select('*')
+                        .eq('shop_id', savedShopId)
+                        .order('created_at', { ascending: true });
+                }
+
+                const sessionPromise = client.auth ? client.auth.getSession() : Promise.resolve({ data: null });
+
+                const [srvRes, sessRes] = await Promise.all([
+                    fastServicesPromise || Promise.resolve(null),
+                    sessionPromise
+                ]);
+
+                const user = sessRes?.data?.session?.user;
+                const effectiveUserId = user?.id || fallbackUserId;
+                currentUserId = effectiveUserId;
+
+                // Non-blocking Role Guard check in background
+                if (effectiveUserId && client) {
+                    client.from('profiles').select('role').eq('id', effectiveUserId).maybeSingle().then(({ data: prof }) => {
+                        if (prof?.role === 'CUSTOMER' || user?.user_metadata?.role === 'CUSTOMER') {
+                            const mainContainer = document.querySelector('main');
+                            if (mainContainer) {
+                                mainContainer.innerHTML = `
+                                    <div class="max-w-md mx-auto my-16 p-8 bg-surface-container rounded-2xl border border-outline-variant/40 shadow-xl text-center space-y-4">
+                                        <div class="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto">
+                                            <span class="material-symbols-outlined text-[36px]">switch_account</span>
+                                        </div>
+                                        <h3 class="text-xl font-bold text-on-surface">คุณกำลังเข้าใช้งานในฐานะลูกค้า</h3>
+                                        <p class="text-sm text-outline">หน้านี้สำหรับเจ้าของร้านคาร์แคร์เท่านั้น หากต้องการจัดการบริการ กรุณาสลับเข้าสู่ระบบด้วยบัญชีเจ้าของร้าน</p>
+                                        <div class="pt-2 flex flex-col gap-2.5">
+                                            <a href="../auth/login.html" class="w-full py-3 bg-secondary hover:brightness-110 text-[#0b1326] font-bold rounded-xl shadow-md transition-all active:scale-95 text-sm">
+                                                เข้าสู่ระบบด้วยบัญชีเจ้าของร้าน
+                                            </a>
+                                            <a href="../customer/discovery.html" class="w-full py-2.5 bg-surface-variant hover:bg-surface-container-highest text-on-surface font-semibold rounded-xl border border-outline-variant/40 transition-all text-xs">
+                                                กลับสู่หน้าหลักลูกค้า
+                                            </a>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        }
+                    }).catch(() => {});
+                }
+
+                // If fast-track returned services from Supabase, apply and cache immediately!
+                if (srvRes && !srvRes.error && srvRes.data && srvRes.data.length > 0) {
+                    localStorage.setItem('ownerServices', JSON.stringify(srvRes.data));
+                    serviceListEl.innerHTML = srvRes.data.map(s => createServiceCardHtml(s)).join('');
+                    updateCounts();
+                    setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
+                    return;
+                }
+
+                // Fallback: If no savedShopId yet or no services found via fast-track, resolve shop
+                let shop = null;
+                if (effectiveUserId) {
+                    const { data } = await client.from('shops').select('id, name').eq('owner_id', effectiveUserId).maybeSingle();
+                    shop = data;
+                }
+
+                if (!shop && localStorage.getItem('ownerShopName')) {
+                    const { data } = await client.from('shops').select('id, name').eq('name', localStorage.getItem('ownerShopName')).maybeSingle();
+                    shop = data;
+                }
+
+                if (shop?.id) {
+                    currentShopId = shop.id;
+                    localStorage.setItem('currentShopId', shop.id);
+                    if (shop.name) localStorage.setItem('ownerShopName', shop.name);
+
+                    let { data: services, error } = await client
+                        .from('services')
+                        .select('*')
+                        .eq('shop_id', shop.id)
+                        .order('created_at', { ascending: true });
+
+                    // Retrieve fallback services from metadata or localStorage
+                    let savedServices = user?.user_metadata?.initial_services;
+                    if (!savedServices || !savedServices.length) {
+                        try {
+                            savedServices = JSON.parse(localStorage.getItem('ownerServices') || 'null');
+                        } catch(_) {}
+                    }
+
+                    if (!savedServices || !savedServices.length) {
+                        savedServices = [
+                            { id: 'srv_1', name: 'ล้างสีภายนอก', price: 150, duration_minutes: 30, description: 'ล้างทำความสะอาดภายนอก ฉีดโฟม เคลือบเงายาง' },
+                            { id: 'srv_2', name: 'ทำความสะอาดพรีเมียม (ภายใน+ภายนอก)', price: 400, duration_minutes: 60, description: 'ล้างสีรอบคัน + ดูดฝุ่น เช็ดคอนโซล แผงประตู สะอาดลึก' },
+                            { id: 'srv_3', name: 'ดูดฝุ่น & สปาภายในห้องโดยสาร', price: 250, duration_minutes: 45, description: 'ดูดฝุ่น ฟอกเบาะผ้า เช็ดคอนโซล ฆ่าเชื้อแบคทีเรีย' },
+                            { id: 'srv_4', name: 'เคลือบแว็กซ์สีรถ & กระจก', price: 350, duration_minutes: 45, description: 'ลงน้ำยาเคลือบสีพรีเมียม เพิ่มความเงา ป้องกันคราบน้ำ' }
+                        ];
+                    }
+
+                    // If DB has shop but no services, seed them into DB
+                    if ((!services || services.length === 0) && client && currentShopId) {
+                        try {
+                            const { data: seeded, error: seedErr } = await client.from('services').insert(savedServices.map(s => ({
+                                shop_id: currentShopId,
+                                name: s.name,
+                                price: parseFloat(s.price) || 150,
+                                duration_minutes: parseInt(s.duration_minutes) || 30,
+                                description: s.description || 'บริการมาตรฐาน'
+                            }))).select();
+
+                            if (!seedErr && seeded && seeded.length > 0) {
+                                services = seeded;
+                            }
+                        } catch(insErr) {
+                            console.warn('Seed services notice:', insErr);
+                        }
+                    }
+
+                    if (!services || services.length === 0) {
+                        services = savedServices;
+                    }
+
+                    if (services && services.length > 0) {
+                        localStorage.setItem('ownerServices', JSON.stringify(services));
+                        serviceListEl.innerHTML = services.map(s => createServiceCardHtml(s)).join('');
+                        updateCounts();
+                    }
+                    setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
+                } else if (!hasRenderedCache) {
+                    const fallback = [
+                        { id: 'srv_1', name: 'ล้างสีภายนอก', price: 150, duration_minutes: 30, description: 'ล้างทำความสะอาดภายนอก ฉีดโฟม เคลือบเงายาง' },
+                        { id: 'srv_2', name: 'ทำความสะอาดพรีเมียม (ภายใน+ภายนอก)', price: 400, duration_minutes: 60, description: 'ล้างสีรอบคัน + ดูดฝุ่น เช็ดคอนโซล แผงประตู สะอาดลึก' },
+                        { id: 'srv_3', name: 'ดูดฝุ่น & สปาภายในห้องโดยสาร', price: 250, duration_minutes: 45, description: 'ดูดฝุ่น ฟอกเบาะผ้า เช็ดคอนโซล ฆ่าเชื้อแบคทีเรีย' },
+                        { id: 'srv_4', name: 'เคลือบแว็กซ์สีรถ & กระจก', price: 350, duration_minutes: 45, description: 'ลงน้ำยาเคลือบสีพรีเมียม เพิ่มความเงา ป้องกันคราบน้ำ' }
+                    ];
+                    serviceListEl.innerHTML = fallback.map(s => createServiceCardHtml(s)).join('');
+                    updateCounts();
+                    setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
+                } else {
+                    setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
+                }
+
+            } catch (err) {
+                console.error('Failed to load services:', err);
+                if (!hasRenderedCache) {
+                    const fallback = [
+                        { id: 'srv_1', name: 'ล้างสีภายนอก', price: 150, duration_minutes: 30, description: 'ล้างทำความสะอาดภายนอก ฉีดโฟม เคลือบเงายาง' },
+                        { id: 'srv_2', name: 'ทำความสะอาดพรีเมียม (ภายใน+ภายนอก)', price: 400, duration_minutes: 60, description: 'ล้างสีรอบคัน + ดูดฝุ่น เช็ดคอนโซล แผงประตู สะอาดลึก' },
+                        { id: 'srv_3', name: 'ดูดฝุ่น & สปาภายในห้องโดยสาร', price: 250, duration_minutes: 45, description: 'ดูดฝุ่น ฟอกเบาะผ้า เช็ดคอนโซล ฆ่าเชื้อแบคทีเรีย' },
+                        { id: 'srv_4', name: 'เคลือบแว็กซ์สีรถ & กระจก', price: 350, duration_minutes: 45, description: 'ลงน้ำยาเคลือบสีพรีเมียม เพิ่มความเงา ป้องกันคราบน้ำ' }
+                    ];
+                    serviceListEl.innerHTML = fallback.map(s => createServiceCardHtml(s)).join('');
+                    updateCounts();
+                }
+                setCloudSyncStatus('offline', 'แสดงผลจากข้อมูลในเครื่อง (ออฟไลน์)');
+            }
+        }
+
+        loadServices();
+
+        // Toggle Card Dimming on Deactivation
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('toggle-checkbox')) {
+                const card = e.target.closest('.service-card');
+                if (card) {
+                    if (!e.target.checked) card.classList.add('opacity-50');
+                    else card.classList.remove('opacity-50');
+                }
+            }
+        });
+
+        // Delete Service
+        document.addEventListener('click', async (e) => {
+            const deleteBtn = e.target.closest('.delete-btn');
+            if (deleteBtn) {
+                const card = deleteBtn.closest('.service-card');
+                if (!card) return;
+                if (!confirm('ต้องการลบรายการบริการนี้ใช่หรือไม่?')) return;
+
+                const serviceId = card.getAttribute('data-id');
+                if (serviceId) {
+                    deleteBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>';
+                    try {
+                        const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                        if (client) {
+                            await client.from('services').delete().eq('id', serviceId);
+                        }
+                    } catch(delErr) {
+                        console.warn('Delete service error:', delErr);
+                    }
+                }
+                card.remove();
+                updateCounts();
+                syncCurrentCardsToLocalStorage();
+                if (document.querySelectorAll('#service-list .service-card').length === 0) {
+                    loadServices();
+                }
+            }
+        });
+
+        // Add Modal Open / Close
+        const showAddModal = () => {
+            document.getElementById('modalInputName').value = '';
+            document.getElementById('modalInputDesc').value = '';
+            document.getElementById('modalInputPrice').value = '';
+            document.getElementById('modalInputDuration').value = '30 นาที';
+            setPickerIcon('addIconPickerContainer', 'modalInputIcon', 'addIconLabel', 'local_car_wash');
+
+            addModal.classList.remove('hidden');
+            addModal.classList.add('flex');
+            setTimeout(() => {
+                addModal.classList.remove('opacity-0');
+                addModalContent.classList.remove('scale-95');
+            }, 10);
+        };
+
+        const hideAddModal = () => {
+            addModal.classList.add('opacity-0');
+            addModalContent.classList.add('scale-95');
+            setTimeout(() => {
+                addModal.classList.add('hidden');
+                addModal.classList.remove('flex');
+            }, 300);
+        };
+
+        openAddModalBtn.addEventListener('click', showAddModal);
+        closeModalBtn.addEventListener('click', hideAddModal);
+        cancelModalBtn.addEventListener('click', hideAddModal);
+        addModal.addEventListener('click', (e) => {
+            if (e.target === addModal) hideAddModal();
+        });
+
+        // Edit Modal Open / Close
+        const showEditModal = (card) => {
+            currentEditingCard = card;
+
+            const iconEl = card.querySelector('.card-icon');
+            const currentIcon = iconEl ? iconEl.textContent.trim() : 'local_car_wash';
+            setPickerIcon('editIconPickerContainer', 'editInputIcon', 'editIconLabel', currentIcon);
+
+            const titleEl = card.querySelector('.card-title');
+            editInputName.value = titleEl ? titleEl.textContent.trim() : '';
+
+            const descEl = card.querySelector('.card-desc');
+            editInputDesc.value = descEl ? descEl.textContent.trim() : '';
+
+            const durationEl = card.querySelector('.card-duration');
+            if (durationEl) {
+                const durText = durationEl.textContent.trim();
+                for (let opt of editInputDuration.options) {
+                    if (opt.value === durText || durText.includes(opt.value.replace(' (1 ชม.)', '').replace(' (1.5 ชม.)', '').replace(' (2 ชม.)', ''))) {
+                        editInputDuration.value = opt.value;
+                        break;
+                    }
+                }
+            }
+
+            const priceInputs = card.querySelectorAll('.price-input');
+            if (priceInputs.length >= 4) {
+                editInputPriceS.value = priceInputs[0].value || '';
+                editInputPriceM.value = priceInputs[1].value || '';
+                editInputPriceL.value = priceInputs[2].value || '';
+                editInputPriceXL.value = priceInputs[3].value || '';
+            }
+
+            editModal.classList.remove('hidden');
+            editModal.classList.add('flex');
+            setTimeout(() => {
+                editModal.classList.remove('opacity-0');
+                editModalContent.classList.remove('scale-95');
+            }, 10);
+        };
+
+        const hideEditModal = () => {
+            editModal.classList.add('opacity-0');
+            editModalContent.classList.add('scale-95');
+            setTimeout(() => {
+                editModal.classList.add('hidden');
+                editModal.classList.remove('flex');
+                currentEditingCard = null;
+            }, 300);
+        };
+
+        closeEditModalBtn.addEventListener('click', hideEditModal);
+        cancelEditModalBtn.addEventListener('click', hideEditModal);
+        editModal.addEventListener('click', (e) => {
+            if (e.target === editModal) hideEditModal();
+        });
+
+        // Edit Button Click Delegation
+        document.addEventListener('click', (e) => {
+            const editBtn = e.target.closest('.edit-btn');
+            if (editBtn) {
+                const card = editBtn.closest('.service-card');
+                if (card) showEditModal(card);
+            }
+        });
+
+        // Save Edit Changes to Supabase
+        confirmEditBtn.addEventListener('click', async () => {
+            if (!currentEditingCard) return;
+
+            const newName = editInputName.value.trim();
+            if (!newName) {
+                alert('กรุณากรอกชื่อบริการ');
+                return;
+            }
+
+            const newIcon = document.getElementById('editInputIcon').value || 'local_car_wash';
+            const newDesc = editInputDesc.value.trim();
+            const newDuration = editInputDuration.value;
+            const newPrice = parseFloat(editInputPriceM.value) || 250;
+            const durMinutes = parseInt(newDuration) || 30;
+
+            const serviceId = currentEditingCard.getAttribute('data-id');
+
+            confirmEditBtn.disabled = true;
+            confirmEditBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>';
+
+            if (serviceId) {
+                try {
+                    const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                    if (client) {
+                        await client.from('services').update({
+                            name: newName,
+                            description: newDesc,
+                            price: newPrice,
+                            duration_minutes: durMinutes
+                        }).eq('id', serviceId);
+                    }
+                } catch(err) {
+                    console.warn('Update service error:', err);
+                }
+            }
+
+            const iconEl = currentEditingCard.querySelector('.card-icon');
+            if (iconEl) iconEl.textContent = newIcon;
+
+            const titleEl = currentEditingCard.querySelector('.card-title');
+            if (titleEl) titleEl.textContent = newName;
+
+            const descEl = currentEditingCard.querySelector('.card-desc');
+            if (descEl) descEl.textContent = newDesc;
+
+            const durationEl = currentEditingCard.querySelector('.card-duration');
+            if (durationEl) durationEl.textContent = newDuration;
+
+            const priceInputs = currentEditingCard.querySelectorAll('.price-input');
+            if (priceInputs.length >= 4) {
+                if (editInputPriceS.value) priceInputs[0].value = editInputPriceS.value;
+                if (editInputPriceM.value) priceInputs[1].value = editInputPriceM.value;
+                if (editInputPriceL.value) priceInputs[2].value = editInputPriceL.value;
+                if (editInputPriceXL.value) priceInputs[3].value = editInputPriceXL.value;
+            }
+
+            confirmEditBtn.disabled = false;
+            confirmEditBtn.textContent = 'บันทึกการแก้ไข';
+            hideEditModal();
+            syncCurrentCardsToLocalStorage();
+
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 1500);
+        });
+
+        // Confirm Add New Service to Supabase
+        confirmAddBtn.addEventListener('click', async () => {
+            const name = document.getElementById('modalInputName').value.trim();
+            const desc = document.getElementById('modalInputDesc').value.trim();
+            const price = document.getElementById('modalInputPrice').value.trim() || '250';
+            const duration = document.getElementById('modalInputDuration').value;
+
+            if (!name) {
+                alert('กรุณากรอกชื่อบริการ');
+                return;
+            }
+
+            const pNum = parseFloat(price) || 250;
+            const durMinutes = parseInt(duration) || 30;
+
+            confirmAddBtn.disabled = true;
+            confirmAddBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>';
+
+            let newSrvId = null;
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (client && currentShopId) {
+                    const { data: newSrv } = await client.from('services').insert({
+                        shop_id: currentShopId,
+                        name: name,
+                        description: desc,
+                        price: pNum,
+                        duration_minutes: durMinutes
+                    }).select().single();
+                    if (newSrv) newSrvId = newSrv.id;
+                }
+            } catch(insErr) {
+                console.warn('Insert service error:', insErr);
+            }
+
+            confirmAddBtn.disabled = false;
+            confirmAddBtn.textContent = 'เพิ่มบริการ';
+
+            const emptyState = document.getElementById('services-empty-state');
+            if (emptyState) emptyState.remove();
+
+            const newCardHtml = createServiceCardHtml({
+                id: newSrvId || ('srv_' + Date.now()),
+                name: name,
+                description: desc,
+                price: pNum,
+                duration_minutes: durMinutes
+            });
+
+            serviceListEl.insertAdjacentHTML('beforeend', newCardHtml);
+            updateCounts();
+            syncCurrentCardsToLocalStorage();
+            hideAddModal();
+        });
+
+        // Submit Form (Save Batch Prices)
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            const cards = document.querySelectorAll('#service-list .service-card');
+
+            if (client && cards.length > 0) {
+                for (const card of cards) {
+                    const id = card.getAttribute('data-id');
+                    const baseInput = card.querySelector('.price-base') || card.querySelectorAll('.price-input')[1];
+                    if (id && baseInput) {
+                        const price = parseFloat(baseInput.value);
+                        if (!isNaN(price)) {
+                            await client.from('services').update({ price: price }).eq('id', id);
+                        }
+                    }
+                }
+            }
+
+            syncCurrentCardsToLocalStorage();
+
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+                window.location.href = 'Owner%20Profile.html';
+            }, 1200);
+        });
+    });
+</script>
+
+</body>
+</html>

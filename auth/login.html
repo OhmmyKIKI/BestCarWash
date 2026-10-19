@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html class="light" lang="th">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>BestCarWash - เข้าสู่ระบบ</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Google Fonts & Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="../supabase-client.js"></script>
+    <script>
+        // Inline Fallback in case external script was blocked or path was mismatched
+        if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
+            var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+            var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+        var supabaseClient = window.supabaseClient;
+    </script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              fontFamily: {
+                sans: ["Prompt", "Inter", "sans-serif"]
+              },
+            }
+          }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #0f172a;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid #e2e8f0;
+        }
+        .glow-effect {
+            box-shadow: 0 0 45px rgba(37, 99, 235, 0.15);
+        }
+        .metallic-highlight {
+            box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+        }
+        /* Crisp white inputs with dark bold readable text */
+        input, select, textarea, .input-field {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid #cbd5e1 !important;
+            font-weight: 500;
+        }
+        input::placeholder, textarea::placeholder, .input-field::placeholder {
+            color: #94a3b8 !important;
+        }
+        input:focus, select:focus, textarea:focus, .input-field:focus {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border-color: #2563eb !important;
+            outline: none !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25) !important;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-[100dvh] flex flex-col items-center justify-center py-6 px-4 sm:py-10 sm:px-6 relative overflow-x-hidden font-sans selection:bg-primary-container selection:text-on-primary-container">
+
+    <!-- Ambient Glowing Background -->
+    <div class="fixed inset-0 w-full h-full pointer-events-none opacity-30 z-0">
+        <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary-container blur-[100px] mix-blend-screen"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-secondary-container blur-[100px] mix-blend-screen"></div>
+    </div>
+
+    <!-- Toast Notification Banner -->
+    <div id="toast" class="fixed top-4 sm:top-6 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 opacity-0 -translate-y-10 pointer-events-none max-w-sm w-full px-4">
+        <div id="toastContent" class="glass-panel border px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm">
+            <span id="toastIcon" class="material-symbols-outlined text-[22px]">info</span>
+            <span id="toastMessage" class="font-medium text-white">ข้อความแจ้งเตือน</span>
+        </div>
+    </div>
+
+    <!-- Main Content Canvas (Extra Large Card Web & App Container) -->
+    <main class="w-full max-w-[440px] sm:max-w-xl md:max-w-2xl lg:max-w-[660px] z-10 glass-panel rounded-2xl sm:rounded-3xl p-7 sm:p-11 md:p-14 flex flex-col gap-6 sm:gap-8 shadow-2xl relative glow-effect border border-outline-variant/30 my-auto">
+        
+        <!-- Header & Brand Title -->
+        <header class="flex flex-col items-center text-center">
+            <div class="flex items-center justify-center gap-3 py-1 mb-1 sm:mb-2">
+                <div class="w-12 h-12 sm:w-15 sm:h-15 md:w-16 md:h-16 rounded-2xl bg-primary/10 border border-primary/25 flex items-center justify-center text-primary shadow-sm hover:scale-105 transition-transform duration-300">
+                    <span class="material-symbols-outlined text-[32px] sm:text-[40px] md:text-[44px]">local_car_wash</span>
+                </div>
+                <span class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-primary tracking-tight">BestCarWash</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold text-on-surface tracking-tight mt-1 sm:mt-2">เข้าสู่ระบบ</h1>
+            <p class="text-sm sm:text-base md:text-lg text-on-surface-variant mt-1 sm:mt-1.5">ยินดีต้อนรับ เข้าสู่ระบบเพื่อดำเนินการต่อ</p>
+        </header>
+
+        <!-- Login Form -->
+        <form id="loginForm" class="flex flex-col gap-5 sm:gap-6">
+            <!-- Email Input -->
+            <div>
+                <label for="email" class="block text-sm sm:text-base md:text-lg font-semibold text-slate-700 mb-2">อีเมล</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 sm:pl-4.5 flex items-center pointer-events-none">
+                        <span class="material-symbols-outlined text-slate-500 text-[22px] sm:text-[24px]">mail</span>
+                    </div>
+                    <input class="block w-full pl-11 sm:pl-13 pr-4 py-3.5 sm:py-4 md:py-4.5 bg-white border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-transparent text-base md:text-lg font-medium transition-all outline-none shadow-sm" id="email" placeholder="example@email.com" required type="email"/>
+                </div>
+            </div>
+
+            <!-- Password Input -->
+            <div>
+                <label for="password" class="block text-sm sm:text-base md:text-lg font-semibold text-slate-700 mb-2">รหัสผ่าน</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 sm:pl-4.5 flex items-center pointer-events-none">
+                        <span class="material-symbols-outlined text-slate-500 text-[22px] sm:text-[24px]">lock</span>
+                    </div>
+                    <input class="block w-full pl-11 sm:pl-13 pr-12 py-3.5 sm:py-4 md:py-4.5 bg-white border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-transparent text-base md:text-lg font-medium transition-all outline-none shadow-sm" id="password" placeholder="กรอกรหัสผ่านของคุณ" required type="password"/>
+                    <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center">
+                        <button id="togglePasswordBtn" class="text-slate-500 hover:text-slate-800 transition-colors focus:outline-none p-1.5" type="button" aria-label="Toggle password visibility">
+                            <span class="material-symbols-outlined text-[22px] sm:text-[24px]">visibility_off</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Primary Action Button -->
+            <button id="loginBtn" class="w-full py-4 sm:py-4.5 md:py-5 bg-primary-container text-on-primary-container font-bold rounded-xl flex items-center justify-center gap-3 metallic-highlight hover:bg-blue-600 transition-all active:scale-[0.98] shadow-lg shadow-primary-container/25 mt-2 sm:mt-3 text-base sm:text-lg md:text-xl cursor-pointer" type="submit">
+                <span>เข้าสู่ระบบ</span>
+                <span class="material-symbols-outlined text-[22px] sm:text-[26px]">login</span>
+            </button>
+        </form>
+
+        <!-- Footer Link -->
+        <div class="text-center pt-3 sm:pt-4 border-t border-outline-variant/20">
+            <p class="text-sm sm:text-base md:text-lg text-slate-600">
+                ยังไม่มีบัญชี? <a class="text-primary hover:underline font-semibold transition-colors" href="role-selection.html">สมัครสมาชิกที่นี่</a>
+            </p>
+        </div>
+    </main>
+
+    <script>
+        // Toast helper function
+        function showToast(message, type = 'error') {
+            const toast = document.getElementById('toast');
+            const toastContent = document.getElementById('toastContent');
+            const toastIcon = document.getElementById('toastIcon');
+            const toastMessage = document.getElementById('toastMessage');
+
+            toastMessage.textContent = message;
+            if (type === 'error') {
+                toastContent.className = 'glass-panel bg-red-950/80 border-red-500/50 text-red-200 px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm';
+                toastIcon.className = 'material-symbols-outlined text-red-400 text-[22px]';
+                toastIcon.textContent = 'error';
+            } else {
+                toastContent.className = 'glass-panel bg-emerald-950/80 border-secondary/50 text-emerald-200 px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm';
+                toastIcon.className = 'material-symbols-outlined text-secondary text-[22px]';
+                toastIcon.textContent = 'check_circle';
+            }
+
+            toast.classList.remove('opacity-0', '-translate-y-10', 'pointer-events-none');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', '-translate-y-10', 'pointer-events-none');
+            }, 3500);
+        }
+
+        // Friendly error messages in Thai
+        function formatAuthError(msg) {
+            if (!msg) return 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+            const lower = msg.toLowerCase();
+            if (lower.includes('invalid login credentials') || lower.includes('invalid credentials')) {
+                return 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+            }
+            if (lower.includes('email not confirmed')) {
+                return 'กรุณายืนยันอีเมลของคุณก่อนเข้าสู่ระบบ';
+            }
+            if (lower.includes('user not found')) {
+                return 'ไม่พบบัญชีผู้ใช้นี้ในระบบ';
+            }
+            if (lower.includes('rate limit')) {
+                return 'ลองเข้าสู่ระบบบ่อยเกินไป กรุณารอสักครู่';
+            }
+            return msg;
+        }
+
+        // Safe helper to get or initialize Supabase Client
+        function getClient() {
+            if (window.supabaseClient) return window.supabaseClient;
+            if (typeof getSupabaseClient === 'function') return getSupabaseClient();
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                const SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+                const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+                window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                return window.supabaseClient;
+            }
+            return null;
+        }
+
+        // Role verification and smart redirect
+        const handleRedirect = async (user) => {
+            if (!user) return;
+
+            // Clear old cache from any previous user account to ensure complete data isolation
+            const lastLoggedInUser = localStorage.getItem('lastLoggedInUserId');
+            if (lastLoggedInUser !== user.id) {
+                localStorage.removeItem('customerProfile');
+                localStorage.removeItem('customerCars');
+                localStorage.removeItem('ownerProfileAvatar');
+                localStorage.removeItem('ownerShopName');
+                localStorage.removeItem('ownerProfileName');
+                localStorage.removeItem('appBookingsList');
+                localStorage.removeItem('activeCustomerBooking');
+                localStorage.removeItem('favoriteShopIds');
+                localStorage.setItem('lastLoggedInUserId', user.id);
+            }
+
+            let role = user.user_metadata?.role;
+            const client = getClient();
+            let profile = null;
+
+            // Fetch live profile details from public.profiles
+            if (user.id && client) {
+                try {
+                    const { data } = await client
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', user.id)
+                        .maybeSingle();
+                    if (data) {
+                        profile = data;
+                        if (data.role) role = data.role;
+                    }
+                } catch (err) {
+                    console.error('Error fetching profile on login:', err);
+                }
+            }
+
+            if (role === 'OWNER') {
+                const avatar = profile?.avatar_url || user.user_metadata?.avatar_url || null;
+                const name = profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'เจ้าของร้าน';
+                if (avatar) localStorage.setItem('ownerProfileAvatar', avatar);
+                if (name) localStorage.setItem('ownerProfileName', name);
+
+                // Also fetch owner shop name, description, address & ensure services are synced
+                if (client) {
+                    try {
+                        const meta = user.user_metadata || {};
+                        const fallbackDesc = meta.shop_description || meta.description || meta.about || localStorage.getItem('ownerShopDesc') || localStorage.getItem('shopDescription') || '';
+                        const fallbackAddr = meta.full_address || meta.address || [meta.street, meta.city, meta.zip].filter(Boolean).join(' ') || [localStorage.getItem('ownerShopStreet'), localStorage.getItem('ownerShopCity'), localStorage.getItem('ownerShopZip')].filter(Boolean).join(' ') || '';
+                        const fallbackPhone = meta.phone_number || localStorage.getItem('ownerShopPhone') || '';
+                        const fallbackLat = meta.latitude || parseFloat(localStorage.getItem('ownerShopLat')) || null;
+                        const fallbackLng = meta.longitude || parseFloat(localStorage.getItem('ownerShopLng')) || null;
+
+                        let { data: shop } = await client.from('shops').select('*').eq('owner_id', user.id).maybeSingle();
+                        if (!shop) {
+                            const sName = meta.shop_name || `${name}'s Car Wash`;
+                            const { data: newShop } = await client.from('shops').insert({
+                                owner_id: user.id,
+                                name: sName,
+                                phone_number: fallbackPhone,
+                                description: fallbackDesc,
+                                address: fallbackAddr,
+                                latitude: fallbackLat,
+                                longitude: fallbackLng
+                            }).select('*').maybeSingle();
+
+                            if (newShop) shop = newShop;
+                        } else {
+                            // Self-healing: if shops table has missing description or address, sync from user_metadata or localStorage
+                            const updateData = {};
+                            if (!shop.description && fallbackDesc) updateData.description = fallbackDesc;
+                            if (!shop.address && fallbackAddr) updateData.address = fallbackAddr;
+                            if (!shop.phone_number && fallbackPhone) updateData.phone_number = fallbackPhone;
+                            if (!shop.latitude && fallbackLat) updateData.latitude = fallbackLat;
+                            if (!shop.longitude && fallbackLng) updateData.longitude = fallbackLng;
+
+                            if (Object.keys(updateData).length > 0) {
+                                await client.from('shops').update(updateData).eq('id', shop.id);
+                                Object.assign(shop, updateData);
+                            }
+                        }
+
+                        if (shop) {
+                            localStorage.setItem('currentShopId', shop.id);
+                            if (shop.name || meta.shop_name) localStorage.setItem('ownerShopName', shop.name || meta.shop_name);
+                            const finalDesc = shop.description || fallbackDesc;
+                            if (finalDesc) {
+                                localStorage.setItem('ownerShopDesc', finalDesc);
+                                localStorage.setItem('shopDescription', finalDesc);
+                            }
+                            if (shop.phone_number || fallbackPhone) {
+                                localStorage.setItem('ownerShopPhone', shop.phone_number || fallbackPhone);
+                            }
+                            
+                            const streetVal = shop.address || fallbackAddr;
+                            const cityVal = meta.city || localStorage.getItem('ownerShopCity') || '';
+                            const zipVal = meta.zip || localStorage.getItem('ownerShopZip') || '';
+                            const mapLinkVal = meta.map_link || localStorage.getItem('ownerShopMapLink') || (shop.latitude && shop.longitude ? `https://maps.google.com/?q=${shop.latitude},${shop.longitude}` : '');
+
+                            if (streetVal) localStorage.setItem('ownerShopStreet', streetVal);
+                            if (cityVal) localStorage.setItem('ownerShopCity', cityVal);
+                            if (zipVal) localStorage.setItem('ownerShopZip', zipVal);
+                            if (mapLinkVal) localStorage.setItem('ownerShopMapLink', mapLinkVal);
+                            if (shop.latitude) localStorage.setItem('ownerShopLat', shop.latitude);
+                            if (shop.longitude) localStorage.setItem('ownerShopLng', shop.longitude);
+                            
+                            // Cover Image cache sync from database or metadata
+                            const cover = shop.cover_image_url || meta.cover_image_url || localStorage.getItem('ownerCoverImage');
+                            if (cover) {
+                                localStorage.setItem('ownerCoverImage', cover);
+                                localStorage.setItem('ownerShopGallery', JSON.stringify([cover]));
+                            }
+
+                            // Logo / Avatar sync from database
+                            const logo = shop.logo_url || avatar;
+                            if (logo) localStorage.setItem('ownerProfileAvatar', logo);
+
+                            // Multi-Photo Gallery sync
+                            if (meta.shop_images && Array.isArray(meta.shop_images) && meta.shop_images.length > 0) {
+                                localStorage.setItem('ownerShopGallery', JSON.stringify(meta.shop_images));
+                            }
+
+                            // 1. Services Self-Healing & Hydration
+                            let { data: srvs } = await client.from('services').select('*').eq('shop_id', shop.id).order('created_at', { ascending: true });
+                            let savedServices = user.user_metadata?.initial_services;
+                            if (!savedServices || !savedServices.length) {
+                                try {
+                                    savedServices = JSON.parse(localStorage.getItem('ownerServices') || 'null');
+                                } catch(_) {}
+                            }
+
+                            if (!srvs || srvs.length === 0) {
+                                let toSeed = (savedServices && savedServices.length > 0) ? savedServices : [
+                                    { name: 'ล้างสีภายนอก', price: 150, duration_minutes: 30, description: 'ล้างทำความสะอาดภายนอก ฉีดโฟม เคลือบเงายาง' },
+                                    { name: 'ทำความสะอาดพรีเมียม (ภายใน+ภายนอก)', price: 400, duration_minutes: 60, description: 'ล้างสีรอบคัน + ดูดฝุ่น เช็ดคอนโซล แผงประตู สะอาดลึก' },
+                                    { name: 'ดูดฝุ่น & สปาภายในห้องโดยสาร', price: 250, duration_minutes: 45, description: 'ดูดฝุ่น ฟอกเบาะผ้า เช็ดคอนโซล ฆ่าเชื้อแบคทีเรีย' },
+                                    { name: 'เคลือบแว็กซ์สีรถ & กระจก', price: 350, duration_minutes: 45, description: 'ลงน้ำยาเคลือบสีพรีเมียม เพิ่มความเงา ป้องกันคราบน้ำ' }
+                                ];
+                                const { data: seeded } = await client.from('services').insert(toSeed.map(s => ({
+                                    shop_id: shop.id,
+                                    name: s.name,
+                                    price: parseFloat(s.price) || 150,
+                                    duration_minutes: parseInt(s.duration_minutes) || 30,
+                                    description: s.description || 'บริการมาตรฐาน'
+                                }))).select();
+                                srvs = seeded || toSeed;
+                            }
+                            if (srvs && srvs.length > 0) {
+                                localStorage.setItem('ownerServices', JSON.stringify(srvs));
+                            }
+
+                            // 2. Operating Hours Self-Healing & Hydration
+                            let { data: hours } = await client.from('shop_operating_hours').select('*').eq('shop_id', shop.id);
+                            if (!hours || hours.length === 0) {
+                                let hoursToSeed = null;
+                                try {
+                                    const local = JSON.parse(localStorage.getItem('ownerOperatingHours') || 'null');
+                                    if (Array.isArray(local) && local.length > 0) {
+                                        hoursToSeed = local.map(h => ({
+                                            shop_id: shop.id,
+                                            day_of_week: h.day_of_week,
+                                            open_time: h.open_time || '08:00:00',
+                                            close_time: h.close_time || '18:00:00',
+                                            is_closed: !!h.is_closed
+                                        }));
+                                    }
+                                } catch(_) {}
+
+                                const defaultHours = hoursToSeed || [
+                                    { shop_id: shop.id, day_of_week: 1, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                                    { shop_id: shop.id, day_of_week: 2, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                                    { shop_id: shop.id, day_of_week: 3, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                                    { shop_id: shop.id, day_of_week: 4, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                                    { shop_id: shop.id, day_of_week: 5, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                                    { shop_id: shop.id, day_of_week: 6, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                                    { shop_id: shop.id, day_of_week: 0, open_time: '08:00:00', close_time: '18:00:00', is_closed: true }
+                                ];
+                                const { data: seededHours } = await client.from('shop_operating_hours').upsert(defaultHours, { onConflict: 'shop_id,day_of_week' }).select();
+                                hours = seededHours || defaultHours;
+                            }
+                            if (hours && hours.length > 0) {
+                                localStorage.setItem('ownerOperatingHours', JSON.stringify(hours));
+                            }
+                            const cloudHolidays = meta.special_holidays || user.user_metadata?.special_holidays;
+                            if (Array.isArray(cloudHolidays) && cloudHolidays.length > 0) {
+                                localStorage.setItem('ownerSpecialHolidays', JSON.stringify(cloudHolidays));
+                            }
+
+                            // 3. Pre-fetch and cache Dashboard KPI for 0ms initial dashboard display
+                            try {
+                                const { data: bList } = await client.from('bookings').select('status').eq('shop_id', shop.id);
+                                if (bList) {
+                                    const delivered = bList.filter(b => String(b.status).toLowerCase() === 'completed').length;
+                                    const inService = bList.filter(b => ['washing', 'arrived', 'ready'].includes(String(b.status).toLowerCase())).length;
+                                    const cancelled = bList.filter(b => ['refunded', 'declined', 'no_show', 'refund_requested', 'cancelled'].includes(String(b.status).toLowerCase())).length;
+                                    const total = bList.length;
+                                    localStorage.setItem('ownerDashboardKPI', JSON.stringify({ delivered, total, inService, cancelled }));
+                                }
+                            } catch(_) {}
+                        }
+                    } catch(e) {
+                        console.warn('Owner shop login sync notice:', e);
+                    }
+                }
+                window.location.href = '../owner/Owner%20Dashboard.html';
+            } else if (role === 'CUSTOMER') {
+                const customerData = {
+                    fullName: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'ลูกค้า',
+                    phone: profile?.phone_number || user.user_metadata?.phone_number || '',
+                    email: user.email,
+                    avatar: profile?.avatar_url || user.user_metadata?.avatar_url || null
+                };
+                localStorage.setItem('customerProfile', JSON.stringify(customerData));
+                window.location.href = '../customer/discovery.html';
+            } else {
+                // New user without role assigned
+                window.location.href = 'role-selection.html';
+            }
+        };
+
+        // Check existing session on page load
+        const initClient = getClient();
+        if (initClient?.auth) {
+            initClient.auth.getSession().then(({ data: { session } }) => {
+                if (session?.user) {
+                    handleRedirect(session.user);
+                }
+            });
+
+            // Listen for OAuth callbacks
+            initClient.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_IN' && session?.user) {
+                    handleRedirect(session.user);
+                }
+            });
+        }
+
+        // Email Login Logic
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+            const originalHTML = btn.innerHTML;
+
+            const client = getClient();
+            if (!client || !client.auth) {
+                showToast('ไม่สามารถเชื่อมต่อระบบฐานข้อมูลได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง', 'error');
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> กำลังเข้าสู่ระบบ...';
+            
+            try {
+                const { data, error } = await client.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+                
+                if (error) {
+                    showToast(formatAuthError(error.message), 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                } else if (data?.user) {
+                    showToast('เข้าสู่ระบบสำเร็จ กำลังนำทาง...', 'success');
+                    setTimeout(() => {
+                        handleRedirect(data.user);
+                    }, 500);
+                }
+            } catch (err) {
+                console.error('Login error:', err);
+                showToast(formatAuthError(err.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ'), 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        });
+
+
+
+        // Toggle Password Visibility
+        const pwInput = document.getElementById('password');
+        const toggleBtn = document.getElementById('togglePasswordBtn');
+        if (pwInput && toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                const icon = toggleBtn.querySelector('span');
+                if (pwInput.type === 'password') {
+                    pwInput.type = 'text';
+                    icon.innerText = 'visibility';
+                } else {
+                    pwInput.type = 'password';
+                    icon.innerText = 'visibility_off';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

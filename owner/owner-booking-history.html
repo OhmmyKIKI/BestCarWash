@@ -1,0 +1,650 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>BestCarWash - ประวัติการให้บริการ</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              "spacing": {
+                      "margin-mobile": "1rem",
+                      "gutter": "1rem",
+                      "touch-target-min": "3rem",
+                      "stack-sm": "0.5rem",
+                      "stack-md": "1rem",
+                      "stack-lg": "1.5rem"
+              },
+              "fontFamily": {
+                      "sans": ["Prompt", "Inter", "sans-serif"]
+              }
+            }
+          }
+        }
+      </script>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-24 md:pb-0 font-sans">
+    
+<!-- Desktop Header (App Bar) -->
+<header class="hidden md:flex justify-between items-center px-6 lg:px-10 h-20 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md z-50 fixed top-0 w-full">
+    <div class="flex items-center gap-4">
+        <a href="Owner%20Dashboard.html" class="flex items-center gap-2.5 group">
+            <span class="material-symbols-outlined text-secondary text-[32px] group-hover:rotate-12 transition-transform duration-300">storefront</span>
+            <span class="text-2xl font-bold text-secondary tracking-tight">BestCarWash</span>
+            <span class="text-xs font-bold text-on-secondary-container bg-secondary/20 border border-secondary/30 px-2.5 py-0.5 rounded-full uppercase ml-1">Partner</span>
+        </a>
+    </div>
+    <div class="flex items-center gap-8">
+        <nav class="flex gap-7">
+            <a class="text-base font-semibold text-on-surface-variant hover:text-secondary transition-colors flex items-center gap-1.5" href="Owner%20Dashboard.html">
+                <span class="material-symbols-outlined text-[20px]">dashboard</span> หน้าหลัก
+            </a>
+            <a class="text-base font-semibold text-on-surface-variant hover:text-secondary transition-colors flex items-center gap-1.5" href="owner-bookings.html">
+                <span class="material-symbols-outlined text-[20px]">calendar_month</span> การจอง
+            </a>
+            <a class="text-base font-bold text-secondary flex items-center gap-1.5" href="owner-booking-history.html">
+                <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">history</span> ประวัติ
+            </a>
+            <a class="text-base font-semibold text-on-surface-variant hover:text-secondary transition-colors flex items-center gap-1.5" href="Owner%20Profile.html">
+                <span class="material-symbols-outlined text-[20px]">person</span> จัดการร้าน
+            </a>
+        </nav>
+        <div class="flex items-center gap-4 border-l border-outline-variant/30 pl-6">
+            <a href="owner-notifications-list.html" class="w-11 h-11 rounded-full flex items-center justify-center bg-surface-container text-on-surface hover:text-secondary hover:bg-surface-variant transition-colors relative border border-outline-variant/50">
+                <span class="material-symbols-outlined text-[24px]">notifications</span>
+                <span class="absolute top-2.5 right-2.5 w-2 h-2 bg-error rounded-full shadow-[0_0_5px_rgba(255,180,171,0.8)]"></span>
+            </a>
+            <a href="Owner%20Profile.html" class="flex items-center gap-3 pl-3 pr-4 py-1.5 rounded-full bg-surface-container hover:bg-surface-variant transition-all border border-outline-variant/30 group">
+                <div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden border-2 border-outline-variant group-hover:border-secondary transition-colors flex-shrink-0">
+                    <img id="owner-desktop-avatar" alt="Owner profile" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
+                </div>
+                <span class="hidden md:inline-block text-base font-semibold text-on-surface" id="owner-desktop-name">เจ้าของร้าน</span>
+            </a>
+        </div>
+    </div>
+</header>
+
+<!-- Mobile Top Bar -->
+<header class="md:hidden fixed top-0 w-full z-50 bg-background/90 backdrop-blur-md border-b border-outline-variant/30 shadow-sm shadow-secondary/10">
+    <div class="flex justify-between items-center px-4 h-16">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-secondary text-[26px]">history</span>
+            <h1 class="text-lg font-bold text-secondary tracking-tight">ประวัติการให้บริการ</h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="owner-notifications-list.html" class="w-10 h-10 rounded-full hover:bg-surface-container flex items-center justify-center text-outline hover:text-secondary transition-colors relative">
+                <span class="material-symbols-outlined text-[22px]">notifications</span>
+                <span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-error animate-pulse"></span>
+            </a>
+            <a href="Owner%20Profile.html" class="w-9 h-9 rounded-full overflow-hidden border border-outline-variant hover:border-secondary transition-colors active:scale-95 block">
+                <img id="owner-header-avatar" alt="User profile avatar" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
+            </a>
+        </div>
+    </div>
+</header>
+
+<main class="pt-20 md:pt-28 pb-28 md:pb-12 p-margin-mobile md:p-gutter max-w-7xl mx-auto flex flex-col gap-stack-lg">
+    <!-- Filters & Search -->
+    <section class="flex flex-col sm:flex-row gap-3">
+        <div class="relative flex-1">
+            <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[22px]">search</span>
+            <input type="text" id="historySearch" placeholder="ค้นหาชื่อลูกค้า, ทะเบียนรถ, หรือบริการ..." class="w-full h-12 pl-11 pr-4 rounded-xl bg-surface-container-low border border-outline-variant/30 text-on-surface text-base placeholder:text-outline focus:border-secondary focus:ring-1 focus:ring-secondary transition-all outline-none">
+        </div>
+        <div class="flex gap-2">
+            <!-- Custom Status Dropdown -->
+            <div class="relative" id="statusFilterContainer">
+                <button type="button" onclick="document.getElementById('statusDropdownList').classList.toggle('hidden')" class="h-12 px-4 rounded-xl bg-surface-container-low border border-outline-variant/30 text-on-surface text-base hover:bg-surface-variant transition-colors flex items-center justify-between gap-2 min-w-[150px] outline-none focus:border-secondary">
+                    <span id="statusFilterLabel">สถานะทั้งหมด</span>
+                    <span class="material-symbols-outlined text-[20px] text-outline">expand_more</span>
+                </button>
+                <div id="statusDropdownList" class="hidden absolute right-0 sm:left-0 sm:right-auto top-full mt-1 w-full min-w-[150px] bg-surface-container-highest border border-outline-variant/50 rounded-xl shadow-xl z-50 overflow-hidden py-1">
+                    <button class="w-full text-left px-4 py-2.5 text-sm text-on-surface hover:bg-surface-variant transition-colors" onclick="selectStatus('all', 'สถานะทั้งหมด')">สถานะทั้งหมด</button>
+                    <button class="w-full text-left px-4 py-2.5 text-sm text-on-surface hover:bg-surface-variant transition-colors" onclick="selectStatus('completed', 'เสร็จสิ้นแล้ว')">เสร็จสิ้นแล้ว</button>
+                    <button class="w-full text-left px-4 py-2.5 text-sm text-on-surface hover:bg-surface-variant transition-colors" onclick="selectStatus('refunded', 'ปฏิเสธ/คืนเงิน')">ปฏิเสธ/คืนเงิน</button>
+                </div>
+                <input type="hidden" id="historyStatusFilter" value="all">
+            </div>
+
+            <!-- Custom Time Dropdown -->
+            <div class="relative" id="timeFilterContainer">
+                <button type="button" onclick="document.getElementById('timeDropdownList').classList.toggle('hidden')" class="h-10 px-3 rounded-lg bg-surface-container-low border border-outline-variant/30 text-on-surface text-sm hover:bg-surface-variant transition-colors flex items-center justify-between gap-2 min-w-[120px] outline-none focus:border-secondary">
+                    <span id="timeFilterLabel">เวลาทั้งหมด</span>
+                    <span class="material-symbols-outlined text-[18px] text-outline">expand_more</span>
+                </button>
+                <div id="timeDropdownList" class="hidden absolute right-0 top-full mt-1 w-full min-w-[120px] bg-surface-container-highest border border-outline-variant/50 rounded-lg shadow-xl z-50 overflow-hidden py-1">
+                    <button class="w-full text-left px-4 py-2 text-sm text-on-surface hover:bg-surface-variant transition-colors" onclick="selectTime('all', 'เวลาทั้งหมด')">เวลาทั้งหมด</button>
+                    <button class="w-full text-left px-4 py-2 text-sm text-on-surface hover:bg-surface-variant transition-colors" onclick="selectTime('today', 'วันนี้')">วันนี้</button>
+                    <button class="w-full text-left px-4 py-2 text-sm text-on-surface hover:bg-surface-variant transition-colors" onclick="selectTime('week', 'สัปดาห์นี้')">สัปดาห์นี้</button>
+                    <button class="w-full text-left px-4 py-2 text-sm text-on-surface hover:bg-surface-variant transition-colors" onclick="selectTime('month', 'เดือนนี้')">เดือนนี้</button>
+                </div>
+                <input type="hidden" id="historyTimeFilter" value="all">
+            </div>
+        </div>
+    </section>
+
+    <!-- History List -->
+    <section class="flex flex-col gap-stack-md">
+        <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-on-surface">รายการทั้งหมด</h3>
+            <span class="text-sm text-outline" id="historyCountLabel">กำลังโหลด...</span>
+        </div>
+        
+        <div id="ownerHistoryItemsContainer" class="flex flex-col gap-stack-sm">
+            <!-- Dynamic History Items Injected by JS -->
+        </div>
+    </section>
+</main>
+
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-4 left-4 right-4 rounded-2xl z-50 bg-surface-container-low/95 backdrop-blur-xl border border-outline-variant/50 shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex justify-around items-center p-2.5 pb-[calc(0.6rem+env(safe-area-inset-bottom,0))]">
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform w-18 h-14" href="Owner%20Dashboard.html">
+        <span class="material-symbols-outlined text-[26px]">home</span>
+        <span class="text-xs font-semibold mt-0.5">หน้าแรก</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform w-18 h-14" href="owner-bookings.html">
+        <span class="material-symbols-outlined text-[26px]">calendar_month</span>
+        <span class="text-xs font-semibold mt-0.5">การจอง</span>
+    </a>
+    <a class="flex flex-col items-center justify-center bg-secondary-container/20 text-secondary rounded-xl w-18 h-14 shadow-sm active:scale-95 transition-transform" href="owner-booking-history.html">
+        <span class="material-symbols-outlined text-[26px] fill">history</span>
+        <span class="text-xs font-bold mt-0.5">ประวัติ</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform w-18 h-14" href="Owner%20Profile.html">
+        <span class="material-symbols-outlined text-[26px]">person</span>
+        <span class="text-xs font-semibold mt-0.5">โปรไฟล์</span>
+    </a>
+</nav>
+
+<!-- Slip Preview Modal -->
+<div id="ownerSlipModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-background/80 backdrop-blur-sm transition-opacity opacity-0" onclick="closeOwnerSlipModal()"></div>
+    <div class="bg-surface-container-high rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl relative z-10 scale-95 opacity-0 transition-all duration-300 flex flex-col border border-outline-variant/30">
+        <div class="p-4 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-highest">
+            <h3 class="text-lg font-bold text-on-surface flex items-center gap-2">
+                <span class="material-symbols-outlined text-secondary">receipt</span>
+                หลักฐานการโอนเงิน
+            </h3>
+            <button onclick="closeOwnerSlipModal()" class="w-8 h-8 rounded-full bg-surface-container hover:bg-surface-variant flex items-center justify-center text-outline hover:text-on-surface transition-colors">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+        </div>
+        <div class="p-4 flex flex-col items-center gap-4 bg-surface-container-low max-h-[70vh] overflow-y-auto">
+            <div class="w-full bg-surface-container rounded-xl p-2 flex flex-col items-center justify-center border border-outline-variant/30 shadow-inner">
+                <img id="ownerSlipImagePreview" src="" alt="สลิป" class="w-full max-h-[50vh] object-contain rounded-lg">
+            </div>
+            <div class="w-full bg-surface-container rounded-xl p-3 border border-outline-variant/30 text-xs flex flex-col gap-2">
+                <div class="flex justify-between">
+                    <span class="text-outline">ชื่อลูกค้า:</span>
+                    <span id="ownerSlipCustomerName" class="text-on-surface font-semibold">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-outline">ยอดเงิน:</span>
+                    <span id="ownerSlipAmount" class="text-secondary font-bold font-mono text-sm">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-outline">เวลา:</span>
+                    <span id="ownerSlipDateTime" class="text-on-surface">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-outline">ช่องทาง:</span>
+                    <span id="ownerSlipBank" class="text-on-surface font-medium">-</span>
+                </div>
+            </div>
+        </div>
+        <div class="p-4 border-t border-outline-variant/30 bg-surface-container-highest">
+            <button onclick="closeOwnerSlipModal()" class="w-full py-2.5 rounded-xl bg-surface-bright text-on-surface font-bold hover:bg-surface-variant transition-colors border border-outline-variant/30">
+                ปิดหน้าต่าง
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const DEFAULT_SLIP_IMAGE = 'https://images.unsplash.com/photo-1627843288177-33a7638d17ee?q=80&w=2070&auto=format&fit=crop';
+
+    function normId(id) {
+        return String(id || '').replace('#', '').trim().toLowerCase();
+    }
+
+    // Default demo items cleared for data isolation
+    const DEFAULT_OWNER_HISTORY = [];
+
+    function getHistoryBookings() {
+        let list = [];
+        const stored = localStorage.getItem('appBookingsList');
+        if (stored) {
+            try { list = JSON.parse(stored); } catch(e) {}
+        }
+        if (!Array.isArray(list)) list = [];
+
+        // Filter for completed or refunded or declined or refund_requested
+        let history = list.filter(b => ['completed', 'refunded', 'declined', 'no_show', 'refund_requested'].includes(b.status));
+
+        // Check active customer booking
+        const activeCust = localStorage.getItem('activeCustomerBooking');
+        if (activeCust) {
+            try {
+                const cust = JSON.parse(activeCust);
+                if (cust && ['completed', 'refunded', 'declined', 'no_show', 'refund_requested'].includes(cust.status)) {
+                    const idx = history.findIndex(b => normId(b.bookingId) === normId(cust.bookingId));
+                    if (idx === -1) {
+                        history.unshift(cust);
+                    }
+                }
+            } catch(e) {}
+        }
+
+        return history;
+    }
+
+    function renderOwnerHistory() {
+        const container = document.getElementById('ownerHistoryItemsContainer');
+        const countLabel = document.getElementById('historyCountLabel');
+        const searchInput = document.getElementById('historySearch');
+        const statusFilter = document.getElementById('historyStatusFilter');
+        const timeFilter = document.getElementById('historyTimeFilter');
+        if (!container) return;
+
+        const allItems = getHistoryBookings();
+        const searchTerm = (searchInput ? searchInput.value : '').toLowerCase().trim();
+        const statusVal = statusFilter ? statusFilter.value : 'all';
+        const timeVal = timeFilter ? timeFilter.value : 'all';
+
+        const filtered = allItems.filter(b => {
+            // Search filter
+            if (searchTerm) {
+                const searchStr = `${b.serviceName || ''} ${b.customerName || ''} ${b.carPlate || ''} ${b.customerPhone || ''} ${b.bookingId || ''}`.toLowerCase();
+                if (!searchStr.includes(searchTerm)) return false;
+            }
+
+            // Status filter
+            if (statusVal === 'completed') {
+                if (b.status !== 'completed') return false;
+            } else if (statusVal === 'cancelled') {
+                if (!['refunded', 'declined', 'no_show', 'refund_requested'].includes(b.status)) return false;
+            }
+
+            // Time filter (prototype matching)
+            if (timeVal === 'today') {
+                const timeStr = `${b.completedAt || ''} ${b.refundedAt || ''} ${b.dateTime || ''}`;
+                if (!timeStr.includes('วันนี้') && !timeStr.includes('14 ก.ย.')) return false;
+            } else if (timeVal === 'week') {
+                const timeStr = `${b.completedAt || ''} ${b.refundedAt || ''} ${b.dateTime || ''}`;
+                if (!timeStr.includes('วันนี้') && !timeStr.includes('14 ก.ย.') && !timeStr.includes('12 ก.ย.')) return false;
+            }
+
+            return true;
+        });
+
+        if (countLabel) {
+            countLabel.innerText = `${filtered.length} รายการ`;
+        }
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div class="text-outline text-center py-12 bg-surface-container-low rounded-xl border border-dashed border-outline-variant/40 flex flex-col items-center gap-2">
+                    <span class="material-symbols-outlined text-4xl opacity-40">receipt_long</span>
+                    <span class="text-sm font-medium">ไม่พบประวัติการให้บริการตามเงื่อนไขที่เลือก</span>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = filtered.map(b => {
+            const isCompleted = b.status === 'completed';
+            const isRefunded = b.status === 'refunded';
+            const isRefundReq = b.status === 'refund_requested';
+            const isDeclined = b.status === 'declined';
+            const isNoShow = b.status === 'no_show';
+
+            let statusBadge = '';
+            if (isCompleted) {
+                statusBadge = `
+                    <div class="h-9 px-3.5 rounded-lg bg-green-500/15 text-green-400 flex items-center gap-1.5 text-xs font-bold border border-green-500/30">
+                        <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">check_circle</span> เสร็จสิ้นแล้ว
+                    </div>
+                `;
+            } else if (isRefunded) {
+                statusBadge = `
+                    <div class="h-9 px-3.5 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center gap-1.5 text-xs font-bold border border-emerald-500/30">
+                        <span class="material-symbols-outlined text-[16px]">currency_exchange</span> คืนเงินแล้ว
+                    </div>
+                `;
+            } else if (isRefundReq) {
+                statusBadge = `
+                    <div class="h-9 px-3.5 rounded-lg bg-amber-500/15 text-amber-300 flex items-center gap-1.5 text-xs font-bold border border-amber-500/30">
+                        <span class="material-symbols-outlined text-[16px]">hourglass_top</span> รอดำเนินการคืนเงิน
+                    </div>
+                `;
+            } else if (isDeclined) {
+                statusBadge = `
+                    <div class="h-9 px-3.5 rounded-lg bg-error/15 text-error flex items-center gap-1.5 text-xs font-bold border border-error/30">
+                        <span class="material-symbols-outlined text-[16px]">cancel</span> ปฏิเสธคิว
+                    </div>
+                `;
+            } else if (isNoShow) {
+                statusBadge = `
+                    <div class="h-9 px-3.5 rounded-lg bg-error/20 text-error flex items-center gap-1.5 text-xs font-bold border border-error/40">
+                        <span class="material-symbols-outlined text-[16px]">person_off</span> ลูกค้า No-Show
+                    </div>
+                `;
+            }
+
+            const slipBtn = b.refundSlip ? `
+                <button onclick="openOwnerSlipModal('${b.customerName || 'ลูกค้า'}', '${b.depositAmount || '฿50.00'}', '${b.refundedAt || 'คืนเงินแล้ว'}', 'พร้อมเพย์', '${b.refundSlip}')" class="h-9 px-3 rounded-lg bg-surface-bright border border-outline-variant text-on-surface hover:text-primary text-xs font-bold transition-all flex items-center gap-1 active:scale-95 shadow-sm">
+                    <span class="material-symbols-outlined text-[15px] text-emerald-400">receipt_long</span> สลิปคืนเงิน
+                </button>
+            ` : (b.slipImage ? `
+                <button onclick="openOwnerSlipModal('${b.customerName || 'ลูกค้า'}', '${b.depositAmount || '฿50.00'}', '${b.dateTime || 'มัดจำ'}', 'โอนมัดจำ', '${b.slipImage}')" class="h-9 px-3 rounded-lg bg-surface-bright border border-outline-variant text-on-surface hover:text-secondary text-xs font-bold transition-all flex items-center gap-1 active:scale-95 shadow-sm">
+                    <span class="material-symbols-outlined text-[15px] text-secondary">receipt</span> สลิปมัดจำ
+                </button>
+            ` : '');
+
+            return `
+                <div class="bg-surface-container-low/70 rounded-xl p-stack-md border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-stack-md relative overflow-hidden group hover:bg-surface-container-low transition-all">
+                    <div class="flex items-start md:items-center gap-stack-md">
+                        <div class="w-12 h-12 rounded-full overflow-hidden border border-outline-variant/40 ${isCompleted ? 'bg-green-500/10 text-green-400' : 'bg-surface-bright text-outline'} flex items-center justify-center shrink-0">
+                            <span class="material-symbols-outlined text-[24px]">${isCompleted ? 'task_alt' : (isRefunded ? 'currency_exchange' : 'person')}</span>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-base md:text-lg font-bold text-on-surface">${b.serviceName || 'ล้างรถ'}</span>
+                                <span class="px-2 py-0.5 bg-surface-bright text-on-surface rounded text-xs font-mono border border-outline-variant/50 tracking-wider">${b.carPlate || 'กท 9999'}</span>
+                                <span class="text-xs text-outline bg-surface-container-highest px-2 py-0.5 rounded">${b.carSize || b.carBrand || 'รถเก๋ง'}</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs md:text-sm text-outline flex-wrap">
+                                <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">calendar_today</span> ${b.completedAt || b.refundedAt || b.dateTime || 'วันนี้'}</span>
+                                <span>•</span>
+                                <span class="text-on-surface-variant font-medium">${b.customerName || 'ลูกค้า'}</span>
+                                <span>•</span>
+                                <a href="tel:${b.customerPhone || '089-123-4567'}" class="text-primary hover:underline font-mono">${b.customerPhone || '089-123-4567'}</a>
+                            </div>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-xs text-outline">ยอดสุทธิ:</span>
+                                <span class="${isCompleted ? 'text-green-400' : 'text-secondary'} text-sm font-bold font-mono">${b.totalAmount || '฿ 450.00'}</span>
+                                ${isRefunded ? '<span class="text-[11px] text-emerald-400 font-medium">(โอนคืนมัดจำแล้ว)</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 self-end md:self-center shrink-0">
+                        ${slipBtn}
+                        ${statusBadge}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Slip Modal handlers
+    function openOwnerSlipModal(name = 'ลูกค้า', amount = '฿50.00', time = 'วันนี้', bank = 'พร้อมเพย์', slipUrl = '') {
+        const modal = document.getElementById('ownerSlipModal');
+        const img = document.getElementById('ownerSlipImagePreview');
+        const cName = document.getElementById('ownerSlipCustomerName');
+        const amt = document.getElementById('ownerSlipAmount');
+        const dt = document.getElementById('ownerSlipDateTime');
+        const bnk = document.getElementById('ownerSlipBank');
+
+        if (cName) cName.innerText = name;
+        if (amt) amt.innerText = amount;
+        if (dt) dt.innerText = time;
+        if (bnk) bnk.innerText = bank;
+        if (img) img.src = slipUrl || DEFAULT_SLIP_IMAGE;
+
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        void modal.offsetWidth;
+        const backdrop = modal.querySelector('.absolute.inset-0');
+        const content = modal.querySelector('.bg-surface-container-high');
+        if (backdrop) backdrop.classList.remove('opacity-0'), backdrop.classList.add('opacity-100');
+        if (content) content.classList.remove('scale-95', 'opacity-0'), content.classList.add('scale-100', 'opacity-100');
+    }
+
+    function closeOwnerSlipModal() {
+        const modal = document.getElementById('ownerSlipModal');
+        if (!modal) return;
+        const backdrop = modal.querySelector('.absolute.inset-0');
+        const content = modal.querySelector('.bg-surface-container-high');
+        if (backdrop) backdrop.classList.remove('opacity-100'), backdrop.classList.add('opacity-0');
+        if (content) content.classList.remove('scale-100', 'opacity-100'), content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    document.addEventListener('click', function(event) {
+        // Owner Menu
+        const container = document.getElementById('owner-menu-container');
+        const dropdown = document.getElementById('ownerMenuDropdown');
+        if (container && dropdown && !container.contains(event.target)) {
+            dropdown.classList.add('hidden');
+        }
+
+        // Status Filter Dropdown
+        const statusContainer = document.getElementById('statusFilterContainer');
+        const statusList = document.getElementById('statusDropdownList');
+        if (statusContainer && statusList && !statusContainer.contains(event.target)) {
+            statusList.classList.add('hidden');
+        }
+
+        // Time Filter Dropdown
+        const timeContainer = document.getElementById('timeFilterContainer');
+        const timeList = document.getElementById('timeDropdownList');
+        if (timeContainer && timeList && !timeContainer.contains(event.target)) {
+            timeList.classList.add('hidden');
+        }
+    });
+
+    // Custom Dropdown Selection Logic
+    window.selectStatus = function(val, label) {
+        document.getElementById('historyStatusFilter').value = val;
+        document.getElementById('statusFilterLabel').innerText = label;
+        document.getElementById('statusDropdownList').classList.add('hidden');
+        renderOwnerHistory();
+    }
+
+    window.selectTime = function(val, label) {
+        document.getElementById('historyTimeFilter').value = val;
+        document.getElementById('timeFilterLabel').innerText = label;
+        document.getElementById('timeDropdownList').classList.add('hidden');
+        renderOwnerHistory();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const searchInput = document.getElementById('historySearch');
+        if (searchInput) searchInput.addEventListener('input', renderOwnerHistory);
+
+        // Sync Owner Avatar & Name
+        const saved = localStorage.getItem('ownerProfileAvatar');
+        if (saved && !saved.includes('googleusercontent')) {
+            const mAvatar = document.getElementById('owner-header-avatar');
+            const dAvatar = document.getElementById('owner-desktop-avatar');
+            if (mAvatar) mAvatar.src = saved;
+            if (dAvatar) dAvatar.src = saved;
+        }
+        const savedName = localStorage.getItem('ownerProfileName');
+        if (savedName) {
+            const dName = document.getElementById('owner-desktop-name');
+            if (dName) dName.textContent = savedName;
+        }
+
+        renderOwnerHistory();
+
+        // Fast-Track Parallel Background Sync for Booking History
+        (async () => {
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (!client) return;
+
+                const savedShopId = localStorage.getItem('currentShopId');
+                const fallbackUserId = localStorage.getItem('lastLoggedInUserId');
+                const cachedShopName = localStorage.getItem('ownerShopName');
+
+                // FAST-TRACK: Query history bookings immediately in parallel with session
+                let fastHistoryPromise = null;
+                if (savedShopId && savedShopId.length > 20) {
+                    fastHistoryPromise = client
+                        .from('bookings')
+                        .select('*')
+                        .eq('shop_id', savedShopId)
+                        .in('status', ['completed', 'refunded', 'declined', 'no_show', 'refund_requested'])
+                        .order('created_at', { ascending: false });
+                }
+
+                const sessionPromise = client.auth ? client.auth.getSession() : Promise.resolve({ data: null });
+
+                const [historyRes, sessRes] = await Promise.all([
+                    fastHistoryPromise || Promise.resolve(null),
+                    sessionPromise
+                ]);
+
+                const user = sessRes?.data?.session?.user || null;
+                const effectiveUserId = user?.id || fallbackUserId;
+
+                if (!effectiveUserId && !cachedShopName && !savedShopId) return;
+
+                // Non-blocking Role Guard & Profile sync in background
+                if (effectiveUserId) {
+                    client.from('profiles').select('avatar_url, full_name, role').eq('id', effectiveUserId).maybeSingle().then(({ data: profile }) => {
+                        if (profile?.role === 'CUSTOMER' || user?.user_metadata?.role === 'CUSTOMER') {
+                            const mainContainer = document.querySelector('main');
+                            if (mainContainer) {
+                                mainContainer.innerHTML = `
+                                    <div class="max-w-md mx-auto my-16 p-8 bg-surface-container rounded-2xl border border-outline-variant/40 shadow-xl text-center space-y-4">
+                                        <div class="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto">
+                                            <span class="material-symbols-outlined text-[36px]">switch_account</span>
+                                        </div>
+                                        <h3 class="text-xl font-bold text-on-surface">คุณกำลังเข้าใช้งานในฐานะลูกค้า</h3>
+                                        <p class="text-sm text-outline">หน้านี้สำหรับเจ้าของร้านคาร์แคร์เท่านั้น หากต้องการจัดการประวัติการจอง กรุณาสลับเข้าสู่ระบบด้วยบัญชีเจ้าของร้าน</p>
+                                        <div class="pt-2 flex flex-col gap-2.5">
+                                            <a href="../auth/login.html" class="w-full py-3 bg-secondary hover:brightness-110 text-[#0b1326] font-bold rounded-xl shadow-md transition-all active:scale-95 text-sm">
+                                                เข้าสู่ระบบด้วยบัญชีเจ้าของร้าน
+                                            </a>
+                                            <a href="../customer/discovery.html" class="w-full py-2.5 bg-surface-variant hover:bg-surface-container-highest text-on-surface font-semibold rounded-xl border border-outline-variant/40 transition-all text-xs">
+                                                กลับสู่หน้าหลักลูกค้า
+                                            </a>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                            return;
+                        }
+
+                        if (profile?.avatar_url) {
+                            const mAvatar = document.getElementById('owner-header-avatar');
+                            const dAvatar = document.getElementById('owner-desktop-avatar');
+                            if (mAvatar) mAvatar.src = profile.avatar_url;
+                            if (dAvatar) dAvatar.src = profile.avatar_url;
+                            localStorage.setItem('ownerProfileAvatar', profile.avatar_url);
+                        }
+                        if (profile?.full_name) {
+                            const dName = document.getElementById('owner-desktop-name');
+                            if (dName) dName.textContent = profile.full_name;
+                            localStorage.setItem('ownerProfileName', profile.full_name);
+                        }
+                    }).catch(() => {});
+                }
+
+                // If fast-track returned bookings directly, merge and render immediately!
+                let dbBookings = historyRes?.data;
+                if (!dbBookings) {
+                    let shop = null;
+                    if (effectiveUserId) {
+                        const { data: s } = await client.from('shops').select('id, name').eq('owner_id', effectiveUserId).maybeSingle();
+                        if (s) shop = s;
+                    }
+                    if (!shop && savedShopId && savedShopId.length > 20) {
+                        const { data: s } = await client.from('shops').select('id, name').eq('id', savedShopId).maybeSingle();
+                        if (s) shop = s;
+                    }
+                    if (!shop && cachedShopName) {
+                        const { data: s } = await client.from('shops').select('id, name').eq('name', cachedShopName).maybeSingle();
+                        if (s) shop = s;
+                    }
+                    if (shop) {
+                        localStorage.setItem('currentShopId', shop.id);
+                        if (shop.name) localStorage.setItem('ownerShopName', shop.name);
+                        const { data: bList } = await client
+                            .from('bookings')
+                            .select('*')
+                            .eq('shop_id', shop.id)
+                            .in('status', ['completed', 'refunded', 'declined', 'no_show', 'refund_requested']);
+                        dbBookings = bList;
+                    }
+                }
+
+                if (dbBookings && dbBookings.length > 0) {
+                    let list = getHistoryBookings();
+                    dbBookings.forEach(db => {
+                        if (!list.some(item => normId(item.bookingId) === normId(db.id))) {
+                            list.push({
+                                bookingId: '#' + (db.id.slice(0, 8)),
+                                customerName: db.customer_name || 'ลูกค้า',
+                                customerPhone: db.customer_phone || '-',
+                                carBrand: db.vehicle_info || 'รถยนต์',
+                                carPlate: db.plate_number || '-',
+                                carSize: db.car_size || 'M',
+                                serviceName: db.service_name || 'บริการล้างรถ',
+                                dateTime: db.booking_date || 'วันนี้',
+                                completedAt: db.completed_at || db.booking_date,
+                                depositAmount: '฿' + (db.deposit_amount || '50.00'),
+                                totalAmount: '฿' + (db.total_price || '250.00'),
+                                status: db.status
+                            });
+                        }
+                    });
+                    localStorage.setItem('appBookingsList', JSON.stringify(list));
+                    renderOwnerHistory();
+                }
+            } catch(e) {
+                console.warn('History Supabase fetch error:', e);
+            }
+        })();
+    });
+
+    // Real-time synchronization across browser tabs
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'ownerProfileName') {
+            const dName = document.getElementById('owner-desktop-name');
+            if (dName) dName.textContent = e.newValue || 'เจ้าของร้าน';
+        }
+        if (e.key === 'ownerProfileAvatar') {
+            const mAvatar = document.getElementById('owner-header-avatar');
+            const dAvatar = document.getElementById('owner-desktop-avatar');
+            if (mAvatar && e.newValue) mAvatar.src = e.newValue;
+            if (dAvatar && e.newValue) dAvatar.src = e.newValue;
+        }
+        if (e.key === 'appBookingsList' || e.key === 'activeCustomerBooking') {
+            renderOwnerHistory();
+        }
+    });
+</script>
+</body>
+</html>

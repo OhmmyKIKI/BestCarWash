@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html class="light" lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ตัวอย่างหน้าร้าน - ร้านค้าของคุณ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script>
+    if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
+        var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+        var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+    var supabaseClient = window.supabaseClient;
+</script>
+<script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+                fontFamily: {
+                    sans: ["Prompt", "Inter", "sans-serif"],
+                }
+            }
+        }
+    }
+</script>
+<style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* ================= MOBILE SIMULATOR FRAME STYLING ================= */
+    .is-mobile-view {
+        max-width: 420px !important;
+        width: 100% !important;
+        height: 840px !important;
+        max-height: calc(100vh - 90px) !important;
+        min-height: 620px !important;
+        margin: 16px auto 32px auto !important;
+        border-radius: 48px !important;
+        box-shadow: 0 25px 80px rgba(0, 0, 0, 0.95), 0 0 0 10px #1a2233, 0 0 0 12px rgba(255, 255, 255, 0.08) !important;
+        border: 3px solid rgba(255, 255, 255, 0.14) !important;
+        background-color: #f8fafc !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        position: relative !important;
+    }
+
+    /* Simulator internal screen scroll */
+    .is-mobile-view #simulatorScreen {
+        flex: 1 1 0% !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        scroll-behavior: smooth !important;
+        position: relative !important;
+        background-color: #f8fafc !important;
+    }
+
+    /* Inside simulator, force mobile layout on any screen size (overrides desktop Tailwind md: classes) */
+    .is-mobile-view #desktopGalleryContainer {
+        display: none !important;
+    }
+    .is-mobile-view #mobileHeroContainer {
+        display: block !important;
+    }
+    .is-mobile-view #mobile-header {
+        display: flex !important;
+        position: sticky !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        z-index: 40 !important;
+        margin-bottom: -64px !important;
+    }
+    .is-mobile-view .split-layout-container {
+        flex-direction: column !important;
+        gap: 1.5rem !important;
+        margin-top: -1.5rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+    .is-mobile-view .desktop-sidebar-col {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    .is-mobile-view #desktopBookingSummary {
+        display: none !important;
+    }
+    .is-mobile-view #mobileBottomBar {
+        display: block !important;
+        position: relative !important;
+        bottom: auto !important;
+        left: auto !important;
+        right: auto !important;
+        width: 100% !important;
+        z-index: 40 !important;
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.7) !important;
+    }
+    .is-mobile-view .phone-home-indicator {
+        display: block !important;
+    }
+
+    /* When on an actual mobile device (screen width < 768px) */
+    @media (max-width: 767px) {
+        .is-mobile-view {
+            max-width: 100% !important;
+            height: auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+            display: block !important;
+        }
+        .is-mobile-view #simulatorNotch {
+            display: none !important;
+        }
+        .is-mobile-view #simulatorScreen {
+            overflow: visible !important;
+            height: auto !important;
+        }
+        .is-mobile-view #mobile-header {
+            position: sticky !important;
+            top: 64px !important;
+            margin-bottom: -64px !important;
+        }
+        .is-mobile-view #mobileBottomBar {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+        }
+        .is-mobile-view .phone-home-indicator {
+            display: none !important;
+        }
+    }
+</style>
+</head>
+<body class="bg-background text-on-background font-sans antialiased selection:bg-primary-container selection:text-on-primary-container relative">
+
+<!-- ================= COMBINED TOP APP BAR (SINGLE HEADER) ================= -->
+<header class="sticky top-0 w-full z-50 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md">
+    <div class="w-full px-4 md:px-8 h-20 flex items-center justify-between gap-4">
+        
+        <!-- Left: Back Button & Store Identity -->
+        <div class="flex items-center gap-3.5 shrink-0">
+            <a href="Owner%20Profile.html" class="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/40 transition-all active:scale-95 group" title="กลับไปโปรไฟล์ร้าน">
+                <span class="material-symbols-outlined text-[22px] md:text-[24px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+            </a>
+            <div class="flex items-center gap-3">
+                <a href="Owner%20Dashboard.html" class="flex items-center gap-2 group">
+                    <span class="material-symbols-outlined text-secondary text-[28px] group-hover:rotate-12 transition-transform duration-300">storefront</span>
+                    <span class="text-xl md:text-2xl font-bold text-on-surface tracking-tight hidden sm:inline">BestCarWash</span>
+                </a>
+                <div class="h-5 w-px bg-outline-variant/40 hidden md:block"></div>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs md:text-sm font-semibold">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span class="hidden md:inline">ตัวอย่างหน้าร้านจริง</span>
+                    <span class="md:hidden">ตัวอย่าง</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Center: Device Mode Switcher (Desktop vs Mobile Simulator) -->
+        <div class="flex items-center bg-surface-container p-1 rounded-xl border border-outline-variant/40 h-11 shrink-0">
+            <button type="button" id="btnModeWeb" class="h-9 px-3 sm:px-4 text-xs sm:text-sm font-bold rounded-lg bg-primary-container text-white shadow-sm flex items-center gap-1.5 transition-all">
+                <span class="material-symbols-outlined text-[18px]">laptop_mac</span>
+                <span class="hidden sm:inline">เดสก์ท็อป</span>
+            </button>
+            <button type="button" id="btnModeApp" class="h-9 px-3 sm:px-4 text-xs sm:text-sm font-medium rounded-lg text-outline hover:text-on-surface flex items-center gap-1.5 transition-all">
+                <span class="material-symbols-outlined text-[18px]">smartphone</span>
+                <span class="hidden sm:inline">มือถือ</span>
+            </button>
+        </div>
+
+        <!-- Right: Action Buttons -->
+        <div class="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
+            <a href="manage-shop-details.html" class="h-11 px-3.5 sm:px-5 rounded-xl bg-surface-container hover:bg-surface-variant border border-outline-variant/40 text-on-surface text-sm font-semibold flex items-center gap-2 transition-all hover:border-secondary/40 active:scale-95" title="แก้ไขข้อมูลร้าน">
+                <span class="material-symbols-outlined text-[20px] text-secondary">edit</span>
+                <span class="hidden lg:inline">แก้ไขข้อมูลร้าน</span>
+            </a>
+            <a id="publicShopLink" href="../customer/shop-details.html?shopId=shop1" target="_blank" class="h-11 px-3.5 sm:px-5 rounded-xl bg-secondary hover:bg-secondary-fixed text-on-secondary-container text-sm font-bold flex items-center gap-2 shadow-md shadow-secondary/20 transition-all active:scale-95" title="เปิดลิงก์ลูกค้าจริง">
+                <span class="material-symbols-outlined text-[20px]">open_in_new</span>
+                <span class="hidden sm:inline">เปิดลิงก์จริง</span>
+            </a>
+        </div>
+
+    </div>
+</header>
+
+<!-- ================= MAIN STOREFRONT CONTAINER (MATCHES shop-details.html) ================= -->
+<div id="previewWrapper" class="w-full transition-all duration-300">
+
+    <!-- Mobile Device Simulator Notch Bar (App Mode Only) -->
+    <div id="simulatorNotch" class="hidden w-full h-8 bg-black flex items-center justify-between px-6 pt-1 text-[11px] text-gray-300 font-medium shrink-0 select-none border-b border-white/5">
+        <span>09:41</span>
+        <div class="w-24 h-4 bg-zinc-900 border border-white/10 rounded-full mx-auto flex items-center justify-end px-2">
+            <span class="w-2 h-2 rounded-full bg-blue-500/80"></span>
+        </div>
+        <div class="flex items-center gap-1.5 text-[12px]">
+            <span class="material-symbols-outlined text-[14px]">signal_cellular_4_bar</span>
+            <span class="material-symbols-outlined text-[14px]">wifi</span>
+            <span class="material-symbols-outlined text-[14px]">battery_full</span>
+        </div>
+    </div>
+
+    <!-- Phone Screen Viewport (Scrollable in App Mode, standard in Web Mode) -->
+    <div id="simulatorScreen" class="w-full">
+
+        <!-- Mobile Dynamic Header (Exactly like shop-details.html) -->
+        <header id="mobile-header" class="md:hidden fixed top-0 w-full z-40 px-4 py-3 transition-all duration-300 flex justify-between items-center bg-transparent pointer-events-none">
+            <a href="Owner%20Profile.html" class="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/60 transition-colors text-white shadow-lg pointer-events-auto active:scale-95" title="ย้อนกลับ">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </a>
+            <h1 id="mobile-header-title" class="text-base font-bold text-white tracking-tight opacity-0 transition-opacity duration-300 drop-shadow-md truncate max-w-[200px]">ร้านคาร์แคร์</h1>
+            <div class="flex gap-2 pointer-events-auto">
+                <button type="button" onclick="toggleFavorite()" class="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/60 transition-colors text-white shadow-lg active:scale-95" title="บันทึกร้านโปรด">
+                    <span class="material-symbols-outlined heart-icon transition-colors">favorite_border</span>
+                </button>
+                <button type="button" onclick="shareShop()" class="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/60 transition-colors text-white shadow-lg active:scale-95" title="แชร์ร้านค้า">
+                    <span class="material-symbols-outlined">share</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="w-full max-w-7xl mx-auto pb-32 md:pb-16 md:mt-6">
+            <!-- Desktop Gallery (4-Grid Exactly like shop-details.html) -->
+            <div id="desktopGalleryContainer" class="hidden md:grid grid-cols-4 grid-rows-2 gap-3 px-6 h-[400px] mb-8">
+                <div onclick="openGallery(0)" class="col-span-2 row-span-2 rounded-2xl overflow-hidden group relative cursor-pointer shadow-md">
+                    <img id="desktopGalleryImg0" src="https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+                    <div class="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors"></div>
+                </div>
+                <div onclick="openGallery(1)" class="col-span-1 row-span-1 rounded-2xl overflow-hidden group relative cursor-pointer shadow-md">
+                    <img src="https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+                </div>
+                <div onclick="openGallery(2)" class="col-span-1 row-span-1 rounded-2xl overflow-hidden group relative cursor-pointer shadow-md">
+                    <img src="https://images.unsplash.com/photo-1520340356584-f9917d1e5113?w=1200&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+                </div>
+                <div onclick="openGallery(3)" class="col-span-2 row-span-1 rounded-2xl overflow-hidden group relative cursor-pointer flex items-center justify-center shadow-md">
+                    <img src="https://images.unsplash.com/photo-1620803444007-681125f16e45?w=1200&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+                    <div class="absolute inset-0 bg-black/60 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                        <span class="text-white font-bold tracking-wider border-2 border-white/30 px-4 py-2 rounded-lg backdrop-blur-sm flex items-center gap-2">
+                            <span class="material-symbols-outlined">photo_library</span> ดูรูปภาพทั้งหมด (5 รูป)
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile Hero (Exactly like shop-details.html) -->
+            <div id="mobileHeroContainer" onclick="openGallery(0)" class="md:hidden relative w-full h-[40vh] min-h-[300px] cursor-pointer group">
+                <img id="mobileHeroImg" src="https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80" alt="Shop" class="w-full h-full object-cover group-active:scale-105 transition-transform" />
+                <div class="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent"></div>
+                <div class="absolute bottom-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-xs font-medium border border-white/10 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">photo_library</span> 5 รูป
+                </div>
+            </div>
+
+            <!-- Split Layout Content (Matches shop-details.html) -->
+            <div class="split-layout-container flex flex-col md:flex-row gap-8 px-4 md:px-6 md:mt-0 -mt-6 relative z-10">
+                
+                <!-- LEFT COLUMN -->
+                <div class="flex-1 flex flex-col gap-6 md:gap-10">
+                    <!-- Header Info -->
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2 mb-3">
+                            <span id="shop-open-status-badge" class="bg-emerald-500/15 text-emerald-600 px-3 py-1 rounded-full text-xs font-bold border border-emerald-500/30 flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span>เปิดให้บริการ</span>
+                            </span>
+                            <span class="bg-surface-container-highest text-on-surface-variant px-3 py-1 rounded-full text-xs font-medium border border-outline-variant flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[14px] text-secondary">location_on</span> <span id="shop-distance">ห่าง 0.8 กม.</span>
+                            </span>
+                            <span class="bg-surface-container-highest text-on-surface-variant px-3 py-1 rounded-full text-xs font-medium border border-outline-variant flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[14px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span> <span id="shop-rating-text">5.0 (0 รีวิว)</span>
+                            </span>
+                        </div>
+
+                        <!-- Shop Brand: Logo + Title -->
+                        <div class="flex items-start sm:items-center gap-3.5 mb-3">
+                            <div id="shop-logo-container" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-outline-variant/40 bg-surface-container shadow-md overflow-hidden shrink-0 flex items-center justify-center">
+                                <img id="shop-logo-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23e2e8f0'/><circle cx='50' cy='38' r='18' fill='%2394a3b8'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%2394a3b8'/></svg>" alt="Shop Logo" class="w-full h-full object-cover">
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h1 id="shop-title" class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-on-surface tracking-tight truncate">กำลังโหลดข้อมูลร้านค้า...</h1>
+                                <p id="shop-address" class="text-on-surface-variant text-xs sm:text-sm md:text-base flex items-center gap-1 mt-1">
+                                    <span class="material-symbols-outlined text-[16px] text-secondary shrink-0">location_on</span>
+                                    <span id="shop-address-text">ที่อยู่ร้านค้า</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3">
+                            <a id="shop-phone-link" href="tel:" class="px-4 py-2 bg-surface-container-highest hover:bg-surface-variant text-on-surface text-sm font-bold rounded-xl flex items-center gap-2 border border-outline-variant/50 transition-colors">
+                                <span class="material-symbols-outlined text-[18px]">call</span> <span id="shop-phone-text">080-000-0000</span>
+                            </a>
+                            <button id="desktop-fav-btn" onclick="toggleFavorite()" class="px-4 py-2 bg-surface-container-highest hover:bg-surface-variant text-on-surface text-sm font-bold rounded-xl flex items-center gap-2 border border-outline-variant/50 transition-colors active:scale-95">
+                                <span class="material-symbols-outlined heart-icon text-[18px] transition-colors">favorite_border</span>
+                                <span id="desktop-fav-label">บันทึกร้านโปรด</span>
+                            </button>
+                            <button onclick="shareShop()" class="px-4 py-2 bg-surface-container-highest hover:bg-surface-variant text-on-surface text-sm font-bold rounded-xl flex items-center gap-2 border border-outline-variant/50 transition-colors active:scale-95">
+                                <span class="material-symbols-outlined text-[18px]">share</span>
+                                <span>แชร์</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Facilities / Amenities Section -->
+                    <section class="bg-surface-container-highest/30 p-4 rounded-2xl border border-outline-variant/20">
+                        <h3 class="text-sm font-bold text-on-surface mb-2.5 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-secondary text-[18px]">verified</span> สิ่งอำนวยความสะดวกของร้าน
+                        </h3>
+                        <div id="shop-facilities-container" class="flex flex-wrap gap-2 text-xs">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface font-medium shadow-xs">
+                                <span class="material-symbols-outlined text-secondary text-[16px]">ac_unit</span> ห้องรับรองติดแอร์
+                            </span>
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface font-medium shadow-xs">
+                                <span class="material-symbols-outlined text-secondary text-[16px]">wifi</span> Wi-Fi ฟรี
+                            </span>
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface font-medium shadow-xs">
+                                <span class="material-symbols-outlined text-secondary text-[16px]">coffee</span> เครื่องดื่ม & กาแฟฟรี
+                            </span>
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface font-medium shadow-xs">
+                                <span class="material-symbols-outlined text-secondary text-[16px]">wc</span> ห้องน้ำสะอาด
+                            </span>
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface font-medium shadow-xs">
+                                <span class="material-symbols-outlined text-secondary text-[16px]">local_parking</span> ที่จอดรถสะดวก
+                            </span>
+                        </div>
+                    </section>
+
+
+                    <!-- About -->
+                    <section>
+                        <h3 class="text-xl font-bold text-on-surface mb-3">เกี่ยวกับร้าน</h3>
+                        <p id="shop-about" class="text-on-surface-variant text-sm md:text-base leading-relaxed">
+                            บริการดูแลรถยนต์ระดับพรีเมียม ล้างมือ เคลือบเงา และทำความสะอาดภายในด้วยคุณภาพสูงสุด เราใช้ผลิตภัณฑ์นำเข้าจากญี่ปุ่นและเป็นมิตรต่อสิ่งแวดล้อม เพื่อความเงางามอย่างไร้ที่ติ พร้อมห้องรับรองแอร์เย็นฉ่ำและกาแฟฟรีสำหรับลูกค้าทุกท่าน
+                        </p>
+                    </section>
+
+                    <!-- Booking Policy -->
+                    <section class="mt-2">
+                        <h3 class="text-xl font-bold text-on-surface mb-3 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-secondary text-[22px]">policy</span> เงื่อนไขการให้บริการ
+                        </h3>
+                        <ul class="text-sm text-on-surface-variant space-y-3 leading-relaxed bg-surface-container-highest/30 p-4 rounded-2xl border border-outline-variant/20">
+                            <li class="flex gap-2 items-start">
+                                <span class="material-symbols-outlined text-[18px] text-error shrink-0 mt-0.5">cancel</span>
+                                <span><strong>การยกเลิกคิว:</strong> หากต้องการยกเลิกและขอรับเงินมัดจำคืน กรุณายกเลิกล่วงหน้าอย่างน้อย 1 ชั่วโมงก่อนถึงเวลานัดหมาย</span>
+                            </li>
+                            <li class="flex gap-2 items-start">
+                                <span class="material-symbols-outlined text-[18px] text-secondary shrink-0 mt-0.5">timer</span>
+                                <span><strong>การมาสาย:</strong> หากมาสายเกิน 15 นาที ระบบอาจพิจารณายกเลิกคิวของคุณเพื่อให้สิทธิ์ลูกค้ารายต่อไป (สงวนสิทธิ์ไม่คืนมัดจำ)</span>
+                            </li>
+                        </ul>
+                    </section>
+
+                    <!-- Mini Map (Leaflet) -->
+                    <section>
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-bold text-on-surface">ที่ตั้ง</h3>
+                            <a id="map-directions-link" href="https://www.google.com/maps/dir/?api=1&destination=18.7938,98.9898" target="_blank" class="text-primary text-sm font-semibold hover:underline flex items-center gap-1">
+                                ขอเส้นทาง <span class="material-symbols-outlined text-[14px]">directions</span>
+                            </a>
+                        </div>
+                        <div class="w-full h-48 bg-surface-container-highest rounded-2xl overflow-hidden border border-outline-variant/50 relative z-0" id="mini-map"></div>
+                        <a id="map-search-link" href="https://www.google.com/maps/search/?api=1&query=18.7938,98.9898" target="_blank" class="block text-xs text-on-surface-variant mt-2 text-right hover:text-primary transition-colors">
+                            เปิดใน Google Maps <span class="material-symbols-outlined text-[12px] align-middle">open_in_new</span>
+                        </a>
+                    </section>
+
+                    <!-- Reviews -->
+                    <section class="mb-8">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold text-on-surface">รีวิวจากลูกค้า</h3>
+                            <div class="flex items-center gap-1 text-yellow-400 text-sm font-bold bg-surface-container-highest px-2 py-1 rounded-lg border border-outline-variant/30">
+                                <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span> <span id="preview-rating-badge">ใหม่</span>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic Review Items -->
+                        <div id="preview-reviews-container" class="space-y-4">
+                            <!-- Injected by renderShopReviews() -->
+                            <div class="bg-surface-container-highest/20 rounded-2xl p-6 text-center border border-outline-variant/20">
+                                <span class="material-symbols-outlined text-[32px] text-yellow-400/60 mb-2">star_border</span>
+                                <p class="font-bold text-sm text-on-surface">ยังไม่มีรีวิวจากลูกค้า</p>
+                                <p class="text-xs text-on-surface-variant mt-1">เมื่อลูกค้าเข้ามาใช้บริการและส่งคะแนนความพึงพอใจ รีวิวจะปรากฏที่นี่</p>
+                            </div>
+                        </div>
+                        
+                        <button id="preview-all-reviews-btn" onclick="openReviewsModal()" class="w-full py-3 rounded-xl border border-outline-variant/50 text-on-surface font-bold hover:bg-surface-variant transition-colors flex items-center justify-center gap-2 mt-4 hidden">
+                            <span id="preview-all-reviews-btn-text">ดูรีวิวทั้งหมด</span> <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                        </button>
+                    </section>
+                </div>
+
+                <!-- RIGHT COLUMN (Sticky on Desktop) -->
+                <div class="w-full md:w-[380px] lg:w-[420px] shrink-0 desktop-sidebar-col">
+                    <div class="md:sticky md:top-32 flex flex-col gap-6">
+                        
+                        <!-- Operating Hours -->
+                        <div class="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-5 shadow-sm">
+                            <h3 class="text-lg font-bold text-on-surface mb-3 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary">schedule</span> เวลาทำการ
+                            </h3>
+                            <div id="operating-hours-container" class="space-y-2 text-sm">
+                                <div class="flex justify-between border-b border-outline-variant/20 pb-2">
+                                    <span class="text-on-surface-variant">จันทร์ - ศุกร์</span>
+                                    <span class="font-medium text-on-surface">08:00 - 18:00</span>
+                                </div>
+                                <div class="flex justify-between border-b border-outline-variant/20 pb-2">
+                                    <span class="text-on-surface-variant">เสาร์</span>
+                                    <span class="font-medium text-on-surface">09:00 - 16:00</span>
+                                </div>
+                                <div class="flex justify-between text-error pt-1">
+                                    <span>อาทิตย์</span>
+                                    <span class="font-bold">ปิดทำการ</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Services (Rich Cards) -->
+                        <div>
+                            <h3 class="text-xl font-bold text-on-surface mb-2">เลือกแพ็กเกจ</h3>
+                            <div class="bg-surface-container-highest/50 border border-outline-variant/30 rounded-xl p-3 mb-4 text-[11px] md:text-xs text-on-surface-variant flex items-start gap-2">
+                                <span class="material-symbols-outlined text-[16px] text-secondary shrink-0">info</span>
+                                <span><strong>หมายเหตุ:</strong> ราคาที่แสดงเป็นราคาเริ่มต้นสำหรับรถเก๋งเล็ก (Size S) ราคาจริงอาจปรับเพิ่มตามขนาดรถและสภาพความสกปรกหน้างาน (ชำระส่วนต่างที่ร้าน)</span>
+                            </div>
+                            <div id="packages-container" class="space-y-3">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Desktop Booking Summary (Hidden on Mobile) -->
+                        <div id="desktopBookingSummary" class="hidden md:block bg-surface-container-low rounded-2xl p-5 shadow-lg border border-outline-variant/30">
+                            <div class="flex justify-between items-end mb-4">
+                                <div>
+                                    <div class="text-on-surface-variant text-sm font-medium mb-1">ยอดรวมทั้งหมด</div>
+                                    <div class="text-on-surface font-bold text-sm summary-name truncate max-w-[200px]">ล้างสีภายนอก</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs text-on-surface-variant mb-0.5">ราคาเริ่มต้น</div>
+                                    <div class="text-3xl font-black text-primary summary-price leading-none">฿150</div>
+                                    <div class="text-xs font-bold text-secondary bg-secondary/20 border border-secondary/30 px-2 py-0.5 rounded-md inline-block mt-2 summary-deposit">จ่ายมัดจำ ฿50</div>
+                                </div>
+                            </div>
+                            <button onclick="simulateBookingAction()" class="w-full bg-primary-container text-white hover:bg-primary-container/90 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-[0_4px_20px_rgba(37,99,235,0.3)]">
+                                ดำเนินการจอง (จำลอง) <span class="material-symbols-outlined" style="font-size: 20px;">arrow_forward</span>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Mobile Sticky Bottom Bar (Matches shop-details.html) -->
+    <div id="mobileBottomBar" class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface-container-low/95 backdrop-blur-xl border-t border-outline-variant/30 pb-[env(safe-area-inset-bottom,1rem)] pt-3 px-4 shadow-[0_-10px_40px_rgba(0,0,0,0.6)]">
+        <div class="flex justify-between items-center">
+            <div class="flex flex-col">
+                <span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mb-0.5 summary-name truncate max-w-[150px]">ล้างสีภายนอก</span>
+                <div class="flex items-end gap-1.5">
+                    <div class="text-[10px] text-on-surface-variant mb-1">เริ่ม</div>
+                    <div class="text-2xl font-black text-primary summary-price transition-all leading-none">฿150</div>
+                </div>
+                <div class="text-[9px] font-bold text-secondary bg-secondary/20 px-1.5 py-0.5 rounded w-fit mt-1 border border-secondary/30 summary-deposit">โอนมัดจำ ฿50</div>
+            </div>
+            <button onclick="simulateBookingAction()" class="bg-primary-container hover:bg-primary-container/90 text-white font-bold px-8 py-3.5 rounded-2xl shadow-[0_4px_15px_rgba(37,99,235,0.4)] active:scale-95 transition-transform flex items-center gap-2">
+                จองเลย (จำลอง) <span class="material-symbols-outlined" style="font-size: 18px;">arrow_forward</span>
+            </button>
+        </div>
+        <!-- iPhone Home Indicator for simulator -->
+        <div class="phone-home-indicator hidden w-32 h-1 bg-white/30 rounded-full mx-auto mt-2.5 mb-1"></div>
+    </div>
+
+</div>
+
+<!-- Full-Screen Image Gallery Modal (Matches shop-details.html) -->
+<div id="image-gallery-modal" class="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl hidden flex-col transition-opacity duration-300 opacity-0" onclick="closeGallery()">
+    <div class="flex justify-between items-center p-4">
+        <div class="text-white font-medium bg-black/50 px-3 py-1 rounded-full border border-white/10"><span id="current-slide-index">1</span> / <span id="total-slide-index">5</span></div>
+        <button onclick="closeGallery()" class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+    </div>
+    
+    <div class="flex-1 relative flex items-center justify-center overflow-hidden px-4 md:px-12" onclick="event.stopPropagation()">
+        <button onclick="prevSlide(event)" class="absolute left-4 z-10 w-12 h-12 flex items-center justify-center rounded-full bg-black/50 border border-white/20 text-white hover:bg-black/80 transition-colors">
+            <span class="material-symbols-outlined">chevron_left</span>
+        </button>
+        
+        <img id="gallery-main-img" src="" class="max-w-full max-h-full object-contain transition-opacity duration-200" />
+        
+        <button onclick="nextSlide(event)" class="absolute right-4 z-10 w-12 h-12 flex items-center justify-center rounded-full bg-black/50 border border-white/20 text-white hover:bg-black/80 transition-colors">
+            <span class="material-symbols-outlined">chevron_right</span>
+        </button>
+    </div>
+
+    <div class="h-28 bg-black/40 p-4 flex gap-3 overflow-x-auto justify-start md:justify-center items-center hide-scrollbar" id="gallery-thumbnails" onclick="event.stopPropagation()">
+        <!-- Thumbnails populated by JS -->
+    </div>
+</div>
+
+<!-- All Reviews Modal (Matches shop-details.html) -->
+<div id="reviews-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-t-3xl md:rounded-3xl w-full max-w-lg h-[85vh] md:h-[70vh] flex flex-col shadow-2xl scale-95 transition-transform duration-300 mt-auto md:mt-0" id="reviews-modal-content">
+        <div class="p-4 border-b border-outline-variant/30 flex justify-between items-center sticky top-0 bg-surface-container z-10 rounded-t-3xl">
+            <h3 id="modal-reviews-title" class="text-xl font-bold text-on-surface">รีวิวทั้งหมด (0)</h3>
+            <button onclick="closeReviewsModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-surface-container-highest hover:bg-surface-variant text-on-surface transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        
+        <div id="modal-reviews-list" class="p-4 overflow-y-auto flex-1 space-y-4 hide-scrollbar">
+            <!-- Dynamic reviews loaded by renderShopReviews() -->
+            <div class="p-8 text-center text-outline">
+                <span class="material-symbols-outlined text-4xl text-yellow-400/60 mb-2">star_border</span>
+                <p class="font-bold text-on-surface text-sm">ยังไม่มีรีวิวจากลูกค้า</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Local Storage Data Helpers ---
+    function getLocalShopAddress() {
+        const street = localStorage.getItem('ownerShopStreet');
+        const sub = localStorage.getItem('ownerShopSubDistrict');
+        const city = localStorage.getItem('ownerShopCity');
+        const zip = localStorage.getItem('ownerShopZip');
+        const parts = [street, sub, city, zip].filter(p => p && p.trim().length > 0);
+        if (parts.length > 0) return parts.join(' ');
+        return street || 'ที่อยู่ร้านค้า';
+    }
+
+    function getLocalShopLogo() {
+        return localStorage.getItem('ownerShopLogo') || localStorage.getItem('ownerProfileAvatar') || '';
+    }
+
+    function updateShopLogoDOM(logoUrl) {
+        const img = document.getElementById('shop-logo-img');
+        if (!img) return;
+        if (logoUrl) {
+            img.src = logoUrl;
+        }
+    }
+
+    // --- Master Data (Defaults, dynamically updated from localStorage & Supabase) ---
+    let SHOP1_DATA = {
+        id: localStorage.getItem('selectedShopId') || 'shop1',
+        name: localStorage.getItem('ownerShopName') || 'ร้านคาร์แคร์',
+        address: getLocalShopAddress(),
+        distance: 'ห่าง 0.8 กม.',
+        rating: 'ใหม่',
+        reviews: '0 รีวิว',
+        phone: localStorage.getItem('ownerShopPhone') || '080-000-0000',
+        about: localStorage.getItem('ownerShopDesc') || localStorage.getItem('shopDescription') || 'บริการดูแลรักษาและทำความสะอาดรถยนต์ระดับมืออาชีพ พร้อมดูแลรถของคุณด้วยมาตรฐานสูงสุด',
+        lat: parseFloat(localStorage.getItem('ownerShopLat')) || 18.7938,
+        lng: parseFloat(localStorage.getItem('ownerShopLng')) || 98.9898,
+        images: (() => {
+            let gallery = null;
+            try { gallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null'); } catch(_) {}
+            if (gallery && Array.isArray(gallery) && gallery.length > 0) return gallery;
+            const cover = localStorage.getItem('ownerCoverImage');
+            if (cover) return [cover, cover, cover, cover];
+            return [
+                "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80",
+                "https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80",
+                "https://images.unsplash.com/photo-1520340356584-f9917d1e5113?w=1200&q=80",
+                "https://images.unsplash.com/photo-1620803444007-681125f16e45?w=1200&q=80",
+                "https://images.unsplash.com/photo-1580274455191-1c62238fa333?w=1200&q=80"
+            ];
+        })(),
+        services: (() => {
+            let srvs = null;
+            try { srvs = JSON.parse(localStorage.getItem('ownerServices') || 'null'); } catch(_) {}
+            if (srvs && Array.isArray(srvs) && srvs.length > 0) {
+                return srvs.map((s, idx) => ({
+                    id: s.id || `srv_local_${idx}`,
+                    name: s.name,
+                    price: parseFloat(s.price) || 150,
+                    duration: `${s.duration_minutes || s.duration || 30} นาที`,
+                    popular: idx === 1,
+                    icon: s.icon || (idx === 0 ? 'local_car_wash' : (idx === 1 ? 'cleaning_services' : 'auto_awesome')),
+                    items: s.description ? [s.description] : ['บริการดูแลมาตรฐาน สะอาด รวดเร็ว']
+                }));
+            }
+            return [
+                { id: 'srv1', name: 'ล้างสีภายนอก', price: 150, duration: '30 นาที', icon: 'local_car_wash', items: ['ล้างรถเบื้องต้นด้วยโฟมแชมพู', 'เช็ดแห้งเคลือบยาง'] },
+                { id: 'srv2', name: 'ทำความสะอาดมาตรฐาน', price: 250, duration: '45 นาที', popular: true, icon: 'cleaning_services', items: ['ล้างสีภายนอกพร้อมโฟม', 'ดูดฝุ่นภายในห้องโดยสาร'] },
+                { id: 'srv3', name: 'พรีเมียมดีเทลลิ่ง', price: 450, duration: '90 นาที', icon: 'auto_awesome', items: ['ล้างสี + ดูดฝุ่น + เช็ดภายใน', 'เคลือบเงาสีรถด้วยแวกซ์พรีเมียม', 'อบโอโซนฆ่าเชื้อโรค'] }
+            ];
+        })()
+    };
+
+    let galleryImages = [...SHOP1_DATA.images];
+    let currentSlide = 0;
+
+    // --- Helper to update Gallery in DOM ---
+    function updateGalleryDOM(images) {
+        if (!images || images.length === 0) return;
+        const dContainer = document.getElementById('desktopGalleryContainer');
+        if (dContainer) {
+            const imgs = dContainer.querySelectorAll('img');
+            if (imgs[0]) imgs[0].src = images[0];
+            if (imgs[1]) imgs[1].src = images[1] || images[0];
+            if (imgs[2]) imgs[2].src = images[2] || images[1] || images[0];
+            if (imgs[3]) imgs[3].src = images[3] || images[2] || images[0];
+            const countLabel = dContainer.querySelector('span.text-white');
+            if (countLabel) {
+                countLabel.innerHTML = `<span class="material-symbols-outlined">photo_library</span> ดูรูปภาพทั้งหมด (${images.length} รูป)`;
+            }
+        }
+        const mHeroImg = document.getElementById('mobileHeroImg');
+        if (mHeroImg) mHeroImg.src = images[0];
+        const mBadge = document.querySelector('#mobileHeroContainer .bg-black\\/60');
+        if (mBadge) {
+            mBadge.innerHTML = `<span class="material-symbols-outlined text-[14px]">photo_library</span> ${images.length} รูป`;
+        }
+    }
+
+    // --- Calculate & Update Shop Live Open/Closed Status Badge ---
+    function updateShopOpenStatus(hoursList, holidaysList) {
+        const badge = document.getElementById('shop-open-status-badge');
+        if (!badge) return;
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
+
+        // 1. Check Special Holidays
+        let holidays = holidaysList;
+        if (!holidays) {
+            try { holidays = JSON.parse(localStorage.getItem('ownerSpecialHolidays') || '[]'); } catch (_) { holidays = []; }
+        }
+        const holidayToday = Array.isArray(holidays) ? holidays.find(h => h.date === todayStr) : null;
+        if (holidayToday) {
+            badge.className = "bg-rose-500/15 text-rose-600 px-3 py-1 rounded-full text-xs font-bold border border-rose-500/30 flex items-center gap-1.5";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span><span>วันหยุดพิเศษ (${holidayToday.reason || 'ปิดทำการ'})</span>`;
+            return;
+        }
+
+        // 2. Check Operating Hours
+        let hours = hoursList;
+        if (!hours) {
+            try { hours = JSON.parse(localStorage.getItem('ownerOperatingHours') || 'null'); } catch (_) { hours = null; }
+        }
+
+        if (!hours || !Array.isArray(hours) || hours.length === 0) {
+            badge.className = "bg-emerald-500/15 text-emerald-600 px-3 py-1 rounded-full text-xs font-bold border border-emerald-500/30 flex items-center gap-1.5";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span><span>เปิดให้บริการ</span>`;
+            return;
+        }
+
+        const dayOfWeek = now.getDay(); // 0 = Sun, 1 = Mon, ...
+        const todaySchedule = hours.find(h => Number(h.day_of_week) === dayOfWeek);
+
+        if (!todaySchedule || todaySchedule.is_closed) {
+            badge.className = "bg-rose-500/15 text-rose-600 px-3 py-1 rounded-full text-xs font-bold border border-rose-500/30 flex items-center gap-1.5";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span><span>ปิดทำการวันนี้</span>`;
+            return;
+        }
+
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const parseTime = (tStr) => {
+            if (!tStr) return 0;
+            const [h, m] = tStr.split(':').map(Number);
+            return (h || 0) * 60 + (m || 0);
+        };
+
+        const openMinutes = parseTime(todaySchedule.open_time || '08:00');
+        const closeMinutes = parseTime(todaySchedule.close_time || '18:00');
+        const closeFormatted = (todaySchedule.close_time || '18:00').slice(0, 5);
+        const openFormatted = (todaySchedule.open_time || '08:00').slice(0, 5);
+
+        if (currentMinutes >= openMinutes && currentMinutes < closeMinutes) {
+            badge.className = "bg-emerald-500/15 text-emerald-600 px-3 py-1 rounded-full text-xs font-bold border border-emerald-500/30 flex items-center gap-1.5";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span><span>เปิดให้บริการ (ปิด ${closeFormatted})</span>`;
+        } else if (currentMinutes < openMinutes) {
+            badge.className = "bg-amber-500/15 text-amber-600 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/30 flex items-center gap-1.5";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span><span>ยังไม่เปิด (เปิด ${openFormatted})</span>`;
+        } else {
+            badge.className = "bg-rose-500/15 text-rose-600 px-3 py-1 rounded-full text-xs font-bold border border-rose-500/30 flex items-center gap-1.5";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span><span>ปิดให้บริการแล้ว</span>`;
+        }
+    }
+
+    // --- Preload Immediately from LocalStorage to Avoid any Mock Flash ---
+    function preloadFromLocalStorage() {
+        const localLogo = getLocalShopLogo();
+        if (localLogo) {
+            updateShopLogoDOM(localLogo);
+        }
+
+        const localName = localStorage.getItem('ownerShopName');
+        if (localName) {
+            document.title = `ตัวอย่างหน้าร้าน - ${localName}`;
+            const titleEl = document.getElementById('shop-title');
+            if (titleEl) titleEl.textContent = localName;
+            const mobTitle = document.getElementById('mobile-header-title');
+            if (mobTitle) mobTitle.textContent = localName;
+        }
+
+        const fullAddress = getLocalShopAddress();
+        const addrText = document.getElementById('shop-address-text');
+        const addrEl = document.getElementById('shop-address');
+        if (addrText) {
+            addrText.textContent = fullAddress;
+        } else if (addrEl) {
+            addrEl.textContent = fullAddress;
+        }
+
+        const localPhone = localStorage.getItem('ownerShopPhone');
+        if (localPhone) {
+            const phoneLink = document.getElementById('shop-phone-link');
+            const phoneText = document.getElementById('shop-phone-text');
+            if (phoneLink) phoneLink.href = `tel:${localPhone}`;
+            if (phoneText) phoneText.textContent = localPhone;
+        }
+
+        const localDesc = localStorage.getItem('ownerShopDesc') || localStorage.getItem('shopDescription');
+        if (localDesc) {
+            const aboutEl = document.getElementById('shop-about');
+            if (aboutEl) aboutEl.textContent = localDesc;
+        }
+
+        const localShopId = localStorage.getItem('selectedShopId');
+        if (localShopId) {
+            const publicLink = document.getElementById('publicShopLink');
+            if (publicLink) publicLink.href = `../customer/shop-details.html?shopId=${localShopId}`;
+        }
+
+        try {
+            const localHours = JSON.parse(localStorage.getItem('ownerOperatingHours') || 'null');
+            if (localHours && localHours.length > 0) {
+                renderOperatingHours(localHours);
+            } else {
+                updateShopOpenStatus();
+            }
+        } catch (_) {
+            updateShopOpenStatus();
+        }
+
+        // Initialize Favorite Status from localStorage
+        const favs = getFavoriteShopIds();
+        const activeShopId = localStorage.getItem('selectedShopId') || 'shop1';
+        isShopFav = favs.includes(activeShopId);
+        syncFavoriteUI();
+
+        updateGalleryDOM(galleryImages);
+    }
+
+    // --- Render Operating Hours ---
+    function renderOperatingHours(hoursList) {
+        const container = document.getElementById('operating-hours-container');
+        if (!container) return;
+
+        const dayLabels = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+        const sorted = [...hoursList].sort((a, b) => {
+            const orderA = a.day_of_week === 0 ? 7 : a.day_of_week;
+            const orderB = b.day_of_week === 0 ? 7 : b.day_of_week;
+            return orderA - orderB;
+        });
+
+        let html = '';
+        sorted.forEach((item, idx) => {
+            const dayName = dayLabels[item.day_of_week] || `วัน ${item.day_of_week}`;
+            const isClosed = item.is_closed;
+            const openFormatted = item.open_time ? item.open_time.slice(0, 5) : '08:00';
+            const closeFormatted = item.close_time ? item.close_time.slice(0, 5) : '18:00';
+            const timeText = isClosed ? 'ปิดทำการ' : `${openFormatted} - ${closeFormatted}`;
+            const isLast = idx === sorted.length - 1;
+            const borderClass = isLast ? '' : 'border-b border-outline-variant/20 pb-2';
+            const colorClass = isClosed ? 'text-error font-bold' : 'font-medium text-on-surface';
+
+            html += `
+                <div class="flex justify-between ${borderClass}">
+                    <span class="text-on-surface-variant">${dayName}</span>
+                    <span class="${colorClass}">${timeText}</span>
+                </div>
+            `;
+        });
+
+        let holidays = [];
+        try {
+            holidays = JSON.parse(localStorage.getItem('ownerSpecialHolidays') || '[]');
+        } catch(_) {}
+        if (Array.isArray(holidays) && holidays.length > 0) {
+            html += `
+                <div class="mt-3 pt-2.5 border-t border-outline-variant/30">
+                    <div class="text-xs font-bold text-amber-500 flex items-center gap-1.5 mb-1.5">
+                        <span class="material-symbols-outlined text-[15px]">event_busy</span> วันหยุดพิเศษ / ปิดชั่วคราว:
+                    </div>
+                    <div class="space-y-1">
+                        ${holidays.map(h => `
+                            <div class="text-[11px] text-outline flex justify-between py-0.5">
+                                <span class="text-amber-500 font-mono">${h.date}</span>
+                                <span class="text-on-surface font-medium truncate max-w-[180px]">${h.reason || 'วันหยุดพิเศษ'}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        container.innerHTML = html;
+        updateShopOpenStatus(hoursList, holidays);
+    }
+
+    // --- Render Packages ---
+    function renderPackages() {
+        const container = document.getElementById('packages-container');
+        if (!container) return;
+
+        let html = '';
+        SHOP1_DATA.services.forEach((srv, index) => {
+            const isChecked = index === 0;
+            const depositAmount = Math.max(50, Math.round(srv.price * 0.2));
+            html += `
+                <label class="cursor-pointer group relative block">
+                    <input type="radio" name="service" value="${srv.price}" data-name="${srv.name}" data-deposit="${depositAmount}" class="peer sr-only" ${isChecked ? 'checked' : ''}>
+                    <div class="rounded-2xl border-2 border-outline-variant/40 bg-surface-container-low p-4 transition-all hover:bg-surface-variant/50 peer-checked:border-primary peer-checked:bg-primary-container/10">
+                        ${srv.popular ? '<div class="absolute -top-3 left-4 bg-error text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10">ขายดีสุด</div>' : ''}
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex gap-3 items-center">
+                                <div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant transition-colors">
+                                    <span class="material-symbols-outlined text-[20px]">${srv.icon || (index === 0 ? 'water_drop' : (index === 1 ? 'local_car_wash' : 'diamond'))}</span>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-on-surface text-base">${srv.name}</h4>
+                                    <span class="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5"><span class="material-symbols-outlined text-[14px]">schedule</span> ${srv.duration}</span>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-end gap-1">
+                                <div class="w-6 h-6 rounded-full border-2 border-outline-variant group-has-[:checked]:border-primary flex items-center justify-center transition-colors">
+                                    <div class="w-3.5 h-3.5 rounded-full bg-primary scale-0 group-has-[:checked]:scale-100 transition-transform shadow-[0_0_8px_rgba(180,197,255,0.8)]"></div>
+                                </div>
+                                <div class="text-[10px] text-on-surface-variant text-right">เริ่มต้น</div>
+                                <div class="text-xl font-black text-primary leading-none mt-0.5">฿${srv.price}</div>
+                                <div class="text-[10px] bg-secondary/20 text-secondary border border-secondary/30 px-2 py-0.5 rounded-md font-bold mt-1.5">มัดจำ ฿${depositAmount}</div>
+                            </div>
+                        </div>
+                        <ul class="text-sm text-on-surface-variant space-y-1.5 pl-[52px]">
+                            ${srv.items.map(item => `<li class="flex gap-2 items-start"><span class="material-symbols-outlined text-secondary text-[16px]">check_circle</span> ${item}</li>`).join('')}
+                        </ul>
+                    </div>
+                </label>
+            `;
+        });
+        container.innerHTML = html;
+
+        const radioInputs = container.querySelectorAll('input[name="service"]');
+        const summaryPrices = document.querySelectorAll('.summary-price');
+        const summaryNames = document.querySelectorAll('.summary-name');
+        const summaryDeposits = document.querySelectorAll('.summary-deposit');
+
+        const updateSummary = () => {
+            const selected = container.querySelector('input[name="service"]:checked');
+            if (selected) {
+                const price = selected.value;
+                const name = selected.dataset.name;
+                const deposit = selected.dataset.deposit || '50';
+
+                summaryPrices.forEach(el => {
+                    el.textContent = '฿' + price;
+                });
+                summaryNames.forEach(el => {
+                    el.textContent = name;
+                });
+                summaryDeposits.forEach(el => {
+                    if (el.textContent.includes('โอน')) {
+                        el.textContent = `โอนมัดจำ ฿${deposit}`;
+                    } else {
+                        el.textContent = `จ่ายมัดจำ ฿${deposit}`;
+                    }
+                });
+            }
+        };
+
+        radioInputs.forEach(input => input.addEventListener('change', updateSummary));
+        updateSummary();
+    }
+
+    // --- Render Live Customer Reviews ---
+    function renderShopReviews(reviews) {
+        const container = document.getElementById('preview-reviews-container');
+        const ratingBadge = document.getElementById('preview-rating-badge');
+        const ratingText = document.getElementById('shop-rating-text');
+        const allBtn = document.getElementById('preview-all-reviews-btn');
+        const allBtnText = document.getElementById('preview-all-reviews-btn-text');
+        const modalTitle = document.getElementById('modal-reviews-title');
+        const modalList = document.getElementById('modal-reviews-list');
+
+        if (!reviews || reviews.length === 0) {
+            if (ratingBadge) ratingBadge.textContent = 'ใหม่';
+            if (ratingText) ratingText.textContent = 'ใหม่ (0 รีวิว)';
+            if (allBtn) allBtn.classList.add('hidden');
+            if (modalTitle) modalTitle.textContent = 'รีวิวทั้งหมด (0)';
+            if (modalList) {
+                modalList.innerHTML = `
+                    <div class="p-8 text-center text-outline">
+                        <span class="material-symbols-outlined text-4xl text-yellow-400/60 mb-2">star_border</span>
+                        <p class="font-bold text-on-surface text-sm">ยังไม่มีรีวิวจากลูกค้า</p>
+                        <p class="text-xs text-on-surface-variant mt-1">รีวิวจากลูกค้าจะปรากฏที่นี่หลังจากมีการเข้ามาใช้บริการ</p>
+                    </div>
+                `;
+            }
+            if (container) {
+                container.innerHTML = `
+                    <div class="bg-surface-container-highest/20 rounded-2xl p-6 text-center border border-outline-variant/20">
+                        <span class="material-symbols-outlined text-[32px] text-yellow-400/60 mb-2">star_border</span>
+                        <p class="font-bold text-sm text-on-surface">ยังไม่มีรีวิวจากลูกค้า</p>
+                        <p class="text-xs text-on-surface-variant mt-1">เมื่อลูกค้าเข้ามาใช้บริการและส่งคะแนนความพึงพอใจ รีวิวจะปรากฏที่นี่</p>
+                    </div>
+                `;
+            }
+            return;
+        }
+
+        const total = reviews.length;
+        const sum = reviews.reduce((acc, r) => acc + (parseFloat(r.rating) || 5), 0);
+        const avg = (sum / total).toFixed(1);
+
+        if (ratingBadge) ratingBadge.textContent = avg;
+        if (ratingText) ratingText.textContent = `${avg} (${total} รีวิว)`;
+        if (allBtn) allBtn.classList.remove('hidden');
+        if (allBtnText) allBtnText.textContent = `ดูรีวิวทั้งหมด (${total} รีวิว)`;
+        if (modalTitle) modalTitle.textContent = `รีวิวทั้งหมด (${total})`;
+
+        const buildReviewCard = (r) => {
+            const custName = r.customer?.full_name || 'ลูกค้าผู้ใช้บริการ';
+            const custAvatar = r.customer?.avatar_url;
+            const ratingNum = Math.min(5, Math.max(1, Math.round(parseFloat(r.rating) || 5)));
+            let starsHtml = '';
+            for (let i = 1; i <= 5; i++) {
+                starsHtml += `<span class="material-symbols-outlined ${i <= ratingNum ? 'text-yellow-400' : 'text-outline-variant'}" style="font-variation-settings: 'FILL' 1;">star</span>`;
+            }
+            const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : 'เมื่อเร็วๆ นี้';
+
+            return `
+                <div class="bg-surface-container-highest/30 rounded-2xl p-4 border border-outline-variant/20">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex items-center gap-3">
+                            ${custAvatar ? `
+                                <div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30">
+                                    <img src="${custAvatar}" class="w-full h-full object-cover">
+                                </div>
+                            ` : `
+                                <div class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-sm">
+                                    ${custName.slice(0, 2).toUpperCase()}
+                                </div>
+                            `}
+                            <div>
+                                <div class="font-bold text-sm text-on-surface">${custName}</div>
+                                <div class="text-[11px] text-on-surface-variant">${dateStr}</div>
+                            </div>
+                        </div>
+                        <div class="flex text-[14px]">
+                            ${starsHtml}
+                        </div>
+                    </div>
+                    <p class="text-sm text-on-surface-variant leading-relaxed">${r.comment || 'บริการดี ประทับใจมากครับ'}</p>
+                    ${r.reply ? `
+                        <div class="bg-surface-container-low rounded-xl p-3 border-l-4 border-secondary border border-outline-variant/30 mt-3 text-xs">
+                            <div class="font-bold text-secondary mb-1 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[14px]">reply</span> ตอบกลับจากทางร้าน
+                            </div>
+                            <p class="text-on-surface-variant">${r.reply}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        };
+
+        if (container) {
+            container.innerHTML = reviews.slice(0, 2).map(buildReviewCard).join('');
+        }
+        if (modalList) {
+            modalList.innerHTML = reviews.map(buildReviewCard).join('');
+        }
+    }
+
+    // --- Toast notification ---
+    function showToast(message) {
+        let toast = document.getElementById('preview-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'preview-toast';
+            toast.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 bg-surface-container-highest text-on-surface px-4 py-2.5 rounded-full text-sm font-semibold shadow-2xl transition-all duration-300 opacity-0 z-[200] pointer-events-none border border-outline-variant/50 whitespace-nowrap flex items-center gap-2';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = message;
+        toast.classList.remove('opacity-0', 'translate-y-4');
+        toast.classList.add('opacity-100', 'translate-y-0');
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-4');
+            toast.classList.remove('opacity-100', 'translate-y-0');
+        }, 2500);
+    }
+
+    // --- Simulation booking action ---
+    function simulateBookingAction() {
+        const selected = document.querySelector('input[name="service"]:checked');
+        const sName = selected ? selected.dataset.name : (SHOP1_DATA.services[0]?.name || 'ล้างสีภายนอก');
+        const sPrice = selected ? selected.value : (SHOP1_DATA.services[0]?.price || 150);
+        showToast(`ตัวอย่างการจอง: เลือก "${sName}" (฿${sPrice}) -> ในมุมมองลูกค้าจะไปยัง book and service.html 🚗`);
+    }
+
+    // --- Favorites Synchronization ---
+    let isShopFav = false;
+
+    function getFavoriteShopIds() {
+        try {
+            return JSON.parse(localStorage.getItem('favoriteShopIds') || '[]');
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function syncFavoriteUI() {
+        document.querySelectorAll('.heart-icon').forEach(icon => {
+            if (isShopFav) {
+                icon.textContent = 'favorite';
+                icon.classList.add('text-error');
+                icon.style.fontVariationSettings = "'FILL' 1";
+            } else {
+                icon.textContent = 'favorite_border';
+                icon.classList.remove('text-error');
+                icon.style.fontVariationSettings = '';
+            }
+        });
+        const desktopFavLabel = document.getElementById('desktop-fav-label');
+        if (desktopFavLabel) {
+            desktopFavLabel.textContent = isShopFav ? 'ร้านโปรดแล้ว' : 'บันทึกร้านโปรด';
+        }
+    }
+
+    function toggleFavorite() {
+        const activeShopId = localStorage.getItem('selectedShopId') || 'shop1';
+        let favs = getFavoriteShopIds();
+        isShopFav = !isShopFav;
+
+        if (isShopFav) {
+            if (!favs.includes(activeShopId)) favs.push(activeShopId);
+        } else {
+            favs = favs.filter(id => id !== activeShopId);
+        }
+
+        try {
+            localStorage.setItem('favoriteShopIds', JSON.stringify(favs));
+        } catch (_) {}
+
+        syncFavoriteUI();
+        showToast(isShopFav ? 'บันทึกร้านโปรดแล้ว ❤️ (มุมมองลูกค้า)' : 'นำออกจากรายการโปรด (มุมมองลูกค้า)');
+    }
+
+    function shareShop() {
+        const activeShopId = localStorage.getItem('selectedShopId') || 'shop1';
+        const shareUrl = `${window.location.origin}/customer/shop-details.html?shopId=${activeShopId}`;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                showToast('คัดลอกลิงก์ร้านค้าเรียบร้อยแล้ว 🔗 (มุมมองลูกค้า)');
+            }).catch(() => {
+                showToast('คัดลอกลิงก์ร้านค้าเรียบร้อยแล้ว 🔗 (มุมมองลูกค้า)');
+            });
+        } else {
+            showToast('คัดลอกลิงก์ร้านค้าเรียบร้อยแล้ว 🔗 (มุมมองลูกค้า)');
+        }
+    }
+
+    // --- Load Live Shop, Cover Image, Services, Hours & Reviews from Supabase ---
+    async function loadShopDataFromSupabase() {
+        try {
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (!client) {
+                renderPackages();
+                return;
+            }
+
+            let user = null;
+            if (client.auth) {
+                const { data } = await client.auth.getUser();
+                user = data?.user;
+            }
+
+            // 1. Fetch Shop by owner_id or selectedShopId
+            let shop = null;
+            if (user) {
+                const { data } = await client
+                    .from('shops')
+                    .select('*')
+                    .eq('owner_id', user.id)
+                    .maybeSingle();
+                shop = data;
+            }
+
+            if (!shop) {
+                const savedShopId = localStorage.getItem('selectedShopId');
+                if (savedShopId) {
+                    const { data } = await client.from('shops').select('*').eq('id', savedShopId).maybeSingle();
+                    shop = data;
+                }
+            }
+
+            if (!shop) {
+                const localName = localStorage.getItem('ownerShopName');
+                if (localName) {
+                    const { data } = await client.from('shops').select('*').eq('name', localName).maybeSingle();
+                    shop = data;
+                }
+            }
+
+            if (!shop) {
+                renderPackages();
+                return;
+            }
+
+            // Store active shop id
+            localStorage.setItem('selectedShopId', shop.id);
+
+            // Update Logo
+            const liveLogo = shop.logo_url || user?.user_metadata?.avatar_url || getLocalShopLogo();
+            if (liveLogo) {
+                updateShopLogoDOM(liveLogo);
+            }
+
+            // Update Title & Identity
+            if (shop.name) {
+                document.title = `ตัวอย่างหน้าร้าน - ${shop.name}`;
+                const titleEl = document.getElementById('shop-title');
+                if (titleEl) titleEl.textContent = shop.name;
+                const mobTitle = document.getElementById('mobile-header-title');
+                if (mobTitle) mobTitle.textContent = shop.name;
+                localStorage.setItem('ownerShopName', shop.name);
+            }
+
+            const finalAddr = shop.address || user?.user_metadata?.full_address || user?.user_metadata?.address || getLocalShopAddress();
+            if (finalAddr) {
+                const addrText = document.getElementById('shop-address-text');
+                const addrEl = document.getElementById('shop-address');
+                if (addrText) {
+                    addrText.textContent = finalAddr;
+                } else if (addrEl) {
+                    addrEl.textContent = finalAddr;
+                }
+            }
+
+            if (shop.phone_number) {
+                const phoneLink = document.getElementById('shop-phone-link');
+                const phoneText = document.getElementById('shop-phone-text');
+                if (phoneLink) phoneLink.href = `tel:${shop.phone_number}`;
+                if (phoneText) phoneText.textContent = shop.phone_number;
+            }
+
+            const finalDesc = shop.description || user?.user_metadata?.shop_description || user?.user_metadata?.description || user?.user_metadata?.about || localStorage.getItem('ownerShopDesc') || localStorage.getItem('shopDescription');
+            const aboutEl = document.getElementById('shop-about');
+            if (aboutEl) {
+                aboutEl.textContent = finalDesc || 'บริการดูแลรักษาและทำความสะอาดรถยนต์ระดับมืออาชีพ พร้อมดูแลรถของคุณด้วยมาตรฐานสูงสุด';
+            }
+
+            // Update Real Customer Link button
+            const publicLink = document.getElementById('publicShopLink');
+            if (publicLink) {
+                publicLink.href = `../customer/shop-details.html?shopId=${shop.id}`;
+            }
+
+            // Multi-Photo Gallery & Cover Sync
+            let customGallery = user?.user_metadata?.shop_images;
+            if (!customGallery || !Array.isArray(customGallery) || customGallery.length === 0) {
+                try {
+                    customGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null');
+                } catch(_) {}
+            }
+            const cover = shop.cover_image_url || user?.user_metadata?.cover_image_url || localStorage.getItem('ownerCoverImage');
+            if (cover && (!customGallery || !customGallery.length)) {
+                customGallery = [cover];
+            }
+
+            if (customGallery && customGallery.length > 0) {
+                galleryImages = [...customGallery];
+                updateGalleryDOM(galleryImages);
+                SHOP1_DATA.images = [...galleryImages];
+            } else if (cover) {
+                galleryImages[0] = cover;
+                updateGalleryDOM(galleryImages);
+            }
+
+            // Update Map Coordinates
+            const lat = shop.latitude || user?.user_metadata?.latitude || parseFloat(localStorage.getItem('ownerShopLat')) || 18.7938;
+            const lng = shop.longitude || user?.user_metadata?.longitude || parseFloat(localStorage.getItem('ownerShopLng')) || 98.9898;
+            SHOP1_DATA.lat = lat;
+            SHOP1_DATA.lng = lng;
+            if (window.previewLeafletMap) {
+                window.previewLeafletMap.setView([lat, lng], 15);
+            }
+            if (window.previewMarker) {
+                window.previewMarker.setLatLng([lat, lng]);
+            }
+            const dirLink = document.getElementById('map-directions-link');
+            if (dirLink) dirLink.href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+            const searchLink = document.getElementById('map-search-link');
+            const customMapLink = user?.user_metadata?.map_link || localStorage.getItem('ownerShopMapLink') || `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+            if (searchLink) searchLink.href = customMapLink;
+
+            // 2. Fetch Operating Hours
+            const { data: hours } = await client
+                .from('shop_operating_hours')
+                .select('*')
+                .eq('shop_id', shop.id)
+                .order('day_of_week', { ascending: true });
+
+            if (hours && hours.length > 0) {
+                renderOperatingHours(hours);
+            } else {
+                try {
+                    const localHours = JSON.parse(localStorage.getItem('ownerOperatingHours') || 'null');
+                    if (localHours && localHours.length > 0) {
+                        renderOperatingHours(localHours);
+                    } else {
+                        updateShopOpenStatus();
+                    }
+                } catch (_) {
+                    updateShopOpenStatus();
+                }
+            }
+
+            // 3. Fetch Services safely (Strictly NO auto-seed insert into live database)
+            let { data: services } = await client
+                .from('services')
+                .select('*')
+                .eq('shop_id', shop.id)
+                .order('created_at', { ascending: true });
+
+            if (!services || services.length === 0) {
+                let savedServices = user?.user_metadata?.initial_services;
+                if (!savedServices || !savedServices.length) {
+                    try {
+                        savedServices = JSON.parse(localStorage.getItem('ownerServices') || 'null');
+                    } catch (_) {}
+                }
+                if (savedServices && savedServices.length > 0) {
+                    services = savedServices;
+                }
+            }
+
+            if (services && services.length > 0) {
+                SHOP1_DATA.services = services.map((srv, idx) => {
+                    let icon = 'local_car_wash';
+                    const lower = (srv.name || '').toLowerCase();
+                    if (lower.includes('ดูดฝุ่น') || lower.includes('ภายใน') || lower.includes('vacuum')) icon = 'cleaning_services';
+                    else if (lower.includes('เคลือบ') || lower.includes('แว็กซ์') || lower.includes('wax') || lower.includes('coating')) icon = 'diamond';
+                    else if (lower.includes('ขัด') || lower.includes('detail') || lower.includes('พรีเมียม')) icon = 'auto_awesome';
+
+                    return {
+                        id: srv.id || `srv_${idx}`,
+                        name: srv.name,
+                        price: parseFloat(srv.price) || 150,
+                        duration: `${srv.duration_minutes || srv.duration || 30} นาที`,
+                        popular: idx === 1,
+                        icon: srv.icon || icon,
+                        items: srv.description ? [srv.description] : ['บริการดูแลมาตรฐาน สะอาด รวดเร็ว']
+                    };
+                });
+            }
+
+            renderPackages();
+
+            // 4. Fetch Live Customer Reviews
+            const { data: dbReviews } = await client
+                .from('reviews')
+                .select('*, customer:customer_id(full_name, avatar_url)')
+                .eq('shop_id', shop.id)
+                .order('created_at', { ascending: false });
+
+            renderShopReviews(dbReviews || []);
+
+        } catch (err) {
+            console.warn('Preview shop data load notice:', err);
+            renderPackages();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // 1. Immediately preload from localStorage to prevent mock flicker
+        preloadFromLocalStorage();
+        renderPackages();
+
+        // Mode Switcher Controls
+        const btnModeWeb = document.getElementById('btnModeWeb');
+        const btnModeApp = document.getElementById('btnModeApp');
+        const previewWrapper = document.getElementById('previewWrapper');
+        const simulatorNotch = document.getElementById('simulatorNotch');
+        const mobileHeader = document.getElementById('mobile-header');
+        const mobTitle = document.getElementById('mobile-header-title');
+        const simulatorScreen = document.getElementById('simulatorScreen');
+
+        function setViewMode(mode) {
+            if (mode === 'mobile') {
+                btnModeApp.className = "h-8 px-2.5 sm:px-3.5 text-xs font-bold rounded-lg bg-primary-container text-white shadow-sm flex items-center gap-1.5 transition-all";
+                btnModeWeb.className = "h-8 px-2.5 sm:px-3.5 text-xs font-medium rounded-lg text-outline hover:text-on-surface flex items-center gap-1.5 transition-all";
+                previewWrapper.classList.add('is-mobile-view');
+                simulatorNotch.classList.remove('hidden');
+            } else {
+                btnModeWeb.className = "h-8 px-2.5 sm:px-3.5 text-xs font-bold rounded-lg bg-primary-container text-white shadow-sm flex items-center gap-1.5 transition-all";
+                btnModeApp.className = "h-8 px-2.5 sm:px-3.5 text-xs font-medium rounded-lg text-outline hover:text-on-surface flex items-center gap-1.5 transition-all";
+                previewWrapper.classList.remove('is-mobile-view');
+                simulatorNotch.classList.add('hidden');
+            }
+
+            if (window.previewLeafletMap) {
+                setTimeout(() => {
+                    window.previewLeafletMap.invalidateSize();
+                }, 300);
+            }
+        }
+
+        btnModeWeb.addEventListener('click', () => setViewMode('web'));
+        btnModeApp.addEventListener('click', () => setViewMode('mobile'));
+
+        // Dynamic Mobile Header scroll effect (matches shop-details.html)
+        function handleHeaderScroll(scrollTop) {
+            if (!mobileHeader) return;
+            if (scrollTop > 120) {
+                mobileHeader.classList.remove('bg-transparent', 'pointer-events-none');
+                mobileHeader.classList.add('bg-surface-container-low/95', 'backdrop-blur-xl', 'border-b', 'border-outline-variant/30', 'shadow-md', 'pointer-events-auto');
+                if (mobTitle) mobTitle.classList.remove('opacity-0');
+            } else {
+                mobileHeader.classList.add('bg-transparent', 'pointer-events-none');
+                mobileHeader.classList.remove('bg-surface-container-low/95', 'backdrop-blur-xl', 'border-b', 'border-outline-variant/30', 'shadow-md', 'pointer-events-auto');
+                if (mobTitle) mobTitle.classList.add('opacity-0');
+            }
+        }
+
+        if (simulatorScreen) {
+            simulatorScreen.addEventListener('scroll', () => {
+                handleHeaderScroll(simulatorScreen.scrollTop);
+            });
+        }
+        window.addEventListener('scroll', () => {
+            handleHeaderScroll(window.scrollY);
+        });
+
+        // Init Leaflet Mini Map (Identical to shop-details.html)
+        const map = L.map('mini-map', {
+            zoomControl: false, 
+            dragging: false, 
+            scrollWheelZoom: false, 
+            doubleClickZoom: false,
+            touchZoom: false
+        }).setView([SHOP1_DATA.lat, SHOP1_DATA.lng], 15);
+        window.previewLeafletMap = map;
+
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 16
+        }).addTo(map);
+
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 16
+        }).addTo(map);
+
+        const markerIcon = L.divIcon({
+            html: '<div class="w-10 h-10 bg-primary-container rounded-full flex items-center justify-center border-4 border-background shadow-lg"><span class="material-symbols-outlined text-on-primary-container text-[20px]">local_car_wash</span></div>',
+            className: '',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+        });
+        window.previewMarker = L.marker([SHOP1_DATA.lat, SHOP1_DATA.lng], {icon: markerIcon}).addTo(map);
+
+        // Load Live Shop Data from Supabase
+        loadShopDataFromSupabase();
+    });
+
+    // Gallery Modals
+    function openGallery(index = 0) {
+        if (!galleryImages || galleryImages.length === 0) return;
+        currentSlide = Math.min(Math.max(0, index), galleryImages.length - 1);
+        const modal = document.getElementById('image-gallery-modal');
+        updateGalleryUI();
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        setTimeout(() => { modal.classList.remove('opacity-0'); }, 10);
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeGallery() {
+        const modal = document.getElementById('image-gallery-modal');
+        modal.classList.add('opacity-0');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.style.display = '';
+            document.body.style.overflow = '';
+        }, 300);
+    }
+
+    function nextSlide(e) {
+        if (e) e.stopPropagation();
+        if (!galleryImages || galleryImages.length === 0) return;
+        currentSlide = (currentSlide + 1) % galleryImages.length;
+        updateGalleryUI();
+    }
+
+    function prevSlide(e) {
+        if (e) e.stopPropagation();
+        if (!galleryImages || galleryImages.length === 0) return;
+        currentSlide = (currentSlide - 1 + galleryImages.length) % galleryImages.length;
+        updateGalleryUI();
+    }
+
+    function updateGalleryUI() {
+        if (!galleryImages || galleryImages.length === 0) return;
+        if (currentSlide < 0 || currentSlide >= galleryImages.length) currentSlide = 0;
+
+        const mainImg = document.getElementById('gallery-main-img');
+        const indexText = document.getElementById('current-slide-index');
+        const thumbsContainer = document.getElementById('gallery-thumbnails');
+        
+        mainImg.style.opacity = '0.3';
+        setTimeout(() => {
+            mainImg.src = galleryImages[currentSlide];
+            mainImg.style.opacity = '1';
+        }, 150);
+        
+        indexText.textContent = currentSlide + 1;
+        const totalText = document.getElementById('total-slide-index');
+        if (totalText) totalText.textContent = galleryImages.length;
+        
+        thumbsContainer.innerHTML = '';
+        galleryImages.forEach((img, idx) => {
+            const isActive = idx === currentSlide;
+            thumbsContainer.innerHTML += `
+                <div onclick="openGallery(${idx})" class="w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden cursor-pointer shrink-0 transition-all duration-300 ${isActive ? 'border-2 border-primary scale-110 shadow-[0_0_15px_rgba(37,99,235,0.5)]' : 'border border-white/20 opacity-40 hover:opacity-100'}">
+                    <img src="${img}" class="w-full h-full object-cover" />
+                </div>
+            `;
+        });
+    }
+
+    function openReviewsModal() {
+        const modal = document.getElementById('reviews-modal');
+        const content = document.getElementById('reviews-modal-content');
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+            document.body.style.overflow = 'hidden';
+        }, 10);
+    }
+
+    function closeReviewsModal() {
+        const modal = document.getElementById('reviews-modal');
+        const content = document.getElementById('reviews-modal-content');
+        modal.classList.add('opacity-0');
+        content.classList.remove('scale-100');
+        content.classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }, 300);
+    }
+</script>
+</body>
+</html>

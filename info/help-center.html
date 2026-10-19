@@ -1,0 +1,269 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BestCarWash - ศูนย์ช่วยเหลือ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              "spacing": {
+                      "margin-mobile": "1rem",
+                      "gutter": "1rem",
+                      "touch-target-min": "3rem",
+                      "stack-sm": "0.5rem",
+                      "stack-md": "1rem",
+                      "stack-lg": "1.5rem"
+              },
+              "fontFamily": {
+                      "sans": ["Prompt", "Inter", "sans-serif"]
+              },
+            }
+          }
+        }
+      </script>
+<style>
+        /* Accordion transition styles */
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-out;
+            opacity: 0;
+        }
+        .faq-item.active .faq-answer {
+            opacity: 1;
+        }
+        .faq-icon {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .faq-item.active .faq-icon {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased flex flex-col items-center min-h-screen">
+
+<!-- Desktop Header (App Bar) -->
+<header class="hidden md:flex justify-between items-center px-6 lg:px-10 h-20 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md z-50 fixed top-0 w-full">
+    <div class="flex items-center gap-3.5">
+        <a href="../customer/Customer%20Profile.html" title="ย้อนกลับ" class="w-11 h-11 rounded-full flex items-center justify-center bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-primary transition-all border border-outline-variant/40 active:scale-95 group">
+            <span class="material-symbols-outlined text-[22px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+        </a>
+        <a href="../customer/discovery.html" class="flex items-center gap-2.5 group">
+            <span class="material-symbols-outlined text-primary text-[32px] group-hover:rotate-12 transition-transform duration-300">local_car_wash</span>
+            <span class="text-2xl lg:text-3xl font-bold text-primary tracking-tighter">BestCarWash</span>
+        </a>
+    </div>
+    <div class="flex items-center gap-7">
+        <nav class="flex gap-7">
+            <a class="text-sm font-medium text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5" href="../customer/discovery.html">
+                <span class="material-symbols-outlined text-[20px]">explore</span> ค้นหาร้าน
+            </a>
+            <a class="text-sm font-medium text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5" href="../customer/booking-history-Customer.html">
+                <span class="material-symbols-outlined text-[20px]">receipt_long</span> ประวัติการจอง
+            </a>
+            <a class="text-sm font-medium text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5" href="../customer/favorite-shops.html">
+                <span class="material-symbols-outlined text-[20px]">favorite</span> ร้านโปรด
+            </a>
+        </nav>
+        <div class="flex items-center gap-4 border-l border-outline-variant/30 pl-7">
+            <a href="../customer/customer-notifications-list.html" class="w-11 h-11 rounded-full flex items-center justify-center bg-surface-container text-on-surface hover:text-primary hover:bg-surface-variant transition-colors relative border border-outline-variant/50">
+                <span class="material-symbols-outlined text-[24px]">notifications</span>
+                <span class="absolute top-2.5 right-2.5 w-2 h-2 bg-error rounded-full shadow-[0_0_5px_rgba(255,180,171,0.8)]"></span>
+            </a>
+            <a href="../customer/Customer%20Profile.html" class="flex items-center gap-3 pl-3 pr-4 py-1.5 rounded-full bg-surface-container hover:bg-surface-variant border border-outline-variant/40 transition-all group" title="โปรไฟล์ของฉัน">
+                <div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden border-2 border-primary/40 group-hover:border-primary transition-colors flex-shrink-0">
+                    <img id="desktop-header-avatar" alt="User profile" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
+                </div>
+                <div class="flex flex-col text-left">
+                    <span id="desktop-header-name" class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors leading-tight">ผู้ใช้งาน</span>
+                </div>
+            </a>
+        </div>
+    </div>
+</header>
+
+<!-- Mobile Top App Bar -->
+<header class="md:hidden fixed top-0 w-full z-50 bg-background/90 backdrop-blur-md flex justify-between items-center px-4 h-16 border-b border-outline-variant/30 shadow-sm shadow-primary/10">
+    <a href="../customer/Customer%20Profile.html" class="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-variant transition-colors active:scale-95 group">
+        <span class="material-symbols-outlined text-[24px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+    </a>
+    <h1 class="text-lg font-bold text-on-surface tracking-tight">ศูนย์ช่วยเหลือ</h1>
+    <div class="w-10"></div> <!-- Spacer for centering -->
+</header>
+
+<main class="w-full max-w-3xl px-4 pt-20 md:pt-28 pb-12 flex flex-col gap-6 mx-auto">
+    
+    <!-- Search Bar Section -->
+    <section class="max-w-md mx-auto w-full relative z-10">
+        <div class="relative w-full h-14">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <span class="material-symbols-outlined text-outline text-[24px]">search</span>
+            </div>
+            <input type="text" placeholder="ค้นหาหัวข้อที่ต้องการ..." 
+                class="w-full h-full bg-surface-container-highest border border-outline-variant rounded-2xl pl-12 pr-4 text-on-surface text-sm placeholder-outline-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-lg">
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="max-w-md mx-auto w-full space-y-4">
+        <h2 class="text-sm font-bold text-outline uppercase tracking-widest px-2 mb-2">คำถามที่พบบ่อย (FAQ)</h2>
+        
+        <div class="space-y-3">
+            <!-- FAQ Item 1 -->
+            <div class="faq-item bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl overflow-hidden shadow-md">
+                <button class="w-full flex items-center justify-between p-4 text-left focus:outline-none hover:bg-surface-variant/30 transition-colors active:bg-surface-variant/50">
+                    <span class="font-semibold text-on-surface text-sm pr-4">วิธีการยกเลิกการจองทำอย่างไร?</span>
+                    <span class="material-symbols-outlined text-primary faq-icon">expand_more</span>
+                </button>
+                <div class="faq-answer bg-surface-container-low/50">
+                    <p class="p-4 pt-1 text-sm text-on-surface-variant leading-relaxed">
+                        คุณสามารถยกเลิกการจองได้ในเมนู <strong>'การจอง'</strong> (Bookings) โดยกดที่รายการจองนั้นและเลือก 'ยกเลิก' ทั้งนี้สามารถทำรายการได้ล่วงหน้าอย่างน้อย 2 ชั่วโมงก่อนถึงเวลานัดหมาย
+                    </p>
+                </div>
+            </div>
+
+            <!-- FAQ Item 2 -->
+            <div class="faq-item bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl overflow-hidden shadow-md">
+                <button class="w-full flex items-center justify-between p-4 text-left focus:outline-none hover:bg-surface-variant/30 transition-colors active:bg-surface-variant/50">
+                    <span class="font-semibold text-on-surface text-sm pr-4">การคืนเงิน (Refund) ทำงานอย่างไร?</span>
+                    <span class="material-symbols-outlined text-primary faq-icon">expand_more</span>
+                </button>
+                <div class="faq-answer bg-surface-container-low/50">
+                    <p class="p-4 pt-1 text-sm text-on-surface-variant leading-relaxed">
+                        หากคุณยกเลิกบริการภายในเวลาที่กำหนด ระบบจะทำการคืนเงินไปยังวิธีการชำระเงินเดิมของคุณโดยอัตโนมัติ กระบวนการนี้อาจใช้เวลา <strong>3-5 วันทำการ</strong> ขึ้นอยู่กับธนาคารของคุณ
+                    </p>
+                </div>
+            </div>
+
+            <!-- FAQ Item 3 -->
+            <div class="faq-item bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl overflow-hidden shadow-md">
+                <button class="w-full flex items-center justify-between p-4 text-left focus:outline-none hover:bg-surface-variant/30 transition-colors active:bg-surface-variant/50">
+                    <span class="font-semibold text-on-surface text-sm pr-4">วิธีการแก้ไขข้อมูลยานพาหนะ?</span>
+                    <span class="material-symbols-outlined text-primary faq-icon">expand_more</span>
+                </button>
+                <div class="faq-answer bg-surface-container-low/50">
+                    <p class="p-4 pt-1 text-sm text-on-surface-variant leading-relaxed">
+                        คุณสามารถจัดการยานพาหนะได้โดยไปที่เมนู <strong>'โปรไฟล์'</strong> เลือก 'ยานพาหนะของฉัน' จากนั้นคลิกที่รูปดินสอเพื่อแก้ไขข้อมูล หรือคลิกปุ่ม 'เพิ่มยานพาหนะใหม่' หากต้องการเพิ่มรถคันอื่น
+                    </p>
+                </div>
+            </div>
+            
+            <!-- FAQ Item 4 -->
+            <div class="faq-item bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl overflow-hidden shadow-md">
+                <button class="w-full flex items-center justify-between p-4 text-left focus:outline-none hover:bg-surface-variant/30 transition-colors active:bg-surface-variant/50">
+                    <span class="font-semibold text-on-surface text-sm pr-4">สามารถชำระเงินด้วยช่องทางใดได้บ้าง?</span>
+                    <span class="material-symbols-outlined text-primary faq-icon">expand_more</span>
+                </button>
+                <div class="faq-answer bg-surface-container-low/50">
+                    <p class="p-4 pt-1 text-sm text-on-surface-variant leading-relaxed">
+                        เรารองรับการชำระเงินผ่านบัตรเครดิต/เดบิต (Visa, Mastercard, JCB) รวมถึงการชำระเงินแบบ PromptPay และ TrueMoney Wallet ที่ร่วมรายการ
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Support Section -->
+    <section class="max-w-md mx-auto w-full mt-8">
+        <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 p-6 rounded-3xl shadow-xl flex flex-col items-center text-center space-y-5 relative overflow-hidden">
+            <!-- Decorative background elements -->
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-2xl"></div>
+            <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-secondary/10 rounded-full blur-2xl"></div>
+            
+            <div class="z-10 flex flex-col items-center">
+                <div class="w-16 h-16 bg-surface-container-highest border border-outline-variant/50 rounded-full flex items-center justify-center mb-3 shadow-inner">
+                    <span class="material-symbols-outlined text-primary text-[32px]">support_agent</span>
+                </div>
+                <h3 class="text-xl font-bold text-on-surface">ต้องการความช่วยเหลือเพิ่มเติม?</h3>
+                <p class="text-sm text-on-surface-variant mt-2">ทีมสนับสนุนของเราพร้อมช่วยเหลือคุณเสมอ 24 ชั่วโมง</p>
+            </div>
+            
+            <div class="w-full flex flex-col gap-3 z-10 pt-2">
+                <button class="w-full h-12 bg-primary-container text-on-primary-container font-semibold rounded-xl hover:bg-primary transition-colors shadow-[0_0_15px_rgba(37,99,235,0.2)] active:scale-[0.98] flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-[20px]">chat</span> แชทกับเจ้าหน้าที่
+                </button>
+                <button class="w-full h-12 bg-surface-container-highest border border-outline-variant text-on-surface font-semibold rounded-xl hover:bg-surface-variant hover:border-primary/50 transition-colors active:scale-[0.98] flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-[20px]">mail</span> ส่งอีเมลหาเรา
+                </button>
+            </div>
+        </div>
+    </section>
+    
+</main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const faqItems = document.querySelectorAll('.faq-item');
+
+        faqItems.forEach(item => {
+            const button = item.querySelector('button');
+            const answer = item.querySelector('.faq-answer');
+
+            button.addEventListener('click', () => {
+                const isActive = item.classList.contains('active');
+                
+                faqItems.forEach(otherItem => {
+                    otherItem.classList.remove('active');
+                    otherItem.querySelector('.faq-answer').style.maxHeight = null;
+                });
+
+                if (!isActive) {
+                    item.classList.add('active');
+                    answer.style.maxHeight = answer.scrollHeight + "px";
+                }
+            });
+        });
+
+        // Avatar & Name Synchronization
+        const saved = localStorage.getItem('customerProfile');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                if (data.avatar && !data.avatar.includes('googleusercontent')) {
+                    const avatar = document.getElementById('desktop-header-avatar');
+                    if (avatar) avatar.src = data.avatar;
+                }
+                if (data.name) {
+                    const nameEl = document.getElementById('desktop-header-name');
+                    if (nameEl) nameEl.textContent = data.name;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
+
+
+

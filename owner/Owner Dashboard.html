@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+
+<html class="light" lang="th"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BestCarWash - แดชบอร์ดเจ้าของร้าน</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<!-- Tailwind Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              "spacing": {
+                      "margin-mobile": "1rem",
+                      "gutter": "1rem",
+                      "touch-target-min": "3rem",
+                      "stack-sm": "0.5rem",
+                      "stack-md": "1rem",
+                      "stack-lg": "1.5rem"
+              },
+              "fontFamily": {
+                      "sans": ["Prompt", "Inter", "sans-serif"]
+              },
+            }
+          }
+        }
+      </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #0f172a;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+            transition: all 0.25s ease;
+        }
+        .glass-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.08);
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-24 md:pb-0 selection:bg-secondary-container selection:text-on-secondary-container font-sans">
+<!-- Desktop Header (App Bar) -->
+<header class="hidden md:flex justify-between items-center px-6 lg:px-10 h-20 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md z-50 fixed top-0 w-full">
+    <div class="flex items-center gap-4">
+        <a href="Owner%20Dashboard.html" class="flex items-center gap-2.5 group">
+            <span class="material-symbols-outlined text-secondary text-[32px] group-hover:rotate-12 transition-transform duration-300">storefront</span>
+            <span class="text-2xl font-bold text-secondary tracking-tight">BestCarWash</span>
+            <span class="text-xs font-bold text-on-secondary-container bg-secondary/20 border border-secondary/30 px-2.5 py-0.5 rounded-full uppercase ml-1">Partner</span>
+        </a>
+    </div>
+    <div class="flex items-center gap-8">
+        <nav class="flex gap-7">
+            <a class="text-base font-bold text-secondary flex items-center gap-1.5" href="Owner%20Dashboard.html">
+                <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">dashboard</span> หน้าหลัก
+            </a>
+            <a class="text-base font-semibold text-on-surface-variant hover:text-secondary transition-colors flex items-center gap-1.5" href="owner-bookings.html">
+                <span class="material-symbols-outlined text-[20px]">calendar_month</span> การจอง
+            </a>
+            <a class="text-base font-semibold text-on-surface-variant hover:text-secondary transition-colors flex items-center gap-1.5" href="owner-booking-history.html">
+                <span class="material-symbols-outlined text-[20px]">history</span> ประวัติ
+            </a>
+            <a class="text-base font-semibold text-on-surface-variant hover:text-secondary transition-colors flex items-center gap-1.5" href="Owner%20Profile.html">
+                <span class="material-symbols-outlined text-[20px]">person</span> จัดการร้าน
+            </a>
+        </nav>
+        <div class="flex items-center gap-4 border-l border-outline-variant/30 pl-6">
+            <a href="owner-notifications-list.html" class="w-11 h-11 rounded-full flex items-center justify-center bg-surface-container text-on-surface hover:text-secondary hover:bg-surface-variant transition-colors relative border border-outline-variant/50">
+                <span class="material-symbols-outlined text-[24px]">notifications</span>
+                <span class="absolute top-2.5 right-2.5 w-2 h-2 bg-error rounded-full shadow-[0_0_5px_rgba(255,180,171,0.8)]"></span>
+            </a>
+            <a href="Owner%20Profile.html" class="flex items-center gap-3 pl-3 pr-4 py-1.5 rounded-full bg-surface-container hover:bg-surface-variant transition-all border border-outline-variant/30 group">
+                <div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden border-2 border-outline-variant group-hover:border-secondary transition-colors flex-shrink-0">
+                    <img id="owner-desktop-avatar" alt="Owner profile" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
+                </div>
+                <span class="hidden md:inline-block text-base font-semibold text-on-surface" id="owner-desktop-name">เจ้าของร้าน</span>
+            </a>
+        </div>
+    </div>
+</header>
+
+<!-- Mobile Header -->
+<header class="md:hidden fixed top-0 w-full z-50 bg-background/90 backdrop-blur-md border-b border-outline-variant/30 shadow-sm shadow-secondary/10">
+    <div class="flex justify-between items-center px-4 h-16">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-secondary text-[26px]">storefront</span>
+            <h1 class="text-lg font-bold text-secondary tracking-tight">แดชบอร์ดร้าน</h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="owner-notifications-list.html" class="w-10 h-10 rounded-full hover:bg-surface-container flex items-center justify-center text-outline hover:text-secondary transition-colors relative">
+                <span class="material-symbols-outlined text-[22px]">notifications</span>
+                <span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-error animate-pulse"></span>
+            </a>
+            <a href="Owner%20Profile.html" class="w-9 h-9 rounded-full overflow-hidden border border-outline-variant hover:border-secondary transition-colors active:scale-95 block">
+                <img id="owner-header-avatar" alt="User profile avatar" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
+            </a>
+        </div>
+    </div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-20 md:pt-28 p-margin-mobile md:p-gutter max-w-7xl mx-auto flex flex-col gap-stack-lg">
+    <!-- Header -->
+    <section class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div class="flex flex-col gap-1">
+            <h2 class="text-2xl font-semibold text-on-surface">สรุปข้อมูลประจำวัน</h2>
+            <p id="owner-dashboard-shop-subtitle" class="text-xs text-secondary font-medium hidden flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[15px]">storefront</span>
+                <span id="owner-dashboard-shop-name"></span>
+            </p>
+        </div>
+        <div id="cloud-sync-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-primary/10 border border-primary/20 text-primary transition-all duration-500 w-fit">
+            <span class="material-symbols-outlined text-[14px] animate-spin">sync</span>
+            <span id="cloud-sync-text">กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...</span>
+        </div>
+    </section>
+
+    <!-- 1. Daily KPI Metrics (5 Cards) -->
+    <section class="grid grid-cols-2 lg:grid-cols-5 gap-stack-md">
+        <!-- ส่งมอบ/เสร็จแล้ว -->
+        <a href="owner-booking-history.html" class="glass-card rounded-2xl p-4 shadow-xl flex flex-col gap-2 relative overflow-hidden group border border-secondary/40 hover:border-secondary cursor-pointer block">
+            <div class="absolute -top-6 -right-6 w-20 h-20 bg-secondary/15 rounded-full blur-xl group-hover:bg-secondary/25 transition-colors"></div>
+            <div class="flex items-center gap-2 text-secondary">
+                <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+                <span class="text-xs font-bold uppercase tracking-wide">ส่งมอบ/เสร็จแล้ว</span>
+            </div>
+            <div id="kpi-delivered" class="text-3xl font-bold text-on-surface mt-1">0</div>
+            <div class="text-xs text-secondary mt-1">คัน (วันนี้)</div>
+        </a>
+        <!-- ยอดจองรวม -->
+        <div class="glass-card rounded-2xl p-4 shadow-xl flex flex-col gap-2 relative overflow-hidden group border border-outline-variant/60 hover:border-primary/50">
+            <div class="absolute -top-6 -right-6 w-20 h-20 bg-primary/10 rounded-full blur-xl group-hover:bg-primary/20 transition-colors"></div>
+            <div class="flex items-center gap-2 text-outline">
+                <span class="material-symbols-outlined text-[20px]">book_online</span>
+                <span class="text-xs font-bold uppercase tracking-wide">ยอดจองรวม</span>
+            </div>
+            <div id="kpi-total-bookings" class="text-3xl font-bold text-on-surface mt-1">0</div>
+            <div class="text-xs text-primary mt-1">คัน (วันนี้)</div>
+        </div>
+        <!-- กำลังให้บริการ -->
+        <div class="glass-card rounded-2xl p-4 shadow-xl flex flex-col gap-2 relative overflow-hidden group border border-outline-variant/60 hover:border-yellow-400/50">
+            <div class="absolute -top-6 -right-6 w-20 h-20 bg-yellow-400/10 rounded-full blur-xl group-hover:bg-yellow-400/20 transition-colors"></div>
+            <div class="flex items-center gap-2 text-outline">
+                <span class="material-symbols-outlined text-[20px]">local_car_wash</span>
+                <span class="text-xs font-bold uppercase tracking-wide">กำลังให้บริการ</span>
+            </div>
+            <div id="kpi-in-service" class="text-3xl font-bold text-on-surface mt-1">0</div>
+            <div class="text-xs text-yellow-400 mt-1">คัน</div>
+        </div>
+        <!-- คิวหลุด/ยกเลิก -->
+        <div class="glass-card rounded-2xl p-4 shadow-xl flex flex-col gap-2 relative overflow-hidden group border border-outline-variant/60 hover:border-error/50">
+            <div class="absolute -top-6 -right-6 w-20 h-20 bg-error/10 rounded-full blur-xl group-hover:bg-error/20 transition-colors"></div>
+            <div class="flex items-center gap-2 text-outline">
+                <span class="material-symbols-outlined text-[20px]">cancel</span>
+                <span class="text-xs font-bold uppercase tracking-wide">คิวหลุด/ยกเลิก</span>
+            </div>
+            <div id="kpi-cancelled" class="text-3xl font-bold text-on-surface mt-1">0</div>
+            <div class="text-xs text-error mt-1">คัน</div>
+        </div>
+        <!-- สรุปรีวิว (เพิ่มใหม่) -->
+        <a href="owner-reviews.html" class="glass-card rounded-2xl p-4 shadow-xl flex flex-col gap-2 relative overflow-hidden group border border-outline-variant/60 hover:border-secondary/50 cursor-pointer block">
+            <div class="absolute -top-6 -right-6 w-20 h-20 bg-secondary/10 rounded-full blur-xl group-hover:bg-secondary/20 transition-colors"></div>
+            <div class="flex items-center gap-2 text-outline">
+                <span class="material-symbols-outlined text-[20px]">star</span>
+                <span class="text-xs font-bold uppercase tracking-wide">คะแนนรีวิวร้าน</span>
+            </div>
+            <div id="kpi-rating" class="text-3xl font-bold text-on-surface mt-1 flex items-baseline gap-1">ใหม่</div>
+            <div id="kpi-reviews-count" class="text-xs text-secondary mt-1 underline decoration-secondary/50 underline-offset-2 group-hover:decoration-secondary">ยังไม่มีรีวิว</div>
+        </a>
+    </section>
+
+    <!-- 2. Current Service Status -->
+    <section class="flex flex-col gap-stack-sm">
+        <div class="flex justify-between items-end">
+            <h3 class="text-xl font-semibold text-on-surface">สถานะการให้บริการปัจจุบัน</h3>
+            <a href="owner-bookings.html" class="text-sm text-secondary hover:underline">ดูทั้งหมด</a>
+        </div>
+        <div id="active-services-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-stack-md mt-2">
+            <div class="col-span-full py-12 px-6 glass-card rounded-2xl shadow-xl border border-dashed border-outline-variant/60 flex flex-col items-center justify-center text-center gap-2">
+                <span class="material-symbols-outlined text-[36px] text-outline opacity-40">local_car_wash</span>
+                <p class="text-sm font-bold text-on-surface">ยังไม่มีรถในคิวให้บริการขณะนี้</p>
+                <p class="text-xs text-outline">เมื่อมีลูกค้าจองคิวหรือนำรถเข้ามาใช้บริการ รายการจะปรากฏที่นี่แบบเรียลไทม์</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Bottom Grids: Timeline & Chart -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-stack-md">
+        <!-- 3. Today's Bookings List (Span 2 cols) -->
+        <section class="lg:col-span-2 flex flex-col gap-stack-sm">
+            <div class="flex justify-between items-end">
+                <h3 class="text-xl font-semibold text-on-surface">รายการจองวันนี้</h3>
+                <a href="owner-bookings.html" class="text-sm text-secondary hover:underline">จัดการการจอง</a>
+            </div>
+            <div class="glass-card rounded-2xl shadow-xl overflow-hidden flex flex-col border border-outline-variant/60">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse min-w-[600px]">
+                        <thead>
+                            <tr class="bg-surface-container-highest/50 text-outline text-sm border-b border-outline-variant/20">
+                                <th class="p-4 font-medium whitespace-nowrap">เวลา</th>
+                                <th class="p-4 font-medium whitespace-nowrap">ข้อมูลรถ</th>
+                                <th class="p-4 font-medium whitespace-nowrap">แพ็กเกจ</th>
+                                <th class="p-4 font-medium whitespace-nowrap text-right">สถานะ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="today-bookings-tbody" class="divide-y divide-outline-variant/20 text-sm">
+                            <tr>
+                                <td colspan="4" class="p-8 text-center text-outline">
+                                    <div class="flex flex-col items-center justify-center gap-2 py-4">
+                                        <span class="material-symbols-outlined text-[32px] opacity-40 animate-spin">progress_activity</span>
+                                        <p class="text-sm font-medium text-on-surface">กำลังโหลดข้อมูลการจองวันนี้...</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Service Popularity -->
+        <section class="flex flex-col gap-stack-sm">
+            <h3 class="text-xl font-semibold text-on-surface">สัดส่วนแพ็กเกจ</h3>
+            <div class="glass-card rounded-2xl p-5 shadow-xl flex flex-col items-center justify-center h-full min-h-[320px] border border-outline-variant/60">
+                <div class="w-full max-w-[220px] aspect-square relative">
+                    <canvas id="popularityChart"></canvas>
+                </div>
+                <div id="popularityLegend" class="w-full mt-6 space-y-2 text-sm">
+                    <div class="text-center text-xs text-outline py-2">กำลังประมวลผลสัดส่วนแพ็กเกจ...</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 5. Recent Reviews Section -->
+    <section class="flex flex-col gap-stack-sm mt-4">
+        <div class="flex justify-between items-end">
+            <h3 class="text-xl font-semibold text-on-surface">รีวิวล่าสุด</h3>
+            <a href="owner-reviews.html" class="text-sm text-secondary hover:underline">จัดการรีวิว</a>
+        </div>
+        <div id="recent-reviews-container" class="grid grid-cols-1 md:grid-cols-2 gap-stack-md">
+            <div class="col-span-full py-10 px-6 glass-card rounded-2xl shadow-xl border border-dashed border-outline-variant/40 flex flex-col items-center justify-center text-center gap-2">
+                <span class="material-symbols-outlined text-[32px] text-outline opacity-40 animate-spin">progress_activity</span>
+                <p class="text-sm font-medium text-on-surface">กำลังโหลดรีวิวล่าสุด...</p>
+            </div>
+        </div>
+    </section>
+
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-4 left-4 right-4 rounded-2xl z-50 bg-surface-container-low/95 backdrop-blur-xl border border-outline-variant/50 shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex justify-around items-center p-2.5 pb-[calc(0.6rem+env(safe-area-inset-bottom,0))]">
+    <a class="flex flex-col items-center justify-center bg-secondary-container/20 text-secondary rounded-xl w-18 h-14 shadow-sm active:scale-95 transition-transform" href="Owner%20Dashboard.html">
+        <span class="material-symbols-outlined text-[26px] fill">home</span>
+        <span class="text-xs font-bold mt-0.5">หน้าแรก</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform w-18 h-14" href="owner-bookings.html">
+        <span class="material-symbols-outlined text-[26px]">calendar_month</span>
+        <span class="text-xs font-semibold mt-0.5">การจอง</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform w-18 h-14" href="owner-booking-history.html">
+        <span class="material-symbols-outlined text-[26px]">history</span>
+        <span class="text-xs font-semibold mt-0.5">ประวัติ</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform w-18 h-14" href="Owner%20Profile.html">
+        <span class="material-symbols-outlined text-[26px]">person</span>
+        <span class="text-xs font-semibold mt-0.5">โปรไฟล์</span>
+    </a>
+</nav>
+
+<script>
+    document.addEventListener('click', function(event) {
+        // Owner Menu Dropdown
+        const menuContainer = document.getElementById('owner-menu-container');
+        const menuDropdown = document.getElementById('ownerMenuDropdown');
+        if (menuContainer && menuDropdown && !menuContainer.contains(event.target)) {
+            menuDropdown.classList.add('hidden');
+        }
+
+        // Notification Dropdown
+        const notifContainer = document.getElementById('owner-notification-container');
+        const notifDropdown = document.getElementById('ownerNotificationDropdown');
+        if (notifContainer && notifDropdown && !notifContainer.contains(event.target)) {
+            notifDropdown.classList.add('hidden');
+        }
+    });
+
+    // Helper Functions
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function renderStars(rating) {
+        let r = Math.round(Number(rating) || 5);
+        let html = '';
+        for (let i = 1; i <= 5; i++) {
+            if (i <= r) {
+                html += '<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: \'FILL\' 1;">star</span>';
+            } else {
+                html += '<span class="material-symbols-outlined text-[16px] text-outline/40">star</span>';
+            }
+        }
+        return html;
+    }
+
+    function getStatusBadge(status) {
+        const s = String(status || '').toLowerCase();
+        if (s === 'completed') {
+            return '<span class="inline-block px-2.5 py-1 bg-secondary/20 text-secondary text-xs font-semibold rounded-full border border-secondary/30">เสร็จสิ้น</span>';
+        }
+        if (s === 'washing' || s === 'in_progress') {
+            return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-400/20 text-yellow-400 text-xs font-semibold rounded-full border border-yellow-400/30 shadow-[0_0_10px_rgba(250,204,21,0.2)]"><span class="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></span>กำลังให้บริการ</span>';
+        }
+        if (s === 'ready') {
+            return '<span class="inline-block px-2.5 py-1 bg-emerald-400/20 text-emerald-400 text-xs font-semibold rounded-full border border-emerald-400/30">พร้อมส่งมอบ</span>';
+        }
+        if (s === 'arrived') {
+            return '<span class="inline-block px-2.5 py-1 bg-primary/20 text-primary text-xs font-semibold rounded-full border border-primary/30">มาถึงแล้ว</span>';
+        }
+        if (s === 'confirmed') {
+            return '<span class="inline-block px-2.5 py-1 bg-primary/20 text-primary text-xs font-semibold rounded-full border border-primary/30">ยืนยันแล้ว</span>';
+        }
+        if (s === 'incoming' || s === 'pending') {
+            return '<span class="inline-block px-2.5 py-1 bg-surface-bright text-on-surface-variant text-xs font-semibold rounded-full border border-outline-variant">รอตรวจสอบ</span>';
+        }
+        if (['cancelled', 'declined', 'refunded', 'no_show', 'refund_requested'].includes(s)) {
+            return '<span class="inline-block px-2.5 py-1 bg-error/20 text-error text-xs font-semibold rounded-full border border-error/30">ยกเลิก</span>';
+        }
+        return `<span class="inline-block px-2.5 py-1 bg-surface-bright text-on-surface-variant text-xs font-semibold rounded-full border border-outline-variant">${escapeHtml(status || 'รอคิว')}</span>`;
+    }
+
+    let popularityChartInstance = null;
+
+    function updatePopularityChart(list) {
+        const canvas = document.getElementById('popularityChart');
+        const legendEl = document.getElementById('popularityLegend');
+        if (!canvas || !legendEl) return;
+
+        if (!list || list.length === 0) {
+            if (popularityChartInstance) {
+                popularityChartInstance.destroy();
+                popularityChartInstance = null;
+            }
+            const ctx = canvas.getContext('2d');
+            popularityChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['ยังไม่มีข้อมูลการจอง'],
+                    datasets: [{
+                        data: [1],
+                        backgroundColor: ['#2d3449'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    }
+                }
+            });
+            legendEl.innerHTML = `
+                <div class="text-center text-xs text-outline py-3 space-y-1">
+                    <p class="font-semibold text-on-surface">ยังไม่มีสถิติแพ็กเกจ</p>
+                    <p class="text-outline">เมื่อมีลูกค้าจองบริการ ระบบจะคำนวณสัดส่วนความนิยมให้อัตโนมัติ</p>
+                </div>
+            `;
+            return;
+        }
+
+        const pkgCounts = {};
+        list.forEach(b => {
+            let name = (b.service_name || b.serviceName || (b.notes ? b.notes.split('-')[0].trim() : '') || 'บริการทั่วไป').trim();
+            pkgCounts[name] = (pkgCounts[name] || 0) + 1;
+        });
+
+        const entries = Object.entries(pkgCounts).sort((a, b) => b[1] - a[1]);
+        const totalCount = list.length;
+        const palette = ['#4edea3', '#b4c5ff', '#facc15', '#f472b6', '#a78bfa', '#38bdf8', '#fb923c', '#34d399'];
+
+        const labels = entries.map(e => e[0]);
+        const counts = entries.map(e => e[1]);
+        const percentages = entries.map(e => Math.round((e[1] / totalCount) * 100));
+        const bgColors = entries.map((_, i) => palette[i % palette.length]);
+
+        if (popularityChartInstance) {
+            popularityChartInstance.destroy();
+            popularityChartInstance = null;
+        }
+
+        const ctx = canvas.getContext('2d');
+        popularityChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: percentages,
+                    backgroundColor: bgColors,
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const count = counts[context.dataIndex] || 0;
+                                return `${context.label}: ${context.parsed}% (${count} คัน)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        legendEl.innerHTML = entries.map((e, idx) => {
+            const color = palette[idx % palette.length];
+            const pct = Math.round((e[1] / totalCount) * 100);
+            return `
+                <div class="flex justify-between items-center text-sm py-0.5">
+                    <div class="flex items-center gap-2 truncate pr-2">
+                        <div class="w-3 h-3 rounded-full shrink-0 shadow-sm" style="background-color: ${color};"></div>
+                        <span class="truncate text-on-surface font-medium" title="${escapeHtml(e[0])}">${escapeHtml(e[0])}</span>
+                    </div>
+                    <span class="font-bold text-on-surface shrink-0">${pct}% <span class="text-xs text-outline font-normal">(${e[1]} คัน)</span></span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderTodayBookings(list) {
+        const tbody = document.getElementById('today-bookings-tbody');
+        if (!tbody) return;
+
+        const now = new Date();
+        const todayIso = now.toISOString().split('T')[0];
+
+        const todayList = (list || []).filter(b => {
+            if (b.booking_date) {
+                const bDate = String(b.booking_date).split('T')[0];
+                if (bDate === todayIso) return true;
+            }
+            if (typeof b.dateTime === 'string' && (b.dateTime.includes('วันนี้') || b.dateTime.includes(todayIso))) {
+                return true;
+            }
+            if (!b.booking_date && b.created_at) {
+                const cDate = String(b.created_at).split('T')[0];
+                if (cDate === todayIso) return true;
+            }
+            return false;
+        });
+
+        if (todayList.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="p-8 text-center text-outline">
+                        <div class="flex flex-col items-center justify-center gap-1.5 py-4">
+                            <span class="material-symbols-outlined text-[32px] opacity-40">calendar_today</span>
+                            <p class="text-sm font-semibold text-on-surface">ไม่มีรายการจองสำหรับวันนี้</p>
+                            <p class="text-xs text-outline">เมื่อมีลูกค้าจองคิวในวันนี้ รายการจะแสดงที่นี่โดยอัตโนมัติ</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = todayList.map(b => {
+            let timeDisplay = '-';
+            if (b.booking_time) {
+                timeDisplay = b.booking_time.slice(0, 5) + ' น.';
+            } else if (b.dateTime) {
+                timeDisplay = b.dateTime.replace(/.*?,\s*/, '');
+            } else if (b.created_at) {
+                timeDisplay = new Date(b.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
+            }
+
+            const plate = escapeHtml(b.plate_number || b.carPlate || '-');
+            const vehicle = escapeHtml(b.vehicle_info || b.carBrand || '');
+            const service = escapeHtml(b.service_name || b.serviceName || (b.notes ? b.notes.split('-')[0].trim() : '') || 'บริการล้างรถ');
+            const badge = getStatusBadge(b.status);
+
+            return `
+                <tr class="hover:bg-surface-variant/30 transition-colors">
+                    <td class="p-4 text-on-surface whitespace-nowrap font-medium text-sm">${timeDisplay}</td>
+                    <td class="p-4 whitespace-nowrap">
+                        <div class="font-bold text-on-surface">${plate}</div>
+                        ${vehicle ? `<div class="text-xs text-outline">${vehicle}</div>` : ''}
+                    </td>
+                    <td class="p-4 text-outline whitespace-nowrap font-medium">${service}</td>
+                    <td class="p-4 whitespace-nowrap text-right">
+                        ${badge}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function loadOwnerReviews(client, shopId) {
+        const container = document.getElementById('recent-reviews-container');
+        const kpiRating = document.getElementById('kpi-rating');
+        const kpiReviewsCount = document.getElementById('kpi-reviews-count');
+
+        try {
+            const { data: reviews, error } = await client
+                .from('reviews')
+                .select('*, customer:customer_id(full_name, avatar_url)')
+                .eq('shop_id', shopId)
+                .order('created_at', { ascending: false });
+
+            const revList = Array.isArray(reviews) ? reviews : [];
+
+            // Update KPI card
+            if (revList.length > 0) {
+                const sum = revList.reduce((acc, r) => acc + (parseFloat(r.rating) || 5), 0);
+                const avg = (sum / revList.length).toFixed(1);
+                if (kpiRating) kpiRating.innerHTML = `${avg} <span class="text-sm text-yellow-400 font-normal">★</span>`;
+                if (kpiReviewsCount) kpiReviewsCount.textContent = `${revList.length} รีวิว`;
+            } else {
+                if (kpiRating) kpiRating.textContent = 'ใหม่';
+                if (kpiReviewsCount) kpiReviewsCount.textContent = 'ยังไม่มีรีวิว';
+            }
+
+            // Reviews container
+            if (!container) return;
+
+            if (revList.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-10 px-6 glass-card rounded-2xl shadow-xl border border-dashed border-outline-variant/40 flex flex-col items-center justify-center text-center gap-2">
+                        <span class="material-symbols-outlined text-[36px] text-yellow-400/50">rate_review</span>
+                        <p class="text-sm font-bold text-on-surface">ยังไม่มีรีวิวสำหรับร้านนี้</p>
+                        <p class="text-xs text-outline">เมื่อลูกค้าใช้บริการเสร็จสิ้นและเขียนรีวิว ความคิดเห็นจะแสดงที่นี่โดยอัตโนมัติ</p>
+                        <a href="owner-reviews.html" class="mt-2 text-xs text-secondary hover:underline flex items-center gap-1 font-semibold">
+                            <span>จัดการหน้ารีวิว</span>
+                            <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                        </a>
+                    </div>
+                `;
+                return;
+            }
+
+            let storedReplies = {};
+            try {
+                storedReplies = JSON.parse(localStorage.getItem('ownerReviewsReplies') || '{}');
+            } catch(e) {}
+
+            const recent = revList.slice(0, 4);
+            container.innerHTML = recent.map(r => {
+                const customerName = r.customer?.full_name || 'ลูกค้าทั่วไป';
+                const firstChar = customerName.charAt(0).toUpperCase();
+                const avatarUrl = r.customer?.avatar_url;
+                const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : 'เมื่อเร็วๆ นี้';
+                const starsHtml = renderStars(r.rating || 5);
+                const comment = r.comment || 'ลูกค้าไม่ได้ระบุความคิดเห็นเพิ่มเติม';
+                const replyText = r.reply || storedReplies[r.id]?.reply;
+
+                const avatarHtml = avatarUrl ? `
+                    <div class="w-10 h-10 rounded-full overflow-hidden border border-secondary/30 shrink-0">
+                        <img src="${escapeHtml(avatarUrl)}" class="w-full h-full object-cover" alt="${escapeHtml(customerName)}">
+                    </div>
+                ` : `
+                    <div class="w-10 h-10 rounded-full bg-secondary/15 text-secondary border border-secondary/30 flex items-center justify-center font-bold text-base shrink-0">
+                        ${escapeHtml(firstChar)}
+                    </div>
+                `;
+
+                return `
+                    <div class="glass-card rounded-2xl p-5 shadow-xl border border-outline-variant/40 flex flex-col justify-between hover:border-secondary/40 transition-all">
+                        <div>
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="flex gap-3 items-center">
+                                    ${avatarHtml}
+                                    <div>
+                                        <h4 class="font-semibold text-on-surface text-sm sm:text-base">${escapeHtml(customerName)}</h4>
+                                        <p class="text-xs text-on-surface-variant">${dateStr}</p>
+                                    </div>
+                                </div>
+                                <div class="flex text-yellow-400 gap-0.5">
+                                    ${starsHtml}
+                                </div>
+                            </div>
+                            <p class="text-on-surface text-sm leading-relaxed line-clamp-2 mb-4">${escapeHtml(comment)}</p>
+                        </div>
+                        ${replyText ? `
+                            <div class="bg-surface-container rounded-lg p-3 border-l-2 border-secondary">
+                                <p class="text-xs font-semibold text-secondary mb-1">ตอบกลับแล้ว</p>
+                                <p class="text-xs text-on-surface-variant line-clamp-1">${escapeHtml(replyText)}</p>
+                            </div>
+                        ` : `
+                            <a href="owner-reviews.html" class="inline-flex items-center justify-center gap-1 bg-secondary text-on-secondary-container px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity">
+                                <span class="material-symbols-outlined text-[16px]">reply</span> ตอบกลับลูกค้า
+                            </a>
+                        `}
+                    </div>
+                `;
+            }).join('');
+        } catch(e) {
+            console.warn('Dashboard reviews fetch notice:', e);
+        }
+    }
+
+    // Cloud Sync Status Controller
+    function setCloudSyncStatus(status, customText) {
+        const badge = document.getElementById('cloud-sync-badge');
+        if (!badge) return;
+        badge.classList.remove('opacity-0', 'text-primary', 'text-secondary', 'text-amber-400', 'bg-primary/10', 'border-primary/20', 'bg-secondary/10', 'border-secondary/20', 'bg-amber-400/10', 'border-amber-400/20');
+
+        if (status === 'syncing') {
+            badge.classList.add('text-primary', 'bg-primary/10', 'border-primary/20');
+            badge.innerHTML = `
+                <span class="material-symbols-outlined text-[14px] animate-spin text-primary">sync</span>
+                <span id="cloud-sync-text">${customText || 'กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...'}</span>
+            `;
+        } else if (status === 'synced') {
+            badge.classList.add('text-secondary', 'bg-secondary/10', 'border-secondary/20');
+            badge.innerHTML = `
+                <span class="material-symbols-outlined text-[14px] text-secondary">cloud_done</span>
+                <span id="cloud-sync-text">${customText || 'ข้อมูลเป็นปัจจุบันแล้ว'}</span>
+            `;
+            setTimeout(() => {
+                badge.classList.add('opacity-0');
+            }, 1800);
+        } else if (status === 'offline') {
+            badge.classList.add('text-amber-400', 'bg-amber-400/10', 'border-amber-400/20');
+            badge.innerHTML = `
+                <span class="material-symbols-outlined text-[14px] text-amber-400">cloud_off</span>
+                <span id="cloud-sync-text">${customText || 'แสดงผลจากข้อมูลในเครื่อง (ออฟไลน์)'}</span>
+            `;
+            setTimeout(() => {
+                badge.classList.add('opacity-0');
+            }, 2500);
+        }
+    }
+
+    // Dual-Layer Loading: Cache-First (0ms Instant Display) + Fast-Track Background Sync
+    async function loadOwnerDashboardData() {
+        setCloudSyncStatus('syncing', 'กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...');
+        try {
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (!client) {
+                renderTodayBookings([]);
+                updatePopularityChart([]);
+                setCloudSyncStatus('offline', 'ระบบออฟไลน์ (ใช้ข้อมูลในเครื่อง)');
+                return;
+            }
+
+            const savedShopId = localStorage.getItem('currentShopId');
+            const fallbackUserId = localStorage.getItem('lastLoggedInUserId');
+            const cachedShopName = localStorage.getItem('ownerShopName');
+
+            // FAST-TRACK: Launch parallel queries if currentShopId is available
+            let fastBookingsPromise = null;
+            let fastShopPromise = null;
+            let fastReviewsPromise = null;
+
+            if (savedShopId && savedShopId.length > 20) {
+                fastBookingsPromise = client.from('bookings').select('*').eq('shop_id', savedShopId).order('created_at', { ascending: false });
+                fastShopPromise = client.from('shops').select('*').eq('id', savedShopId).maybeSingle();
+                fastReviewsPromise = client.from('reviews').select('*').eq('shop_id', savedShopId).order('created_at', { ascending: false });
+            }
+
+            const sessionPromise = client.auth ? client.auth.getSession() : Promise.resolve({ data: null });
+
+            const [bookingsRes, shopRes, reviewsRes, sessRes] = await Promise.all([
+                fastBookingsPromise || Promise.resolve(null),
+                fastShopPromise || Promise.resolve(null),
+                fastReviewsPromise || Promise.resolve(null),
+                sessionPromise
+            ]);
+
+            const user = sessRes?.data?.session?.user || null;
+            const effectiveUserId = user?.id || fallbackUserId;
+
+            if (!effectiveUserId && !cachedShopName && !savedShopId) {
+                renderTodayBookings([]);
+                updatePopularityChart([]);
+                const revContainer = document.getElementById('recent-reviews-container');
+                if (revContainer) {
+                    revContainer.innerHTML = `
+                        <div class="col-span-full py-8 text-center text-outline flex flex-col items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-rose-400 text-3xl">lock_person</span>
+                            <p class="text-sm font-semibold text-on-surface">ไม่พบเซสชันการเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่</p>
+                            <a href="../auth/login.html" class="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-secondary text-[#0b1326] font-bold text-xs hover:brightness-110 active:scale-95 transition-all shadow-md">
+                                <span class="material-symbols-outlined text-[16px]">login</span> เข้าสู่ระบบใหม่
+                            </a>
+                        </div>
+                    `;
+                }
+                return;
+            }
+
+            // Non-blocking Role Guard & Profile sync in background
+            if (effectiveUserId) {
+                client.from('profiles').select('avatar_url, full_name, role').eq('id', effectiveUserId).maybeSingle().then(({ data: profile }) => {
+                    if (profile?.role === 'CUSTOMER' || user?.user_metadata?.role === 'CUSTOMER') {
+                        const mainContainer = document.querySelector('main');
+                        if (mainContainer) {
+                            mainContainer.innerHTML = `
+                                <div class="max-w-md mx-auto my-16 p-8 bg-surface-container rounded-2xl border border-outline-variant/40 shadow-xl text-center space-y-4">
+                                    <div class="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto">
+                                        <span class="material-symbols-outlined text-[36px]">switch_account</span>
+                                    </div>
+                                    <h3 class="text-xl font-bold text-on-surface">คุณกำลังเข้าใช้งานในฐานะลูกค้า</h3>
+                                    <p class="text-sm text-outline">หน้านี้สำหรับเจ้าของร้านคาร์แคร์เท่านั้น หากต้องการจัดการร้าน กรุณาสลับเข้าสู่ระบบด้วยบัญชีเจ้าของร้าน</p>
+                                    <div class="pt-2 flex flex-col gap-2.5">
+                                        <a href="../auth/login.html" class="w-full py-3 bg-secondary hover:brightness-110 text-[#0b1326] font-bold rounded-xl shadow-md transition-all active:scale-95 text-sm">
+                                            เข้าสู่ระบบด้วยบัญชีเจ้าของร้าน
+                                        </a>
+                                        <a href="../customer/discovery.html" class="w-full py-2.5 bg-surface-variant hover:bg-surface-container-highest text-on-surface font-semibold rounded-xl border border-outline-variant/40 transition-all text-xs">
+                                            กลับสู่หน้าหลักลูกค้า
+                                        </a>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        return;
+                    }
+
+                    if (profile?.avatar_url) {
+                        const mAvatar = document.getElementById('owner-header-avatar');
+                        const dAvatar = document.getElementById('owner-desktop-avatar');
+                        if (mAvatar) mAvatar.src = profile.avatar_url;
+                        if (dAvatar) dAvatar.src = profile.avatar_url;
+                        localStorage.setItem('ownerProfileAvatar', profile.avatar_url);
+                    }
+                    if (profile?.full_name) {
+                        const dName = document.getElementById('owner-desktop-name');
+                        if (dName) dName.textContent = profile.full_name;
+                        localStorage.setItem('ownerProfileName', profile.full_name);
+                    }
+                }).catch(() => {});
+            }
+
+            // Resolve Shop: Use fast-track shop if found, else fallback
+            let shop = shopRes?.data || null;
+            if (!shop && effectiveUserId) {
+                const { data: s } = await client.from('shops').select('*').eq('owner_id', effectiveUserId).maybeSingle();
+                if (s) shop = s;
+            }
+            if (!shop && cachedShopName) {
+                const { data: s } = await client.from('shops').select('*').eq('name', cachedShopName).maybeSingle();
+                if (s) shop = s;
+            }
+
+            if (shop) {
+                localStorage.setItem('currentShopId', shop.id);
+                if (shop.name) {
+                    const subName = document.getElementById('owner-dashboard-shop-name');
+                    const subContainer = document.getElementById('owner-dashboard-shop-subtitle');
+                    if (subName) subName.textContent = shop.name;
+                    if (subContainer) subContainer.classList.remove('hidden');
+                    localStorage.setItem('ownerShopName', shop.name);
+                }
+                if (shop.logo_url) {
+                    const curAv = localStorage.getItem('ownerProfileAvatar');
+                    if (!curAv || curAv.includes('googleusercontent') || curAv.startsWith('data:image/svg')) {
+                        const mAvatar = document.getElementById('owner-header-avatar');
+                        const dAvatar = document.getElementById('owner-desktop-avatar');
+                        if (mAvatar) mAvatar.src = shop.logo_url;
+                        if (dAvatar) dAvatar.src = shop.logo_url;
+                        localStorage.setItem('ownerProfileAvatar', shop.logo_url);
+                    }
+                }
+                if (shop.cover_image_url) {
+                    localStorage.setItem('ownerCoverImage', shop.cover_image_url);
+                }
+
+                // Retrieve bookings (from fast-track or query now)
+                let dbBookings = bookingsRes?.data;
+                if (!dbBookings) {
+                    const { data } = await client.from('bookings').select('*').eq('shop_id', shop.id).order('created_at', { ascending: false });
+                    dbBookings = data;
+                }
+                let list = Array.isArray(dbBookings) ? dbBookings : [];
+
+                // Also merge any local bookings matching this shop
+                try {
+                    const stored = localStorage.getItem('appBookingsList');
+                    if (stored) {
+                        const localList = JSON.parse(stored);
+                        if (Array.isArray(localList)) {
+                            localList.forEach(lb => {
+                                const matchesShop = (lb.shop_id === shop.id || lb.shopId === shop.id);
+                                const alreadyExists = list.some(item => String(item.id).includes(String(lb.bookingId || lb.id).replace('#','')));
+                                if (matchesShop && !alreadyExists) {
+                                    list.push(lb);
+                                }
+                            });
+                        }
+                    }
+                } catch(e) {}
+
+                const delivered = list.filter(b => String(b.status).toLowerCase() === 'completed').length;
+                const inService = list.filter(b => ['washing', 'arrived', 'ready'].includes(String(b.status).toLowerCase())).length;
+                const cancelled = list.filter(b => ['refunded', 'declined', 'no_show', 'refund_requested', 'cancelled'].includes(String(b.status).toLowerCase())).length;
+                const total = list.length;
+
+                // Cache KPI for next 0ms instant display
+                localStorage.setItem('ownerDashboardKPI', JSON.stringify({ delivered, total, inService, cancelled }));
+
+                const elDelivered = document.getElementById('kpi-delivered');
+                if (elDelivered) elDelivered.textContent = delivered;
+                const elTotal = document.getElementById('kpi-total-bookings');
+                if (elTotal) elTotal.textContent = total;
+                const elInService = document.getElementById('kpi-in-service');
+                if (elInService) elInService.textContent = inService;
+                const elCancelled = document.getElementById('kpi-cancelled');
+                if (elCancelled) elCancelled.textContent = cancelled;
+
+                // Render active service cards
+                const activeList = list.filter(b => ['washing', 'arrived', 'ready', 'confirmed'].includes(String(b.status).toLowerCase()));
+                const container = document.getElementById('active-services-container');
+                if (container) {
+                    if (activeList.length === 0) {
+                        container.innerHTML = `
+                            <div class="col-span-full glass-card rounded-2xl p-8 shadow-xl border border-dashed border-outline-variant/40 text-center flex flex-col items-center justify-center">
+                                <span class="material-symbols-outlined text-4xl text-outline mb-2">car_crash</span>
+                                <p class="text-sm font-semibold text-on-surface">ยังไม่มีคิวที่กำลังให้บริการในขณะนี้</p>
+                                <p class="text-xs text-outline mt-1">เมื่อคุณกดยืนยันรับคิว รายการรถจะปรากฏในช่องนี้</p>
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = activeList.map(b => {
+                            const isWashing = String(b.status).toLowerCase() === 'washing';
+                            const badgeColor = isWashing ? 'yellow-400' : 'primary';
+                            const badgeText = isWashing ? 'กำลังดำเนินการ' : (String(b.status).toLowerCase() === 'ready' ? 'พร้อมรับรถ' : 'รอรับบริการ');
+                            return `
+                                <div class="glass-card rounded-2xl p-5 shadow-xl border border-${badgeColor}/40 flex flex-col gap-3 relative overflow-hidden hover:border-${badgeColor} transition-all">
+                                    <div class="absolute top-0 right-0 w-2 h-full bg-${badgeColor}"></div>
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-${badgeColor}/20 text-${badgeColor} text-xs font-semibold rounded-full border border-${badgeColor}/30">
+                                                ${isWashing ? '<span class="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></span>' : ''}
+                                                ${badgeText}
+                                            </div>
+                                        </div>
+                                        <div class="text-xs text-outline font-medium">${escapeHtml(b.booking_time || b.dateTime || 'วันนี้')}</div>
+                                    </div>
+                                    <div class="flex flex-col gap-2 mt-1">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-lg bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                                                <span class="material-symbols-outlined">directions_car</span>
+                                            </div>
+                                            <div>
+                                                <div class="text-lg font-bold text-on-surface">${escapeHtml(b.plate_number || b.carPlate || '-')}</div>
+                                                <div class="text-sm text-outline">${escapeHtml(b.vehicle_info || b.carBrand || 'รถยนต์')}</div>
+                                            </div>
+                                        </div>
+                                        <div class="p-3 bg-surface-variant/50 rounded-lg mt-1">
+                                            <div class="flex justify-between text-sm">
+                                                <span class="text-outline">แพ็กเกจ:</span>
+                                                <span class="font-semibold text-on-surface">${escapeHtml(b.service_name || b.serviceName || 'ล้างรถ')}</span>
+                                            </div>
+                                            <div class="flex justify-between text-sm mt-1">
+                                                <span class="text-outline">ลูกค้า:</span>
+                                                <span class="text-on-surface">${escapeHtml(b.customer_name || b.customerName || 'ลูกค้า')}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
+
+                // Render 1: รายการจองวันนี้ (Today's Bookings)
+                renderTodayBookings(list);
+
+                // Render 2: สัดส่วนแพ็กเกจ (Package Breakdown)
+                updatePopularityChart(list);
+
+                // Render 3: รีวิวล่าสุด & Review KPI
+                if (reviewsRes && !reviewsRes.error && reviewsRes.data) {
+                    renderReviewsFromData(reviewsRes.data);
+                } else {
+                    await loadOwnerReviews(client, shop.id);
+                }
+                setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
+            } else {
+                renderTodayBookings([]);
+                updatePopularityChart([]);
+                setCloudSyncStatus('offline', 'ไม่พบข้อมูลร้านค้า');
+                const revContainer = document.getElementById('recent-reviews-container');
+                if (revContainer) {
+                    revContainer.innerHTML = `
+                        <div class="col-span-full py-8 text-center text-outline">
+                            <p class="text-sm">ยังไม่พบข้อมูลร้านค้าของคุณ</p>
+                        </div>
+                    `;
+                }
+            }
+        } catch(e) {
+            console.warn('Dashboard data fetch error:', e);
+            setCloudSyncStatus('offline', 'แสดงผลจากข้อมูลในเครื่อง (ออฟไลน์)');
+        }
+    }
+
+    function renderReviewsFromData(reviews) {
+        try {
+            const list = Array.isArray(reviews) ? reviews : [];
+            const avgRating = list.length > 0 ? (list.reduce((acc, r) => acc + (parseFloat(r.rating) || 5), 0) / list.length).toFixed(1) : '5.0';
+            const kpiAvg = document.getElementById('kpi-avg-rating');
+            if (kpiAvg) kpiAvg.textContent = avgRating;
+            const kpiCount = document.getElementById('kpi-review-count');
+            if (kpiCount) kpiCount.textContent = `จาก ${list.length} รีวิว`;
+
+            const container = document.getElementById('recent-reviews-container');
+            if (!container) return;
+
+            if (list.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-8 text-center text-outline">
+                        <span class="material-symbols-outlined text-3xl mb-1">rate_review</span>
+                        <p class="text-sm">ยังไม่มีรีวิวจากลูกค้า</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = list.slice(0, 4).map(r => {
+                const stars = '★'.repeat(Math.round(r.rating || 5)) + '☆'.repeat(5 - Math.round(r.rating || 5));
+                return `
+                    <div class="bg-surface-container rounded-xl p-4 border border-outline-variant/30 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-sm text-on-surface">${escapeHtml(r.customer_name || 'ลูกค้า')}</span>
+                                <span class="text-amber-400 text-xs tracking-wider">${stars}</span>
+                            </div>
+                            <p class="text-xs text-on-surface-variant line-clamp-2">"${escapeHtml(r.comment || 'บริการดีมาก รวดเร็ว ประทับใจ')}"</p>
+                        </div>
+                        <div class="text-[11px] text-outline mt-3 flex justify-between">
+                            <span>${escapeHtml(r.service_name || 'บริการล้างรถ')}</span>
+                            <span>${r.created_at ? new Date(r.created_at).toLocaleDateString('th-TH') : 'เมื่อเร็วๆ นี้'}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch(e) {
+            console.warn('Dashboard reviews render notice:', e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Layer 1: Instant 0ms Render of Cached Profile & KPI
+        const savedAvatar = localStorage.getItem('ownerProfileAvatar');
+        if (savedAvatar && !savedAvatar.includes('googleusercontent')) {
+            const mAvatar = document.getElementById('owner-header-avatar');
+            const dAvatar = document.getElementById('owner-desktop-avatar');
+            if (mAvatar) mAvatar.src = savedAvatar;
+            if (dAvatar) dAvatar.src = savedAvatar;
+        }
+        const savedName = localStorage.getItem('ownerProfileName');
+        if (savedName) {
+            const dName = document.getElementById('owner-desktop-name');
+            if (dName) dName.textContent = savedName;
+        }
+        const savedShop = localStorage.getItem('ownerShopName');
+        if (savedShop) {
+            const subName = document.getElementById('owner-dashboard-shop-name');
+            const subContainer = document.getElementById('owner-dashboard-shop-subtitle');
+            if (subName) subName.textContent = savedShop;
+            if (subContainer) subContainer.classList.remove('hidden');
+        }
+
+        // 0ms KPI Render from Cache
+        const savedKpi = localStorage.getItem('ownerDashboardKPI');
+        if (savedKpi) {
+            try {
+                const k = JSON.parse(savedKpi);
+                if (k) {
+                    const elDelivered = document.getElementById('kpi-delivered');
+                    if (elDelivered && k.delivered !== undefined) elDelivered.textContent = k.delivered;
+                    const elTotal = document.getElementById('kpi-total-bookings');
+                    if (elTotal && k.total !== undefined) elTotal.textContent = k.total;
+                    const elInService = document.getElementById('kpi-in-service');
+                    if (elInService && k.inService !== undefined) elInService.textContent = k.inService;
+                    const elCancelled = document.getElementById('kpi-cancelled');
+                    if (elCancelled && k.cancelled !== undefined) elCancelled.textContent = k.cancelled;
+                }
+            } catch(e) {}
+        }
+
+        // Layer 2: Fast-Track Background Sync
+        loadOwnerDashboardData();
+    });
+
+    // Cross-tab real-time sync
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'ownerProfileName') {
+            const dName = document.getElementById('owner-desktop-name');
+            if (dName) dName.textContent = e.newValue || 'เจ้าของร้าน';
+        }
+        if (e.key === 'ownerShopName') {
+            const subName = document.getElementById('owner-dashboard-shop-name');
+            const subContainer = document.getElementById('owner-dashboard-shop-subtitle');
+            if (subName) subName.textContent = e.newValue || '';
+            if (subContainer) {
+                if (e.newValue) subContainer.classList.remove('hidden');
+                else subContainer.classList.add('hidden');
+            }
+        }
+        if (e.key === 'ownerProfileAvatar') {
+            const mAvatar = document.getElementById('owner-header-avatar');
+            const dAvatar = document.getElementById('owner-desktop-avatar');
+            if (mAvatar && e.newValue) mAvatar.src = e.newValue;
+            if (dAvatar && e.newValue) dAvatar.src = e.newValue;
+        }
+        if (e.key === 'appBookingsList' || e.key === 'activeCustomerBooking' || e.key === 'ownerReviewsReplies') {
+            loadOwnerDashboardData();
+        }
+    });
+</script>
+</body></html>
+
+

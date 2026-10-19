@@ -1,0 +1,840 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>BestCarWash - การตั้งค่าการแจ้งเตือน</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="../supabase-client.js"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+                    spacing: {
+                        "margin-mobile": "1rem",
+                        "gutter": "1rem",
+                        "touch-target-min": "3rem",
+                        "stack-sm": "0.5rem",
+                        "stack-md": "1rem",
+                        "stack-lg": "1.5rem"
+                    },
+                    fontFamily: {
+                        "sans": ["Prompt", "Inter", "sans-serif"]
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-sans overflow-x-hidden relative pb-28 md:pb-12 pt-0 md:pt-20">
+
+<!-- Desktop Header (App Bar) -->
+<header class="hidden md:flex justify-between items-center px-6 lg:px-10 h-20 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md z-50 fixed top-0 w-full">
+    <!-- Brand Logo -->
+    <div class="flex items-center gap-6">
+        <a href="discovery.html" class="flex items-center gap-3 group">
+            <div class="w-11 h-11 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center group-hover:bg-primary/20 transition-all shadow-sm">
+                <span class="material-symbols-outlined text-primary text-[28px] group-hover:rotate-12 transition-transform duration-300">local_car_wash</span>
+            </div>
+            <span class="text-2xl lg:text-3xl font-extrabold text-primary tracking-tight">BestCarWash</span>
+        </a>
+    </div>
+
+    <!-- Navigation & User Profile -->
+    <div class="flex items-center gap-6">
+        <nav class="flex items-center gap-5 lg:gap-7">
+            <a class="text-base font-semibold text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5 py-1" href="discovery.html">
+                <span class="material-symbols-outlined text-[20px]">explore</span> ค้นหาร้าน
+            </a>
+            <a class="text-base font-semibold text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5 py-1" href="booking-history-Customer.html">
+                <span class="material-symbols-outlined text-[20px]">receipt_long</span> การจองของฉัน
+            </a>
+            <a class="text-base font-semibold text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5 py-1" href="favorite-shops.html">
+                <span class="material-symbols-outlined text-[20px]">favorite</span> ร้านโปรด
+            </a>
+        </nav>
+
+        <div class="flex items-center gap-4 border-l border-outline-variant/30 pl-5 lg:pl-6">
+            <a href="customer-notifications-list.html" class="w-11 h-11 rounded-full flex items-center justify-center bg-surface-container text-on-surface hover:text-primary hover:bg-surface-variant transition-colors relative border border-outline-variant/50 shadow-sm" title="การแจ้งเตือน">
+                <span class="material-symbols-outlined text-[24px]">notifications</span>
+                <span class="absolute top-2.5 right-3 w-2.5 h-2.5 bg-error rounded-full shadow-[0_0_5px_rgba(255,180,171,0.8)]"></span>
+            </a>
+
+            <!-- User Profile Chip -->
+            <a href="Customer%20Profile.html" class="flex items-center gap-3 pl-1.5 pr-4 py-1.5 rounded-full bg-surface-container hover:bg-surface-variant border border-outline-variant/40 hover:border-primary transition-all shadow-md group" title="โปรไฟล์ของฉัน">
+                <div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest border border-outline-variant/40 flex-shrink-0">
+                    <img id="desktop-header-avatar" alt="User profile" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
+                </div>
+                <span class="hidden md:inline-block text-base font-semibold text-on-surface group-hover:text-primary transition-colors" id="desktop-header-name">โปรไฟล์</span>
+            </a>
+        </div>
+    </div>
+</header>
+
+<!-- Mobile Header -->
+<header class="md:hidden sticky top-0 w-full z-50 bg-surface-container-low/95 backdrop-blur-md flex justify-between items-center px-4 py-3 border-b border-outline-variant/30 shadow-sm">
+    <div class="flex items-center gap-2.5">
+        <a href="Customer%20Profile.html" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container text-on-surface-variant hover:text-primary hover:bg-surface-variant transition-colors active:scale-95 border border-outline-variant/30">
+            <span class="material-symbols-outlined text-[22px]">arrow_back</span>
+        </a>
+        <h1 class="text-xl font-bold text-on-surface tracking-tight flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[22px]">notifications_active</span>
+            <span>ตั้งค่าการแจ้งเตือน</span>
+        </h1>
+    </div>
+    <a href="customer-notifications-list.html" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container text-on-surface-variant hover:text-primary transition-colors active:scale-95 border border-outline-variant/30" title="การแจ้งเตือน">
+        <span class="material-symbols-outlined text-[22px]">notifications</span>
+    </a>
+</header>
+
+<!-- Main Container -->
+<main class="w-full max-w-5xl mx-auto px-4 md:px-6 pt-20 md:pt-24 pb-8 flex-1">
+    
+    <!-- Top Banner & Controls -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+        <div>
+            <div class="flex items-center gap-2 mb-1.5">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/15 text-primary text-xs font-semibold border border-primary/25">
+                    <span class="material-symbols-outlined text-[15px]">tune</span> การแจ้งเตือน & ข้อความ
+                </span>
+                <span id="sync-status-badge" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary/15 text-secondary text-xs font-medium border border-secondary/25">
+                    <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    <span>บันทึกอัตโนมัติแล้ว</span>
+                </span>
+            </div>
+            <h1 class="text-2xl md:text-3xl font-bold text-on-surface tracking-tight">ตั้งค่าการแจ้งเตือน</h1>
+            <p class="text-sm text-on-surface-variant mt-1">เลือกประเภทข้อมูลและช่องทางที่คุณต้องการให้ BestCarWash แจ้งเตือน</p>
+        </div>
+        
+        <!-- Action Buttons (Desktop Only) -->
+        <div class="hidden md:flex items-center gap-3">
+            <button type="button" onclick="resetToDefaults()" class="px-4 py-2.5 rounded-xl border border-outline-variant/40 hover:border-outline-variant text-on-surface-variant hover:text-on-surface text-xs font-semibold transition-all active:scale-95 flex items-center gap-1.5 bg-surface-container/60 hover:bg-surface-container">
+                <span class="material-symbols-outlined text-[16px]">restart_alt</span>
+                <span>รีเซ็ตค่าเริ่มต้น</span>
+            </button>
+            <button type="button" onclick="saveSettings(this)" id="saveSettingsBtn" class="px-5 py-2.5 bg-primary-container hover:bg-primary text-on-primary-container rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[18px]">save</span>
+                <span>บันทึกการตั้งค่า</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Settings Form (2-Column Grid) -->
+    <form id="notificationsForm" class="grid grid-cols-1 md:grid-cols-2 gap-6" onsubmit="event.preventDefault(); saveSettings();">
+        
+        <!-- Card 1: Booking & Car Wash Status -->
+        <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-primary/40 transition-all flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between pb-3 mb-4 border-b border-outline-variant/30">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center text-primary border border-primary/25">
+                            <span class="material-symbols-outlined text-[20px]">calendar_month</span>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-on-surface">สถานะการจอง & การบริการ</h2>
+                            <p class="text-xs text-on-surface-variant">แจ้งเตือนลำดับขั้นตอนสำคัญเกี่ยวกับการล้างรถของคุณ</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="divide-y divide-outline-variant/20">
+                    <!-- Item 1: Booking Confirmed -->
+                    <label class="flex items-center justify-between cursor-pointer group/toggle py-3.5 first:pt-0">
+                        <div class="flex items-start gap-3 flex-1 pr-3">
+                            <div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center text-primary shrink-0 mt-0.5">
+                                <span class="material-symbols-outlined text-[18px]">event_available</span>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-sm font-semibold text-on-surface group-hover/toggle:text-primary transition-colors">ยืนยันการจองคิว</span>
+                                <span class="text-xs text-on-surface-variant">แจ้งเตือนทันทีเมื่อร้านคาร์แคร์กดยืนยันรับคิวของคุณ</span>
+                            </div>
+                        </div>
+                        <div class="relative inline-block w-12 h-7 align-middle select-none shrink-0">
+                            <input type="checkbox" id="setting-bookingConfirmed" class="setting-toggle peer absolute opacity-0 w-0 h-0" onchange="autoSave()"/>
+                            <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/40 transition-colors duration-200 ease-in-out peer-checked:bg-primary-container peer-checked:border-primary"></span>
+                            <span class="absolute left-1 top-1 bg-outline w-5 h-5 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-white shadow-sm"></span>
+                        </div>
+                    </label>
+
+                    <!-- Item 2: 1-Hour Reminder -->
+                    <label class="flex items-center justify-between cursor-pointer group/toggle py-3.5">
+                        <div class="flex items-start gap-3 flex-1 pr-3">
+                            <div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center text-secondary shrink-0 mt-0.5">
+                                <span class="material-symbols-outlined text-[18px]">alarm</span>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-sm font-semibold text-on-surface group-hover/toggle:text-primary transition-colors">เตือนล่วงหน้า 1 ชั่วโมง</span>
+                                <span class="text-xs text-on-surface-variant">แจ้งเตือนให้เตรียมตัวออกเดินทางก่อนถึงเวลานัดหมาย</span>
+                            </div>
+                        </div>
+                        <div class="relative inline-block w-12 h-7 align-middle select-none shrink-0">
+                            <input type="checkbox" id="setting-upcomingReminder" class="setting-toggle peer absolute opacity-0 w-0 h-0" onchange="autoSave()"/>
+                            <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/40 transition-colors duration-200 ease-in-out peer-checked:bg-primary-container peer-checked:border-primary"></span>
+                            <span class="absolute left-1 top-1 bg-outline w-5 h-5 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-white shadow-sm"></span>
+                        </div>
+                    </label>
+
+                    <!-- Item 3: In-Progress Alert -->
+                    <label class="flex items-center justify-between cursor-pointer group/toggle py-3.5">
+                        <div class="flex items-start gap-3 flex-1 pr-3">
+                            <div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface-variant shrink-0 mt-0.5">
+                                <span class="material-symbols-outlined text-[18px]">local_car_wash</span>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-sm font-semibold text-on-surface group-hover/toggle:text-primary transition-colors">สถานะกำลังล้างรถ</span>
+                                <span class="text-xs text-on-surface-variant">แจ้งเตือนเมื่อช่างเริ่มนำรถของคุณเข้าช่องบริการ</span>
+                            </div>
+                        </div>
+                        <div class="relative inline-block w-12 h-7 align-middle select-none shrink-0">
+                            <input type="checkbox" id="setting-serviceProgress" class="setting-toggle peer absolute opacity-0 w-0 h-0" onchange="autoSave()"/>
+                            <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/40 transition-colors duration-200 ease-in-out peer-checked:bg-primary-container peer-checked:border-primary"></span>
+                            <span class="absolute left-1 top-1 bg-outline w-5 h-5 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-white shadow-sm"></span>
+                        </div>
+                    </label>
+
+                    <!-- Item 4: Car Ready for Pickup -->
+                    <label class="flex items-center justify-between cursor-pointer group/toggle py-3.5">
+                        <div class="flex items-start gap-3 flex-1 pr-3">
+                            <div class="w-8 h-8 rounded-full bg-secondary/15 flex items-center justify-center text-secondary shrink-0 mt-0.5 border border-secondary/25">
+                                <span class="material-symbols-outlined text-[18px]">task_alt</span>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-sm font-semibold text-on-surface group-hover/toggle:text-primary transition-colors">ล้างเสร็จสิ้นพร้อมรับรถ</span>
+                                <span class="text-xs text-on-surface-variant">แจ้งเตือนทันทีเมื่อทำความสะอาดเสร็จ ให้มารับรถกลับได้</span>
+                            </div>
+                        </div>
+                        <div class="relative inline-block w-12 h-7 align-middle select-none shrink-0">
+                            <input type="checkbox" id="setting-carReady" class="setting-toggle peer absolute opacity-0 w-0 h-0" onchange="autoSave()"/>
+                            <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/40 transition-colors duration-200 ease-in-out peer-checked:bg-primary-container peer-checked:border-primary"></span>
+                            <span class="absolute left-1 top-1 bg-outline w-5 h-5 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-white shadow-sm"></span>
+                        </div>
+                    </label>
+
+                    <!-- Item 5: Refund & Deposit Slip Alert (NEW) -->
+                    <label class="flex items-center justify-between cursor-pointer group/toggle py-3.5 last:pb-0">
+                        <div class="flex items-start gap-3 flex-1 pr-3">
+                            <div class="w-8 h-8 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5 border border-emerald-500/25">
+                                <span class="material-symbols-outlined text-[18px]">currency_exchange</span>
+                            </div>
+                            <div class="flex flex-col">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-sm font-semibold text-on-surface group-hover/toggle:text-primary transition-colors">การคืนเงิน & สลิปมัดจำ</span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">สำคัญ</span>
+                                </div>
+                                <span class="text-xs text-on-surface-variant">แจ้งเตือนทันทีเมื่อร้านดำเนินการโอนเงินคืนมัดจำ พร้อมแนบรูปสลิป</span>
+                            </div>
+                        </div>
+                        <div class="relative inline-block w-12 h-7 align-middle select-none shrink-0">
+                            <input type="checkbox" id="setting-refundAlert" class="setting-toggle peer absolute opacity-0 w-0 h-0" onchange="autoSave()"/>
+                            <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/40 transition-colors duration-200 ease-in-out peer-checked:bg-emerald-500 peer-checked:border-emerald-500"></span>
+                            <span class="absolute left-1 top-1 bg-outline w-5 h-5 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-white shadow-sm"></span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Channels (Interactive LINE Official Focus) -->
+        <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-[#06C755]/40 transition-all flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between pb-3 mb-4 border-b border-outline-variant/30">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-[#06C755]/15 flex items-center justify-center text-[#06C755] border border-[#06C755]/25">
+                            <span class="material-symbols-outlined text-[20px]">cell_tower</span>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-on-surface">ช่องทางการรับแจ้งเตือน</h2>
+                            <p class="text-xs text-on-surface-variant">เลือกช่องทางที่คุณสะดวกรับข้อความ</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="divide-y divide-outline-variant/20">
+                    <!-- LINE Notification Module -->
+                    <div class="py-3.5 first:pt-0">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-start gap-3 flex-1 pr-3">
+                                <!-- LINE Icon Badge -->
+                                <div class="w-8 h-8 rounded-full bg-[#06C755] flex items-center justify-center text-white font-black text-xs shrink-0 mt-0.5 shadow-md shadow-[#06C755]/30">
+                                    LINE
+                                </div>
+                                <div class="flex flex-col">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-sm font-bold text-on-surface">LINE Official Notification</span>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#06C755]/15 text-[#06C755] border border-[#06C755]/30">แนะนำสูงสุด</span>
+                                    </div>
+                                    <span class="text-xs text-on-surface-variant">แจ้งเตือนสถานะคิว & สลิปเงินคืนผ่านแชต LINE ทันที</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Master Switch for LINE -->
+                            <div class="relative inline-block w-12 h-7 align-middle select-none shrink-0">
+                                <input type="checkbox" id="channel-line" class="setting-toggle peer absolute opacity-0 w-0 h-0" onchange="autoSave()"/>
+                                <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/40 transition-colors duration-200 ease-in-out peer-checked:bg-[#06C755] peer-checked:border-[#06C755]"></span>
+                                <span class="absolute left-1 top-1 bg-outline w-5 h-5 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-white shadow-sm"></span>
+                            </div>
+                        </div>
+
+                        <!-- STATE A: Connected State -->
+                        <div id="line-connected-view" class="mt-3 ml-11 p-3.5 rounded-2xl bg-[#06C755]/10 border border-[#06C755]/30 flex flex-col gap-2.5">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-full bg-[#06C755] text-white flex items-center justify-center text-[10px] font-bold shadow-sm">
+                                        <span class="material-symbols-outlined text-[14px]">check</span>
+                                    </div>
+                                    <div class="text-xs">
+                                        <span class="text-on-surface-variant">ผูกกับ: </span>
+                                        <strong class="text-on-surface font-semibold" id="line-account-display">Somchai (LINE)</strong>
+                                    </div>
+                                </div>
+                                <span class="text-[11px] font-bold text-[#06C755] bg-[#06C755]/15 px-2 py-0.5 rounded-full border border-[#06C755]/30">เชื่อมต่อแล้ว</span>
+                            </div>
+
+                            <!-- Buttons inside Connected View -->
+                            <div class="flex items-center gap-2 pt-1 border-t border-[#06C755]/20">
+                                <button type="button" onclick="openLinePreviewModal()" class="flex-1 py-1.5 px-2.5 rounded-lg bg-[#06C755] hover:bg-[#05b34c] text-white text-[11px] font-bold transition-all shadow-sm flex items-center justify-center gap-1 active:scale-95">
+                                    <span class="material-symbols-outlined text-[14px]">visibility</span>
+                                    <span>ดูตัวอย่างการแจ้งเตือนใน LINE</span>
+                                </button>
+                                <button type="button" onclick="disconnectLine()" class="py-1.5 px-2.5 rounded-lg bg-surface-container-highest hover:bg-error/20 text-on-surface-variant hover:text-error text-[11px] font-medium transition-colors border border-outline-variant/30 active:scale-95">
+                                    ยกเลิกผูกบัญชี
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- STATE B: Disconnected State -->
+                        <div id="line-disconnected-view" class="hidden mt-3 ml-11 p-3.5 rounded-2xl bg-surface-container-highest/60 border border-outline-variant/30 flex flex-col gap-2.5">
+                            <div class="flex items-start gap-2">
+                                <span class="material-symbols-outlined text-outline text-[18px] shrink-0 mt-0.5">link_off</span>
+                                <div class="text-xs text-on-surface-variant leading-relaxed">
+                                    ยังไม่ได้เชื่อมต่อกับ LINE Official Account กรุณากดเชื่อมต่อเพื่อรับการแจ้งเตือนสลิปเงินคืนและคิวล้างรถ
+                                </div>
+                            </div>
+                            <button type="button" onclick="openConnectModal()" class="w-full py-2 px-3 bg-[#06C755] hover:bg-[#05b34c] text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-95">
+                                <span class="material-symbols-outlined text-[16px]">qr_code_scanner</span>
+                                <span>เชื่อมต่อบัญชี LINE Official</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Push Notification (App) -->
+                    <label class="flex items-center justify-between cursor-pointer group/toggle py-3.5 last:pb-0">
+                        <div class="flex items-start gap-3 flex-1 pr-3">
+                            <div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center text-primary shrink-0 mt-0.5">
+                                <span class="material-symbols-outlined text-[18px]">notifications</span>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-sm font-semibold text-on-surface group-hover/toggle:text-primary transition-colors">การแจ้งเตือน Push (แอป)</span>
+                                <span class="text-xs text-on-surface-variant">แจ้งเตือนเด้งบนหน้าจอหลักของสมาร์ตโฟน</span>
+                            </div>
+                        </div>
+                        <div class="relative inline-block w-12 h-7 align-middle select-none shrink-0">
+                            <input type="checkbox" id="channel-push" class="setting-toggle peer absolute opacity-0 w-0 h-0" onchange="autoSave()"/>
+                            <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/40 transition-colors duration-200 ease-in-out peer-checked:bg-primary-container peer-checked:border-primary"></span>
+                            <span class="absolute left-1 top-1 bg-outline w-5 h-5 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-white shadow-sm"></span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Helpful note banner in Card 2 -->
+            <div class="mt-6 p-3 rounded-xl bg-surface-container/60 border border-outline-variant/20 flex items-start gap-2.5">
+                <span class="material-symbols-outlined text-[18px] text-[#06C755] shrink-0 mt-0.5">verified_user</span>
+                <p class="text-[11px] text-on-surface-variant leading-relaxed">
+                    ระบบจะส่งข้อความแจ้งเตือนผ่านช่องทางที่คุณเลือกไว้แบบเรียลไทม์ พร้อมติดตามสถานะการล้างรถและหลักฐานสลิปเงินคืนได้ทุกขั้นตอน
+                </p>
+            </div>
+        </div>
+
+        <!-- Mobile Action Buttons (Visible only on mobile) -->
+        <div class="md:hidden flex flex-col gap-3 pt-3 md:col-span-2">
+            <button type="button" onclick="saveSettings(this)" class="w-full h-12 bg-primary-container text-on-primary-container font-bold rounded-xl hover:bg-primary transition-colors shadow-md active:scale-95 flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-[20px]">save</span>
+                <span>บันทึกการตั้งค่า</span>
+            </button>
+            <button type="button" onclick="resetToDefaults()" class="w-full h-12 border border-outline-variant/40 hover:border-outline-variant text-on-surface-variant hover:text-on-surface font-medium rounded-xl hover:bg-surface-container transition-all active:scale-95 flex items-center justify-center gap-2 bg-surface-container/40">
+                <span class="material-symbols-outlined text-[18px]">restart_alt</span>
+                <span>รีเซ็ตค่าเริ่มต้น</span>
+            </button>
+        </div>
+
+    </form>
+</main>
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed bottom-20 md:bottom-8 left-1/2 transform -translate-x-1/2 bg-surface-container-highest border border-outline-variant/50 text-on-surface px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 z-[110] transition-all duration-300 opacity-0 pointer-events-none translate-y-4 max-w-sm w-full mx-4">
+    <span class="material-symbols-outlined text-secondary text-[22px]" id="toast-icon">check_circle</span>
+    <span class="text-sm font-medium flex-1 truncate" id="toast-msg">บันทึกการตั้งค่าเรียบร้อยแล้ว</span>
+</div>
+
+<!-- LINE Flex Message Interactive Preview Modal -->
+<div id="line-preview-modal" class="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4 py-6">
+    <div class="bg-[#1e232f] border border-outline-variant/40 rounded-3xl max-w-md w-full flex flex-col shadow-2xl scale-95 transition-transform duration-300 relative overflow-hidden max-h-[90vh]" id="line-preview-modal-content">
+        
+        <!-- LINE App Simulated Header -->
+        <div class="bg-[#212b36] px-4 py-3 border-b border-outline-variant/30 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-full bg-[#06C755] flex items-center justify-center text-white font-black text-xs shadow-sm">
+                    LINE
+                </div>
+                <div>
+                    <div class="flex items-center gap-1">
+                        <span class="text-sm font-bold text-white">BestCarWash Official</span>
+                        <span class="material-symbols-outlined text-[#06C755] text-[16px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+                    </div>
+                    <span class="text-[10px] text-gray-400">ตัวอย่างข้อความที่ลูกค้าจะได้รับใน LINE</span>
+                </div>
+            </div>
+            <button onclick="closeLinePreviewModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+        </div>
+
+        <!-- LINE Chat Body (Scrollable) -->
+        <div class="p-4 overflow-y-auto space-y-4 bg-[#111622] flex-1">
+            
+            <!-- FLEX CARD 1: REFUND NOTIFICATION (คืนเงินมัดจำ) -->
+            <div class="bg-surface-container rounded-2xl overflow-hidden border border-emerald-500/40 shadow-xl max-w-xs mx-auto">
+                <!-- Card Header -->
+                <div class="bg-gradient-to-r from-emerald-600 to-teal-700 p-3.5 text-white flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">currency_exchange</span>
+                        <span class="text-xs font-bold uppercase tracking-wider">คืนเงินมัดจำสำเร็จ</span>
+                    </div>
+                    <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">โอนแล้ว</span>
+                </div>
+                <!-- Card Content -->
+                <div class="p-4 space-y-3 text-xs">
+                    <div class="text-center py-1 bg-surface-container-highest/60 rounded-xl border border-outline-variant/20">
+                        <span class="text-[10px] text-on-surface-variant block">ยอดเงินที่โอนคืน</span>
+                        <span class="text-2xl font-black text-emerald-400 font-mono">฿150.00</span>
+                    </div>
+
+                    <div class="space-y-1.5 text-[11px] border-y border-outline-variant/20 py-2">
+                        <div class="flex justify-between">
+                            <span class="text-on-surface-variant">รหัสการจอง:</span>
+                            <span class="font-mono font-bold text-on-surface">#BK-9821</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-on-surface-variant">ร้านคาร์แคร์:</span>
+                            <span class="font-medium text-on-surface">Gleam Auto Care</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-on-surface-variant">โอนเข้าบัญชี:</span>
+                            <span class="text-on-surface">กสิกรไทย (xxx-x-xx123-x)</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-on-surface-variant">เวลาโอน:</span>
+                            <span class="text-on-surface">11 ต.ค. 2026, 17:30 น.</span>
+                        </div>
+                    </div>
+
+                    <!-- Mini Slip Graphic Mock -->
+                    <div class="p-2 rounded-lg bg-surface-container-highest/40 border border-outline-variant/20 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-emerald-400 text-[18px]">receipt_long</span>
+                        <div class="flex-1 truncate text-[10px] text-on-surface-variant">
+                            <span>หลักฐานสลิป: </span><strong class="text-on-surface">slip_trans_9821.jpg</strong>
+                        </div>
+                        <span class="text-[10px] text-[#06C755] font-bold">แนบแล้ว</span>
+                    </div>
+
+                    <button class="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-center transition-colors shadow-sm text-xs">
+                        ดูรายละเอียดและรูปสลิป
+                    </button>
+                </div>
+            </div>
+
+            <!-- FLEX CARD 2: CAR READY FOR PICKUP (รถล้างเสร็จแล้ว) -->
+            <div class="bg-surface-container rounded-2xl overflow-hidden border border-[#06C755]/40 shadow-xl max-w-xs mx-auto">
+                <div class="bg-gradient-to-r from-[#06C755] to-emerald-700 p-3.5 text-white flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">local_car_wash</span>
+                        <span class="text-xs font-bold uppercase tracking-wider">ล้างเสร็จสิ้นพร้อมรับรถ ✨</span>
+                    </div>
+                    <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">พร้อมรับ</span>
+                </div>
+                <div class="p-4 space-y-3 text-xs">
+                    <p class="text-on-surface font-semibold text-[13px] leading-tight">
+                        รถยนต์ของคุณได้รับการดูแลเรียบร้อยแล้ว เงาวับพร้อมส่งมอบ!
+                    </p>
+                    <div class="space-y-1.5 text-[11px] bg-surface-container-highest/40 p-2.5 rounded-xl border border-outline-variant/20">
+                        <div class="flex justify-between">
+                            <span class="text-on-surface-variant">รถยนต์:</span>
+                            <span class="font-bold text-on-surface">Honda Civic (กข 1234)</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-on-surface-variant">ช่องรับรถ:</span>
+                            <span class="text-primary font-bold">Bay 02 (ช่องส่งมอบ)</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-on-surface-variant">ร้าน:</span>
+                            <span class="text-on-surface">Gleam Auto Care</span>
+                        </div>
+                    </div>
+
+                    <button class="w-full py-2 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold rounded-xl text-center transition-colors shadow-sm text-xs flex items-center justify-center gap-1">
+                        <span class="material-symbols-outlined text-[16px]">navigation</span>
+                        <span>เปิดแผนที่นำทางไปรับรถ</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="p-3 bg-[#1e232f] border-t border-outline-variant/30 text-center">
+            <span class="text-[11px] text-gray-400">ระบบจะสร้างการ์ด Flex Message และส่งตรงเข้า LINE อัตโนมัติ</span>
+        </div>
+
+    </div>
+</div>
+
+<!-- LINE Connect Modal -->
+<div id="connect-modal" class="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4">
+    <div class="bg-surface-container border border-outline-variant/40 rounded-3xl p-6 max-w-sm w-full flex flex-col items-center text-center shadow-2xl scale-95 transition-transform duration-300 relative" id="connect-modal-content">
+        <button onclick="closeConnectModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-surface-variant text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors">
+            <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
+
+        <div class="w-12 h-12 rounded-2xl bg-[#06C755] flex items-center justify-center text-white font-black text-lg mb-3 shadow-lg shadow-[#06C755]/30">
+            LINE
+        </div>
+
+        <h3 class="text-lg font-bold text-on-surface">เชื่อมต่อ LINE Official</h3>
+        <p class="text-xs text-on-surface-variant mt-1 mb-4">สแกน QR Code เพื่อเชื่อมต่อการแจ้งเตือนกับ BestCarWash</p>
+
+        <!-- QR Code Frame -->
+        <div class="p-3 bg-white rounded-2xl shadow-inner border-2 border-[#06C755]/40 mb-3 flex flex-col items-center">
+            <svg class="w-36 h-36" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100" height="100" fill="white"/>
+                <rect x="10" y="10" width="24" height="24" fill="#0b1326" rx="3"/>
+                <rect x="14" y="14" width="16" height="16" fill="white" rx="2"/>
+                <rect x="18" y="18" width="8" height="8" fill="#06C755" rx="1"/>
+                <rect x="66" y="10" width="24" height="24" fill="#0b1326" rx="3"/>
+                <rect x="70" y="14" width="16" height="16" fill="white" rx="2"/>
+                <rect x="74" y="18" width="8" height="8" fill="#06C755" rx="1"/>
+                <rect x="10" y="66" width="24" height="24" fill="#0b1326" rx="3"/>
+                <rect x="14" y="70" width="16" height="16" fill="white" rx="2"/>
+                <rect x="18" y="74" width="8" height="8" fill="#06C755" rx="1"/>
+                <rect x="42" y="12" width="6" height="6" fill="#0b1326"/>
+                <rect x="52" y="18" width="6" height="6" fill="#0b1326"/>
+                <rect x="40" y="28" width="6" height="6" fill="#0b1326"/>
+                <rect x="14" y="44" width="6" height="6" fill="#0b1326"/>
+                <rect x="24" y="50" width="6" height="6" fill="#0b1326"/>
+                <rect x="44" y="44" width="12" height="12" fill="#06C755" rx="2"/>
+                <rect x="64" y="42" width="6" height="6" fill="#0b1326"/>
+                <rect x="78" y="48" width="6" height="6" fill="#0b1326"/>
+                <rect x="40" y="66" width="6" height="6" fill="#0b1326"/>
+                <rect x="54" y="74" width="6" height="6" fill="#0b1326"/>
+                <rect x="68" y="68" width="6" height="6" fill="#0b1326"/>
+                <rect x="80" y="78" width="6" height="6" fill="#0b1326"/>
+                <rect x="70" y="82" width="6" height="6" fill="#0b1326"/>
+            </svg>
+            <span class="text-[11px] font-mono font-bold text-gray-800 mt-1">LINE ID: @bestcarwash</span>
+        </div>
+
+        <div class="w-full flex flex-col gap-2 mt-2">
+            <button onclick="confirmConnectLine()" class="w-full py-2.5 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-xs rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">how_to_reg</span>
+                <span>จำลอง: เพิ่มเพื่อน & เชื่อมต่อสำเร็จ</span>
+            </button>
+            <button onclick="closeConnectModal()" class="w-full py-2 bg-surface-variant text-on-surface-variant text-xs font-semibold rounded-xl">
+                ยกเลิก
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const DEFAULT_SETTINGS = {
+        bookingConfirmed: true,
+        upcomingReminder: true,
+        serviceProgress: true,
+        carReady: true,
+        refundAlert: true,
+        channelLine: true,
+        channelPush: true,
+        lineConnected: true
+    };
+
+    const SETTING_MAP = {
+        'setting-bookingConfirmed': 'bookingConfirmed',
+        'setting-upcomingReminder': 'upcomingReminder',
+        'setting-serviceProgress': 'serviceProgress',
+        'setting-carReady': 'carReady',
+        'setting-refundAlert': 'refundAlert',
+        'channel-line': 'channelLine',
+        'channel-push': 'channelPush'
+    };
+
+    function showToast(message, icon = 'check_circle') {
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toast-msg');
+        const toastIcon = document.getElementById('toast-icon');
+
+        if (toast && toastMsg) {
+            toastMsg.innerText = message;
+            if (toastIcon) toastIcon.innerText = icon;
+
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            if (window.toastTimeout) clearTimeout(window.toastTimeout);
+            window.toastTimeout = setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.remove('opacity-100', 'translate-y-0');
+            }, 2500);
+        }
+    }
+
+    function getSettings() {
+        const stored = localStorage.getItem('customerNotificationSettings');
+        if (stored) {
+            try {
+                return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        return { ...DEFAULT_SETTINGS };
+    }
+
+    function syncLineUI(settings) {
+        const connectedView = document.getElementById('line-connected-view');
+        const disconnectedView = document.getElementById('line-disconnected-view');
+        const lineSwitch = document.getElementById('channel-line');
+
+        const isConnected = settings.lineConnected !== false;
+
+        if (connectedView && disconnectedView) {
+            if (isConnected) {
+                connectedView.classList.remove('hidden');
+                disconnectedView.classList.add('hidden');
+                if (lineSwitch) lineSwitch.disabled = false;
+            } else {
+                connectedView.classList.add('hidden');
+                disconnectedView.classList.remove('hidden');
+                if (lineSwitch) {
+                    lineSwitch.checked = false;
+                }
+            }
+        }
+    }
+
+    function applySettingsToUI(settings) {
+        for (const [elementId, key] of Object.entries(SETTING_MAP)) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.checked = settings[key] !== undefined ? settings[key] : DEFAULT_SETTINGS[key];
+            }
+        }
+        syncLineUI(settings);
+    }
+
+    function readSettingsFromUI() {
+        const current = getSettings();
+        const settings = { ...current };
+        for (const [elementId, key] of Object.entries(SETTING_MAP)) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                settings[key] = el.checked;
+            }
+        }
+        return settings;
+    }
+
+    function autoSave() {
+        const settings = readSettingsFromUI();
+        localStorage.setItem('customerNotificationSettings', JSON.stringify(settings));
+        
+        const badge = document.getElementById('sync-status-badge');
+        if (badge) {
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span><span>บันทึกอัตโนมัติแล้ว</span>`;
+            badge.classList.remove('opacity-50');
+        }
+    }
+
+    function saveSettings(btn = null) {
+        const settings = readSettingsFromUI();
+        localStorage.setItem('customerNotificationSettings', JSON.stringify(settings));
+
+        if (btn) {
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `<span class="material-symbols-outlined text-[18px]">check</span><span>บันทึกสำเร็จ</span>`;
+            btn.classList.remove('bg-primary-container', 'text-on-primary-container');
+            btn.classList.add('bg-secondary', 'text-on-secondary');
+            
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.classList.remove('bg-secondary', 'text-on-secondary');
+                btn.classList.add('bg-primary-container', 'text-on-primary-container');
+            }, 1500);
+        }
+
+        showToast('บันทึกการตั้งค่าการแจ้งเตือนเรียบร้อยแล้ว');
+    }
+
+    function resetToDefaults() {
+        localStorage.setItem('customerNotificationSettings', JSON.stringify(DEFAULT_SETTINGS));
+        applySettingsToUI(DEFAULT_SETTINGS);
+        showToast('รีเซ็ตค่าเริ่มต้นทั้งหมดแล้ว', 'restart_alt');
+    }
+
+    // Modal Handlers
+    function openLinePreviewModal() {
+        const modal = document.getElementById('line-preview-modal');
+        const content = document.getElementById('line-preview-modal-content');
+        if (modal && content) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+    }
+
+    function closeLinePreviewModal() {
+        const modal = document.getElementById('line-preview-modal');
+        const content = document.getElementById('line-preview-modal-content');
+        if (modal && content) {
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }, 300);
+        }
+    }
+
+    function openConnectModal() {
+        const modal = document.getElementById('connect-modal');
+        const content = document.getElementById('connect-modal-content');
+        if (modal && content) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+    }
+
+    function closeConnectModal() {
+        const modal = document.getElementById('connect-modal');
+        const content = document.getElementById('connect-modal-content');
+        if (modal && content) {
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }, 300);
+        }
+    }
+
+    function confirmConnectLine() {
+        const settings = getSettings();
+        settings.lineConnected = true;
+        settings.channelLine = true;
+        localStorage.setItem('customerNotificationSettings', JSON.stringify(settings));
+        applySettingsToUI(settings);
+        closeConnectModal();
+        showToast('เชื่อมต่อ LINE Official สำเร็จแล้ว!', 'how_to_reg');
+    }
+
+    function disconnectLine() {
+        if (confirm("คุณต้องการยกเลิกการเชื่อมต่อกับ LINE Official ใช่หรือไม่?\n(ระบบจะไม่สามารถส่งแจ้งเตือนสลิปเงินคืนและสถานะคิวล้างรถผ่าน LINE ได้)")) {
+            const settings = getSettings();
+            settings.lineConnected = false;
+            settings.channelLine = false;
+            localStorage.setItem('customerNotificationSettings', JSON.stringify(settings));
+            applySettingsToUI(settings);
+            showToast('ยกเลิกการเชื่อมต่อ LINE แล้ว', 'link_off');
+        }
+    }
+
+    // Initialize Page & Synchronize Profile
+    document.addEventListener('DOMContentLoaded', () => {
+        // Load notification settings
+        const currentSettings = getSettings();
+        applySettingsToUI(currentSettings);
+
+        // Synchronize customer profile name and avatar
+        const savedProfile = localStorage.getItem('customerProfile');
+        if (savedProfile) {
+            try {
+                const data = JSON.parse(savedProfile);
+                if (data.avatar && !data.avatar.includes('googleusercontent')) {
+                    const avatar = document.getElementById('desktop-header-avatar');
+                    if (avatar) avatar.src = data.avatar;
+                }
+                const displayName = data.fullName || data.name;
+                if (displayName) {
+                    const nameEl = document.getElementById('desktop-header-name');
+                    if (nameEl) nameEl.innerText = displayName;
+                    const lineDisplay = document.getElementById('line-account-display');
+                    if (lineDisplay) lineDisplay.innerText = `${displayName} (LINE)`;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    });
+</script>
+
+<!-- Mobile Bottom Navigation -->
+<nav class="md:hidden bg-surface-container/95 backdrop-blur-xl fixed bottom-5 left-4 right-4 rounded-2xl z-50 border border-outline-variant/30 shadow-2xl shadow-background/80 flex justify-around items-center p-2.5 pb-[calc(0.6rem+env(safe-area-inset-bottom,0))]">
+    <a class="flex flex-col items-center justify-center w-20 h-14 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-all active:scale-95" href="discovery.html">
+        <span class="material-symbols-outlined text-[26px]">explore</span>
+        <span class="text-xs font-semibold mt-1">ค้นหา</span>
+    </a>
+    <a class="flex flex-col items-center justify-center w-20 h-14 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-all active:scale-95" href="booking-history-Customer.html">
+        <span class="material-symbols-outlined text-[26px]">receipt_long</span>
+        <span class="text-xs font-semibold mt-1">การจอง</span>
+    </a>
+    <a class="flex flex-col items-center justify-center w-20 h-14 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-all active:scale-95" href="Customer%20Profile.html">
+        <span class="material-symbols-outlined text-[26px]">person</span>
+        <span class="text-xs font-semibold mt-1">โปรไฟล์</span>
+    </a>
+</nav>
+
+</body>
+</html>

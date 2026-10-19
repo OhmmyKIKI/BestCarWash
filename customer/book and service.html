@@ -1,0 +1,1723 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>จองคิวและเวลา - BestCarWash</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<!-- Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="../supabase-client.js"></script>
+<script>
+    if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
+        var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+        var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+    var supabaseClient = window.supabaseClient;
+</script>
+<script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+                fontFamily: {
+                    sans: ["Prompt", "Inter", "sans-serif"],
+                }
+            }
+        }
+    }
+</script>
+<style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+</head>
+<body class="bg-background text-on-background font-sans antialiased selection:bg-primary-container selection:text-on-primary-container relative">
+
+<!-- Desktop Header -->
+<header class="hidden md:flex justify-between items-center px-6 lg:px-10 h-20 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md z-50 sticky top-0">
+    <div class="flex items-center gap-4">
+        <a id="desktop-back-btn" href="shop-details.html" title="ย้อนกลับ" class="w-11 h-11 rounded-full flex items-center justify-center bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-primary transition-all border border-outline-variant/40 active:scale-95 group">
+            <span class="material-symbols-outlined text-[22px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+        </a>
+        <a href="discovery.html" class="flex items-center gap-2.5 group">
+            <span class="material-symbols-outlined text-primary text-[32px] group-hover:rotate-12 transition-transform duration-300">local_car_wash</span>
+            <span class="text-2xl font-bold text-primary tracking-tight">BestCarWash</span>
+        </a>
+    </div>
+    <div class="flex items-center gap-8">
+        <nav class="flex gap-7">
+            <a class="text-base font-semibold text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5" href="discovery.html">
+                <span class="material-symbols-outlined text-[20px]">explore</span> ค้นหาร้าน
+            </a>
+            <a class="text-base font-semibold text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5" href="booking-history-Customer.html">
+                <span class="material-symbols-outlined text-[20px]">receipt_long</span> การจองของฉัน
+            </a>
+            <a class="text-base font-semibold text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5" href="favorite-shops.html">
+                <span class="material-symbols-outlined text-[20px]">favorite</span> ร้านโปรด
+            </a>
+        </nav>
+        <div class="flex items-center gap-4 border-l border-outline-variant/30 pl-6">
+            <a href="Customer Profile.html" class="flex items-center gap-3 pl-3 pr-4 py-1.5 rounded-full bg-surface-container hover:bg-surface-variant transition-all border border-outline-variant/30 group">
+                <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-outline-variant/50 group-hover:border-primary transition-colors flex-shrink-0">
+                    <img id="customer-header-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>" alt="Profile" class="w-full h-full object-cover"/>
+                </div>
+                <span class="hidden md:inline-block text-base font-semibold text-on-surface" id="desktop-header-name">ผู้ใช้</span>
+            </a>
+        </div>
+    </div>
+</header>
+
+<!-- Mobile Header (Focus Mode - Back button only) -->
+<header class="md:hidden fixed top-0 w-full z-50 px-4 h-14 bg-surface-container-low/95 backdrop-blur-xl border-b border-outline-variant/30 flex items-center shadow-md">
+    <a id="mobile-back-btn" href="shop-details.html" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-highest hover:bg-surface-variant transition-colors text-on-surface">
+        <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <h1 class="text-lg font-bold text-on-surface ml-3" id="mobile-page-title">จองคิวรับบริการ</h1>
+</header>
+
+<main class="w-full max-w-7xl mx-auto pt-20 pb-32 md:pb-12 md:pt-8 px-4 md:px-6">
+    
+    <div class="flex flex-col md:flex-row gap-8 items-start">
+        
+        <!-- LEFT COLUMN: Forms -->
+        <div class="flex-1 flex flex-col gap-8 w-full">
+            
+            <!-- Step 1: Select Car -->
+            <section class="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-5 shadow-sm">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">directions_car</span> 1. เลือกรถของคุณ
+                    </h2>
+                    <button type="button" onclick="openAddCarModal()" class="text-primary text-sm font-bold flex items-center gap-1 hover:underline">
+                        <span class="material-symbols-outlined text-[16px]">add</span> เพิ่มรถใหม่
+                    </button>
+                </div>
+
+                <div id="car-list-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Dynamic Vehicles list loaded from customerCars -->
+                </div>
+            </section>
+
+            <!-- Step 2: Select Date -->
+            <section class="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-5 shadow-sm">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">calendar_month</span> 2. เลือกวันที่
+                    </h2>
+                    <div class="flex gap-2">
+                        <button id="prev-month" class="w-8 h-8 flex items-center justify-center rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-primary hover:border-primary transition-colors"><span class="material-symbols-outlined text-sm">chevron_left</span></button>
+                        <button id="next-month" class="w-8 h-8 flex items-center justify-center rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-primary hover:border-primary transition-colors"><span class="material-symbols-outlined text-sm">chevron_right</span></button>
+                    </div>
+                </div>
+                <h3 id="month-year-label" class="text-center font-bold text-lg mb-4 text-on-surface">เดือน ปี</h3>
+                
+                <div class="grid grid-cols-7 gap-1 text-center mb-2">
+                    <div class="text-xs font-bold text-error">อา</div>
+                    <div class="text-xs font-bold text-on-surface-variant">จ</div>
+                    <div class="text-xs font-bold text-on-surface-variant">อ</div>
+                    <div class="text-xs font-bold text-on-surface-variant">พ</div>
+                    <div class="text-xs font-bold text-on-surface-variant">พฤ</div>
+                    <div class="text-xs font-bold text-on-surface-variant">ศ</div>
+                    <div class="text-xs font-bold text-on-surface-variant">ส</div>
+                </div>
+                <div id="date-container" class="grid grid-cols-7 gap-2 text-center text-sm font-medium">
+                    <!-- JS Calendar -->
+                </div>
+            </section>
+
+            <!-- Step 3: Select Time -->
+            <section class="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-5 shadow-sm">
+                <h2 class="text-xl font-bold text-on-surface flex items-center gap-2 mb-4">
+                    <span class="material-symbols-outlined text-primary">schedule</span> 3. เลือกเวลา
+                </h2>
+                
+                <div id="time-container" class="grid grid-cols-3 md:grid-cols-4 gap-3">
+                    <button class="time-btn py-3 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all">09:00 น.</button>
+                    <button class="time-btn py-3 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all">09:30 น.</button>
+                    <button class="time-btn active-time py-3 px-2 rounded-xl border-2 border-primary bg-primary-container/20 text-primary font-bold shadow-[0_0_15px_rgba(37,99,235,0.2)] transition-all">10:00 น.</button>
+                    <button class="time-btn py-3 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all">10:30 น.</button>
+                    <button class="time-btn py-3 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all">11:00 น.</button>
+                    
+                    <!-- Disabled State -->
+                    <button class="py-3 px-2 rounded-xl border border-outline-variant/20 bg-surface-container-highest/50 text-on-surface-variant/40 font-bold cursor-not-allowed relative overflow-hidden" disabled>
+                        11:30 น.
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="w-full h-px bg-on-surface-variant/30 -rotate-12"></div>
+                        </div>
+                    </button>
+                    
+                    <button class="time-btn py-3 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all">12:00 น.</button>
+                    <button class="time-btn py-3 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all">13:00 น.</button>
+                    
+                    <button class="py-3 px-2 rounded-xl border border-outline-variant/20 bg-surface-container-highest/50 text-on-surface-variant/40 font-bold cursor-not-allowed relative overflow-hidden" disabled>
+                        13:30 น.
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="w-full h-px bg-on-surface-variant/30 -rotate-12"></div>
+                        </div>
+                    </button>
+                    <button class="time-btn py-3 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all">14:00 น.</button>
+                </div>
+            </section>
+
+            <!-- Step 3.5: Note to Shop -->
+            <section class="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-5 shadow-sm">
+                <h2 class="text-xl font-bold text-on-surface flex items-center gap-2 mb-4">
+                    <span class="material-symbols-outlined text-primary">edit_note</span> หมายเหตุถึงร้านค้า (ทางเลือก)
+                </h2>
+                <textarea rows="2" placeholder="เช่น เน้นดูดฝุ่นเบาะหลังพิเศษ, ระวังรอยขูดด้านซ้าย..." spellcheck="false" data-gramm="false" class="w-full bg-surface-container-highest border border-outline-variant/50 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none"></textarea>
+            </section>
+
+            <!-- Step 4: Payment Method -->
+            <section class="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-5 shadow-sm">
+                <h2 class="text-xl font-bold text-on-surface flex items-center gap-2 mb-4">
+                    <span class="material-symbols-outlined text-primary">payments</span> 4. วิธีการชำระเงิน
+                </h2>
+                
+                <div class="grid grid-cols-1 gap-4">
+                    <!-- QR Code Promtpay -->
+                    <label class="cursor-pointer group relative block">
+                        <input type="radio" name="payment_method" value="QR PromptPay" class="peer sr-only" checked onchange="updatePaymentSummary()">
+                        <div class="rounded-xl border-2 border-outline-variant/30 bg-surface-container p-4 hover:border-primary/50 peer-checked:border-primary peer-checked:bg-primary-container/10 transition-all h-full">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-secondary text-[24px]">qr_code_scanner</span>
+                                    <h4 class="font-bold text-on-surface text-base">สแกนจ่าย QR</h4>
+                                </div>
+                                <div class="w-6 h-6 rounded-full border-2 border-outline-variant group-has-[:checked]:border-primary flex items-center justify-center shrink-0 transition-colors">
+                                    <div class="w-3.5 h-3.5 rounded-full bg-primary scale-0 group-has-[:checked]:scale-100 transition-transform shadow-[0_0_8px_rgba(180,197,255,0.8)]"></div>
+                                </div>
+                            </div>
+                            <p class="text-sm text-on-surface-variant">อัปโหลดสลิปหลังโอนเงิน</p>
+                        </div>
+                    </label>
+                </div>
+            </section>
+
+            <!-- Terms & Conditions (Mobile & General) -->
+            <section class="md:hidden bg-transparent pt-2 pb-6">
+                <label class="flex items-start gap-2 cursor-pointer group">
+                    <input type="checkbox" class="mt-0.5 rounded border-outline-variant/50 bg-surface-container-highest text-primary focus:ring-primary/50 focus:ring-offset-0 focus:ring-offset-transparent cursor-pointer" id="mobile-terms-check" onchange="toggleConfirmButtonMobile()">
+                    <span class="text-xs text-on-surface-variant group-hover:text-on-surface transition-colors">
+                        ฉันยอมรับ<a href="#" class="text-primary hover:underline">เงื่อนไขการให้บริการ</a>และนโยบายการคืนเงินมัดจำ
+                    </span>
+                </label>
+            </section>
+        </div>
+
+        <!-- RIGHT COLUMN: Summary & Checkout -->
+        <div class="w-full md:w-[380px] lg:w-[420px] shrink-0 md:sticky md:top-24">
+            <div>
+                <section class="hidden md:block bg-surface-container-low border border-outline-variant/30 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                    <!-- Decorative blur -->
+                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/20 blur-3xl rounded-full pointer-events-none"></div>
+
+                    <h3 class="text-xl font-bold text-on-surface mb-6 border-b border-outline-variant/30 pb-4">สรุปการจอง</h3>
+                    
+                    <div class="flex flex-col gap-5 mb-8 relative z-10">
+                        <div>
+                            <div class="text-on-surface-variant text-sm mb-1">ร้านที่ให้บริการ</div>
+                            <div class="text-on-surface font-bold" id="summary-shop-name">กำลังโหลดร้านค้า...</div>
+                        </div>
+
+                        <div>
+                            <div class="text-on-surface-variant text-sm mb-1">บริการที่เลือก</div>
+                            <div class="flex justify-between items-start">
+                                <div class="text-on-surface font-bold text-lg" id="summary-service-name">พรีเมียมดีเทลลิ่ง</div>
+                                <div class="text-primary font-black text-xl" id="summary-service-price">฿450</div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-surface-container-highest/50 rounded-xl p-4 border border-outline-variant/30 space-y-3">
+                            <div class="flex items-start gap-3">
+                                <span class="material-symbols-outlined text-on-surface-variant text-[20px]">directions_car</span>
+                                <div>
+                                    <div class="text-xs text-on-surface-variant">รถยนต์</div>
+                                    <div class="text-sm font-bold text-on-surface summary-car-text">ยังไม่ได้เลือกรถ</div>
+                                </div>
+                            </div>
+                            <div class="h-px bg-outline-variant/30 w-full"></div>
+                            <div class="flex items-start gap-3">
+                                <span class="material-symbols-outlined text-on-surface-variant text-[20px]">event_available</span>
+                                <div>
+                                    <div class="text-xs text-on-surface-variant">วันและเวลา</div>
+                                    <div class="text-sm font-bold text-on-surface">
+                                        <span class="summary-date-text">5 ต.ค. 2026</span> • <span class="summary-time-text">10:00 น.</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="h-px bg-outline-variant/30 w-full"></div>
+                            <div class="flex items-start gap-3">
+                                <span class="material-symbols-outlined text-on-surface-variant text-[20px]">payments</span>
+                                <div>
+                                    <div class="text-xs text-on-surface-variant">ชำระเงินด้วย</div>
+                                    <div class="text-sm font-bold text-primary summary-payment-text">สแกนจ่าย QR (มัดจำ)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-end mb-6">
+                        <div class="flex flex-col">
+                            <span class="text-on-surface font-medium">ยอดชำระมัดจำ</span>
+                            <span class="text-xs text-on-surface-variant" id="summary-total-original-price">(จากราคาเริ่มต้น ฿450)</span>
+                        </div>
+                        <span class="text-3xl font-black text-white">฿50</span>
+                    </div>
+
+                    <label class="flex items-start gap-2 mb-4 cursor-pointer group">
+                        <input type="checkbox" class="mt-0.5 rounded border-outline-variant/50 bg-surface-container-highest text-primary focus:ring-primary/50 focus:ring-offset-0 focus:ring-offset-transparent cursor-pointer" id="desktop-terms-check" onchange="toggleConfirmButton()">
+                        <span class="text-xs text-on-surface-variant group-hover:text-on-surface transition-colors">
+                            ฉันยอมรับ<a href="#" class="text-primary hover:underline">เงื่อนไขการให้บริการ</a>และนโยบายการคืนเงินมัดจำ
+                        </span>
+                    </label>
+
+                    <button onclick="confirmBooking(this)" id="desktop-confirm-btn" class="w-full bg-primary-container hover:bg-primary-container/90 disabled:bg-surface-variant disabled:text-on-surface-variant disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-[0_4px_20px_rgba(37,99,235,0.3)]" disabled>
+                        <span class="btnText">ยืนยันการจองคิว</span>
+                        <span class="btnIcon material-symbols-outlined">check_circle</span>
+                    </button>
+                </section>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Mobile Sticky Bottom Bar -->
+<div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-container-low/95 backdrop-blur-xl border-t border-outline-variant/30 pb-[env(safe-area-inset-bottom,1rem)] pt-3 px-4 shadow-[0_-10px_40px_rgba(0,0,0,0.6)]">
+    <div class="flex justify-between items-center mb-3 px-1">
+        <div class="flex flex-col">
+            <span class="text-[10px] text-on-surface-variant font-bold" id="mobile-summary-service-name">พรีเมียมดีเทลลิ่ง (มัดจำ)</span>
+            <div class="text-sm font-medium text-on-surface summary-date-text">5 ต.ค. 2026 • <span class="summary-time-text text-primary font-bold">10:00 น.</span></div>
+        </div>
+        <div class="text-2xl font-black text-white">฿50</div>
+    </div>
+    <button onclick="confirmBooking(this)" id="mobile-confirm-btn" class="w-full bg-primary-container hover:bg-primary-container/90 disabled:bg-surface-variant disabled:text-on-surface-variant disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-[0_4px_15px_rgba(37,99,235,0.4)]" disabled>
+        <span class="btnText">ยืนยันการจองคิว</span>
+        <span class="btnIcon material-symbols-outlined">check_circle</span>
+    </button>
+</div>
+
+<!-- Add Car Modal -->
+<div id="add-car-modal" onclick="if(event.target === this) closeAddCarModal()" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4">
+    <div class="bg-surface-container-low border border-outline-variant/30 rounded-3xl p-6 max-w-sm w-full shadow-2xl scale-95 transition-transform duration-300" id="add-car-modal-content">
+        <h2 class="text-xl font-bold text-white mb-4">เพิ่มรถใหม่</h2>
+        
+        <div class="space-y-4 mb-6">
+            <div>
+                <label class="block text-sm font-medium text-on-surface-variant mb-1">ยี่ห้อ / รุ่นรถ</label>
+                <input type="text" id="new-car-brand" placeholder="เช่น Honda City" class="w-full bg-surface-container-highest border border-outline-variant/50 rounded-xl px-4 py-3 text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-on-surface-variant mb-1">ทะเบียนรถ</label>
+                <input type="text" id="new-car-plate" placeholder="เช่น 9กต 9999 กทม." class="w-full bg-surface-container-highest border border-outline-variant/50 rounded-xl px-4 py-3 text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all">
+            </div>
+            <div class="relative">
+                <label class="block text-sm font-medium text-on-surface-variant mb-1">ประเภทรถ</label>
+                <div class="relative cursor-pointer" onclick="toggleCarSizeDropdown()">
+                    <div class="w-full bg-surface-container-highest border border-outline-variant/50 rounded-xl px-4 py-3 text-on-surface flex justify-between items-center hover:border-primary/50 transition-all" id="car-size-display">
+                        <span>รถเก๋งเล็ก (S)</span>
+                        <span class="material-symbols-outlined text-on-surface-variant transition-transform duration-200" id="car-size-icon">expand_more</span>
+                    </div>
+                </div>
+                <!-- Dropdown Menu -->
+                <div id="car-size-menu" class="absolute z-50 w-full mt-2 bg-surface-container-highest border border-outline-variant/50 rounded-xl shadow-lg opacity-0 pointer-events-none transition-all duration-200 transform -translate-y-2 overflow-hidden">
+                    <div class="flex flex-col">
+                        <div class="px-4 py-3 hover:bg-primary/20 text-on-surface cursor-pointer transition-colors" onclick="selectCarSize('รถเก๋งเล็ก (S)')">รถเก๋งเล็ก (S)</div>
+                        <div class="px-4 py-3 hover:bg-primary/20 text-on-surface cursor-pointer transition-colors border-t border-outline-variant/20" onclick="selectCarSize('รถเก๋งใหญ่ (M)')">รถเก๋งใหญ่ (M)</div>
+                        <div class="px-4 py-3 hover:bg-primary/20 text-on-surface cursor-pointer transition-colors border-t border-outline-variant/20" onclick="selectCarSize('SUV / PPV (L)')">SUV / PPV (L)</div>
+                        <div class="px-4 py-3 hover:bg-primary/20 text-on-surface cursor-pointer transition-colors border-t border-outline-variant/20" onclick="selectCarSize('รถกระบะ / รถตู้ (XL)')">รถกระบะ / รถตู้ (XL)</div>
+                    </div>
+                </div>
+                <!-- Hidden input to store value -->
+                <input type="hidden" id="new-car-size" value="รถเก๋งเล็ก (S)">
+            </div>
+        </div>
+
+        <div class="flex gap-3">
+            <button onclick="closeAddCarModal()" class="flex-1 py-3 rounded-xl font-bold text-on-surface bg-surface-variant hover:bg-surface-container-highest transition-colors">ยกเลิก</button>
+            <button onclick="saveNewCar()" class="flex-1 py-3 rounded-xl font-bold text-white bg-primary-container hover:bg-primary-container/90 transition-colors shadow-sm">บันทึก</button>
+        </div>
+    </div>
+</div>
+
+<!-- Payment & Deposit Modal (PromptPay QR & Slip Upload) -->
+<div id="payment-modal" class="fixed inset-0 z-[105] bg-black/85 backdrop-blur-md hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4 py-4 overflow-y-auto">
+    <div class="bg-surface-container-low border border-outline-variant/40 rounded-3xl p-5 sm:p-6 max-w-md w-full flex flex-col shadow-2xl scale-95 transition-transform duration-300 relative my-auto max-h-[92vh] overflow-y-auto hide-scrollbar" id="payment-modal-content">
+        
+        <!-- Subtle Glow Background -->
+        <div class="absolute -top-16 -right-16 w-40 h-40 bg-primary-container/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-16 -left-16 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- Header -->
+        <div class="flex items-start justify-between pb-3 border-b border-outline-variant/30 mb-4 relative z-10">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-primary-container/20 border border-primary/30 flex items-center justify-center text-primary shrink-0 shadow-inner">
+                    <span class="material-symbols-outlined text-[24px]">qr_code_scanner</span>
+                </div>
+                <div>
+                    <h2 class="text-lg sm:text-xl font-bold text-on-surface">ชำระเงินมัดจำเพื่อยืนยันคิว</h2>
+                    <p class="text-xs text-on-surface-variant">สแกน QR PromptPay เพื่อล็อกคิว และแนบสลิปโอนเงิน</p>
+                </div>
+            </div>
+            <button type="button" onclick="closePaymentModal()" class="w-8 h-8 rounded-full bg-surface-container-highest hover:bg-surface-variant flex items-center justify-center text-on-surface-variant hover:text-white transition-colors shrink-0">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+        </div>
+
+        <!-- Timer & Deposit Info Banner -->
+        <div class="bg-surface-container-highest/80 border border-outline-variant/40 rounded-2xl p-3 px-4 mb-4 flex items-center justify-between gap-2 text-xs relative z-10">
+            <div class="flex items-center gap-2 text-on-surface-variant shrink-0">
+                <span class="material-symbols-outlined text-[18px] text-amber-400 animate-pulse">timer</span>
+                <span>ชำระภายใน: <strong id="payment-timer" class="font-mono text-sm text-amber-400 font-bold">15:00</strong> น.</span>
+            </div>
+            <div class="flex items-baseline gap-1.5 shrink-0 text-right">
+                <span class="text-on-surface-variant text-xs">มัดจำ:</span>
+                <span class="text-xl sm:text-2xl font-black text-emerald-400" id="payment-deposit-amount">฿50</span>
+                <span class="text-[11px] text-on-surface-variant/80" id="payment-full-amount">(ยอดเต็ม ฿450)</span>
+            </div>
+        </div>
+
+        <!-- Thai QR Payment Card -->
+        <div class="w-full bg-white rounded-2xl p-4 shadow-xl border border-outline-variant/40 flex flex-col items-center mb-4 text-slate-800 relative z-10">
+            <!-- PromptPay Banner Header -->
+            <div class="w-full bg-[#003b6d] text-white py-2 px-3.5 rounded-xl flex items-center justify-between mb-3 shadow-md">
+                <div class="flex items-center gap-1.5 font-bold tracking-wider text-xs">
+                    <span class="material-symbols-outlined text-[18px] text-amber-300">payments</span>
+                    <span>PromptPay</span>
+                    <span class="text-[10px] font-normal opacity-80 pl-1 border-l border-white/20">พร้อมเพย์</span>
+                </div>
+                <div class="text-[10px] font-semibold bg-white/15 px-2 py-0.5 rounded text-white/90">
+                    THAI QR PAYMENT
+                </div>
+            </div>
+
+            <!-- QR Code Graphic Container -->
+            <div class="w-48 h-48 sm:w-52 sm:h-52 bg-white rounded-xl p-2 border-2 border-slate-200 flex items-center justify-center relative shadow-inner overflow-hidden">
+                <!-- Shop QR Code Image (If uploaded by shop) -->
+                <img id="shop-qr-image" src="" alt="QR Code รับเงินของทางร้าน" class="w-full h-full object-contain hidden">
+                <!-- Fallback Thai QR Code SVG -->
+                <div id="default-qr-svg" class="w-full h-full flex items-center justify-center">
+                    <svg class="w-full h-full text-slate-900" viewBox="0 0 120 120" fill="currentColor">
+                        <!-- Corner Markers -->
+                        <!-- Top Left -->
+                        <rect x="8" y="8" width="30" height="30" fill="#003b6d" rx="4"/>
+                        <rect x="13" y="13" width="20" height="20" fill="white" rx="2"/>
+                        <rect x="18" y="18" width="10" height="10" fill="#003b6d" rx="2"/>
+                        
+                        <!-- Top Right -->
+                        <rect x="82" y="8" width="30" height="30" fill="#003b6d" rx="4"/>
+                        <rect x="87" y="13" width="20" height="20" fill="white" rx="2"/>
+                        <rect x="92" y="18" width="10" height="10" fill="#003b6d" rx="2"/>
+                        
+                        <!-- Bottom Left -->
+                        <rect x="8" y="82" width="30" height="30" fill="#003b6d" rx="4"/>
+                        <rect x="13" y="87" width="20" height="20" fill="white" rx="2"/>
+                        <rect x="18" y="92" width="10" height="10" fill="#003b6d" rx="2"/>
+
+                        <!-- QR Data Pattern Pixels -->
+                        <rect x="44" y="10" width="6" height="6"/>
+                        <rect x="56" y="10" width="6" height="6"/>
+                        <rect x="68" y="10" width="6" height="6"/>
+                        <rect x="44" y="22" width="12" height="6"/>
+                        <rect x="62" y="22" width="12" height="6"/>
+                        <rect x="50" y="34" width="6" height="6"/>
+                        <rect x="62" y="34" width="12" height="6"/>
+                        
+                        <rect x="10" y="44" width="6" height="6"/>
+                        <rect x="22" y="44" width="6" height="6"/>
+                        <rect x="34" y="44" width="12" height="6"/>
+                        <rect x="70" y="44" width="6" height="6"/>
+                        <rect x="82" y="44" width="12" height="6"/>
+                        <rect x="100" y="44" width="10" height="6"/>
+                        
+                        <rect x="10" y="56" width="12" height="6"/>
+                        <rect x="28" y="56" width="6" height="6"/>
+                        <rect x="82" y="56" width="6" height="6"/>
+                        <rect x="94" y="56" width="16" height="6"/>
+                        
+                        <rect x="10" y="68" width="6" height="6"/>
+                        <rect x="22" y="68" width="12" height="6"/>
+                        <rect x="70" y="68" width="12" height="6"/>
+                        <rect x="88" y="68" width="6" height="6"/>
+                        <rect x="100" y="68" width="10" height="6"/>
+                        
+                        <rect x="44" y="82" width="6" height="6"/>
+                        <rect x="56" y="82" width="12" height="6"/>
+                        <rect x="74" y="82" width="6" height="6"/>
+                        <rect x="86" y="82" width="12" height="6"/>
+                        <rect x="104" y="82" width="6" height="6"/>
+                        
+                        <rect x="44" y="94" width="12" height="6"/>
+                        <rect x="62" y="94" width="6" height="6"/>
+                        <rect x="74" y="94" width="18" height="6"/>
+                        <rect x="100" y="94" width="10" height="6"/>
+                        
+                        <rect x="50" y="104" width="12" height="6"/>
+                        <rect x="68" y="104" width="6" height="6"/>
+                        <rect x="80" y="104" width="12" height="6"/>
+                        <rect x="98" y="104" width="12" height="6"/>
+
+                        <!-- Center PromptPay Tag -->
+                        <rect x="45" y="45" width="30" height="30" fill="white" rx="6"/>
+                        <rect x="47" y="47" width="26" height="26" fill="#003b6d" rx="4"/>
+                        <path d="M52 56 L60 62 L68 56 M52 64 L60 70 L68 64" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Account Details in QR Card - Clean horizontal rows -->
+            <div class="w-full mt-3 pt-3 border-t border-slate-200 text-xs space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-slate-500 shrink-0">ชื่อบัญชีร้าน:</span>
+                    <strong class="text-slate-800 text-right truncate" id="shop-account-name">บริษัท สปาร์คเคิล คาร์แคร์ จำกัด</strong>
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-slate-500 shrink-0">พร้อมเพย์:</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-sm font-mono font-bold text-[#003b6d] tracking-wide" id="promptpay-number">089-123-4567</span>
+                        <button type="button" onclick="copyPromptPayNumber()" class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded text-[11px] font-semibold flex items-center gap-0.5 active:scale-95 transition-all" title="คัดลอกหมายเลข">
+                            <span class="material-symbols-outlined text-[14px]" id="copy-icon">content_copy</span>
+                            <span id="copy-text">คัดลอก</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between gap-2 pt-1 border-t border-dashed border-slate-200">
+                    <span class="text-slate-500 shrink-0">รหัสคิวอ้างอิง:</span>
+                    <span class="font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]" id="payment-booking-id">#SPK-9821</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slip Upload Section -->
+        <div class="mb-4 relative z-10">
+            <div class="mb-2">
+                <label class="text-xs sm:text-sm font-bold text-on-surface flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary text-[18px]">receipt_long</span>
+                    <span>แนบหลักฐานการโอนเงิน (สลิป)</span>
+                    <span class="text-error">*</span>
+                </label>
+            </div>
+
+            <!-- Upload Dropzone / Preview Area -->
+            <input type="file" id="slip-file-input" accept="image/*" class="hidden" onchange="handleSlipFile(this)">
+            
+            <!-- Default Upload Box -->
+            <div id="slip-dropzone" onclick="document.getElementById('slip-file-input').click()" class="w-full border-2 border-dashed border-outline-variant/50 hover:border-primary/60 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer bg-surface-container/50 hover:bg-surface-container transition-all group">
+                <div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface-variant group-hover:text-primary group-hover:scale-110 transition-all shadow-inner">
+                    <span class="material-symbols-outlined text-[22px]">cloud_upload</span>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs sm:text-sm font-medium text-on-surface group-hover:text-primary transition-colors">คลิกเพื่ออัปโหลดรูปภาพสลิป หรือลากไฟล์มาวาง</p>
+                    <p class="text-[11px] text-on-surface-variant/70 mt-0.5">รองรับไฟล์ JPG, PNG, WEBP (ไม่เกิน 10MB)</p>
+                </div>
+            </div>
+
+            <!-- Uploaded Preview Box (Initially Hidden) -->
+            <div id="slip-preview-container" class="hidden w-full bg-surface-container-highest/60 border border-emerald-500/30 rounded-2xl p-3 items-center justify-between gap-3">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <img id="slip-preview-img" src="" alt="สลิปโอนเงิน" class="w-14 h-14 object-cover rounded-xl border border-outline-variant/40 shadow-sm shrink-0">
+                    <div class="overflow-hidden">
+                        <div class="flex items-center gap-1 text-emerald-400 text-xs font-bold mb-0.5">
+                            <span class="material-symbols-outlined text-[15px]">check_circle</span>
+                            <span>แนบสลิปเรียบร้อยแล้ว</span>
+                        </div>
+                        <p class="text-[11px] text-on-surface truncate font-mono" id="slip-filename">slip-transfer.jpg</p>
+                        <p class="text-[10px] text-on-surface-variant" id="slip-filesize">ยอดเงินตรงตามมัดจำ ฿50.00</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <button type="button" onclick="document.getElementById('slip-file-input').click()" class="text-xs text-primary hover:text-white bg-surface-container px-2.5 py-1.5 rounded-lg border border-outline-variant/30 transition-colors" title="เปลี่ยนรูป">
+                        เปลี่ยน
+                    </button>
+                    <button type="button" onclick="removeSlip()" class="text-xs text-error hover:bg-error/10 p-1.5 rounded-lg transition-colors" title="ลบสลิป">
+                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-2.5 relative z-10 pt-2 border-t border-outline-variant/30">
+            <button type="button" onclick="closePaymentModal()" class="w-full sm:w-1/3 py-3 rounded-xl border border-outline-variant/50 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant font-medium text-xs sm:text-sm transition-all active:scale-95">
+                ยกเลิก
+            </button>
+            <button type="button" id="payment-confirm-btn" onclick="submitPaymentAndBooking(this)" class="w-full sm:w-2/3 py-3 rounded-xl bg-primary-container hover:bg-primary-container/90 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-[0_4px_16px_rgba(37,99,235,0.35)]">
+                <span class="material-symbols-outlined text-[18px]">verified</span>
+                <span id="payment-confirm-btn-text">ยืนยันการชำระเงิน</span>
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<!-- Success Modal with LINE Notification Feature -->
+<div id="success-modal" class="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4">
+    <div class="bg-surface-container-low border border-outline-variant/40 rounded-3xl p-6 sm:p-8 max-w-md w-full flex flex-col items-center text-center shadow-2xl scale-95 transition-transform duration-300 relative overflow-hidden" id="success-modal-content">
+        
+        <!-- Subtle Glow Background -->
+        <div class="absolute -top-20 -left-20 w-48 h-48 bg-[#06C755]/15 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-20 -right-20 w-48 h-48 bg-primary/15 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- Success Icon -->
+        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-secondary/15 text-secondary border border-secondary/30 flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(78,222,163,0.25)]">
+            <span class="material-symbols-outlined text-[36px] sm:text-[44px]">task_alt</span>
+        </div>
+        
+        <h2 class="text-2xl font-bold text-on-surface mb-1 tracking-tight">จองคิวสำเร็จแล้ว!</h2>
+        <p class="text-on-surface-variant text-xs sm:text-sm mb-4">ระบบบันทึกคิวล้างรถของคุณเข้าสู่ระบบเรียบร้อยแล้ว</p>
+        
+        <!-- Booking Quick Details Card -->
+        <div class="w-full bg-surface-container-highest/60 rounded-2xl p-3.5 text-left mb-4 border border-outline-variant/30 flex items-center justify-between text-xs">
+            <div class="space-y-0.5">
+                <span class="text-[10px] text-outline font-semibold uppercase tracking-wider">รหัสการจอง</span>
+                <div class="font-mono text-primary font-bold text-base" id="success-booking-id">#SPK-9821</div>
+            </div>
+            <div class="text-right space-y-0.5">
+                <span class="text-[10px] text-outline font-semibold uppercase tracking-wider">วันและเวลานัดหมาย</span>
+                <div class="text-on-surface font-semibold" id="success-booking-datetime">วันนี้, 10:00 น.</div>
+            </div>
+        </div>
+
+        <!-- LINE Notification Feature Card (THE HIGHLIGHT) -->
+        <div class="w-full bg-gradient-to-br from-[#06C755]/15 via-surface-container to-[#06C755]/5 border-2 border-[#06C755]/40 rounded-2xl p-4 text-left mb-6 relative overflow-hidden shadow-lg group">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl bg-[#06C755] flex items-center justify-center text-white font-black text-sm shrink-0 shadow-md shadow-[#06C755]/30">
+                    LINE
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-center gap-1.5 mb-1">
+                        <span class="text-xs font-bold text-[#06C755] tracking-wide uppercase">แนะนำเพื่อไม่พลาดการแจ้งเตือน</span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#06C755] animate-ping"></span>
+                    </div>
+                    <h3 class="text-sm font-bold text-on-surface leading-tight">รับแจ้งเตือนสถานะ & สลิปคืนเงินผ่าน LINE</h3>
+                    <p class="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
+                        แอดเพื่อนกับ LINE Official เพื่อรับแจ้งเตือนเรียลไทม์:
+                    </p>
+                    <ul class="text-[11px] text-on-surface-variant/90 space-y-1 mt-1.5 pl-1">
+                        <li class="flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[13px] text-[#06C755]">check_circle</span>
+                            <span>แจ้งเตือนเมื่อช่างเริ่มล้าง & เมื่อรถล้างเสร็จพร้อมรับ</span>
+                        </li>
+                        <li class="flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[13px] text-[#06C755]">check_circle</span>
+                            <span>แจ้งเตือนและแนบหลักฐานสลิปคืนเงินมัดจำทันที</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Action to Connect LINE -->
+            <button type="button" onclick="openLineConnectModal()" class="w-full mt-3.5 py-3 px-4 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md shadow-[#06C755]/25 flex items-center justify-center gap-2 active:scale-95 group-hover:brightness-105">
+                <span class="material-symbols-outlined text-[18px]">chat</span>
+                <span>แอด LINE เพื่อรับแจ้งเตือนคิวนี้</span>
+                <span class="material-symbols-outlined text-[16px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+            </button>
+        </div>
+
+        <!-- Skip / Secondary Action -->
+        <button type="button" onclick="goToHistory()" class="text-xs text-on-surface-variant hover:text-on-surface font-medium transition-colors py-1 flex items-center gap-1">
+            <span>ข้ามไปก่อน ไปที่การจอง</span>
+            <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+        </button>
+
+    </div>
+</div>
+
+<!-- LINE Add Friend / QR Code Modal -->
+<div id="line-connect-modal" class="fixed inset-0 z-[110] bg-black/85 backdrop-blur-md hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4">
+    <div class="bg-surface-container border border-outline-variant/40 rounded-3xl p-6 max-w-sm w-full flex flex-col items-center text-center shadow-2xl scale-95 transition-transform duration-300 relative" id="line-connect-modal-content">
+        
+        <!-- Close Button -->
+        <button onclick="closeLineConnectModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-surface-variant text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors">
+            <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
+
+        <div class="w-12 h-12 rounded-2xl bg-[#06C755] flex items-center justify-center text-white font-black text-lg mb-3 shadow-lg shadow-[#06C755]/30">
+            LINE
+        </div>
+
+        <h3 class="text-lg font-bold text-on-surface">เชื่อมต่อกับ LINE Official</h3>
+        <p class="text-xs text-on-surface-variant mt-1 mb-4">สแกน QR Code หรือเพิ่มเพื่อนกับ BestCarWash เพื่อรับการแจ้งเตือน</p>
+
+        <!-- QR Code Frame -->
+        <div class="p-3 bg-white rounded-2xl shadow-inner border-2 border-[#06C755]/40 mb-3 flex flex-col items-center">
+            <svg class="w-36 h-36" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <!-- Outer Corners -->
+                <rect width="100" height="100" fill="white"/>
+                <rect x="10" y="10" width="24" height="24" fill="#0b1326" rx="3"/>
+                <rect x="14" y="14" width="16" height="16" fill="white" rx="2"/>
+                <rect x="18" y="18" width="8" height="8" fill="#06C755" rx="1"/>
+                
+                <rect x="66" y="10" width="24" height="24" fill="#0b1326" rx="3"/>
+                <rect x="70" y="14" width="16" height="16" fill="white" rx="2"/>
+                <rect x="74" y="18" width="8" height="8" fill="#06C755" rx="1"/>
+                
+                <rect x="10" y="66" width="24" height="24" fill="#0b1326" rx="3"/>
+                <rect x="14" y="70" width="16" height="16" fill="white" rx="2"/>
+                <rect x="18" y="74" width="8" height="8" fill="#06C755" rx="1"/>
+                
+                <!-- Center Grid Dots -->
+                <rect x="42" y="12" width="6" height="6" fill="#0b1326"/>
+                <rect x="52" y="18" width="6" height="6" fill="#0b1326"/>
+                <rect x="40" y="28" width="6" height="6" fill="#0b1326"/>
+                <rect x="14" y="44" width="6" height="6" fill="#0b1326"/>
+                <rect x="24" y="50" width="6" height="6" fill="#0b1326"/>
+                <rect x="44" y="44" width="12" height="12" fill="#06C755" rx="2"/>
+                <rect x="64" y="42" width="6" height="6" fill="#0b1326"/>
+                <rect x="78" y="48" width="6" height="6" fill="#0b1326"/>
+                <rect x="40" y="66" width="6" height="6" fill="#0b1326"/>
+                <rect x="54" y="74" width="6" height="6" fill="#0b1326"/>
+                <rect x="68" y="68" width="6" height="6" fill="#0b1326"/>
+                <rect x="80" y="78" width="6" height="6" fill="#0b1326"/>
+                <rect x="70" y="82" width="6" height="6" fill="#0b1326"/>
+            </svg>
+            <span class="text-[11px] font-mono font-bold text-gray-800 mt-1">LINE ID: @bestcarwash</span>
+        </div>
+
+        <div class="w-full flex flex-col gap-2 mt-2">
+            <button onclick="goToHistory()" class="w-full py-2.5 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-xs rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                <span>ไปที่การจอง</span>
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // Global State
+    let selectedDateText = "";
+    let selectedTimeText = "10:00 น.";
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- 1. Calendar Logic ---
+        const dateContainer = document.getElementById('date-container');
+        const monthYearLabel = document.getElementById('month-year-label');
+        let currentDate = new Date();
+        let selectedDate = new Date();
+        const monthsThai = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+        const monthsThaiShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+
+        function renderCalendar(date) {
+            dateContainer.innerHTML = '';
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            monthYearLabel.innerText = `${monthsThai[month]} ${year + 543}`;
+            
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const prevMonthDays = new Date(year, month, 0).getDate();
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            let cells = [];
+            
+            // Prev month
+            for (let i = firstDay - 1; i >= 0; i--) {
+                cells.push({ date: new Date(year, month - 1, prevMonthDays - i), isCurrent: false });
+            }
+            // Current month
+            for (let i = 1; i <= daysInMonth; i++) {
+                cells.push({ date: new Date(year, month, i), isCurrent: true });
+            }
+            // Next month
+            const remaining = 42 - cells.length;
+            for (let i = 1; i <= remaining; i++) {
+                if (remaining >= 7 && i > (remaining - remaining % 7)) break;
+                cells.push({ date: new Date(year, month + 1, i), isCurrent: false });
+            }
+            
+            cells.forEach(cell => {
+                const div = document.createElement('div');
+                const isPast = cell.date < today;
+                const isSelected = selectedDate.getTime() === cell.date.getTime();
+                
+                div.innerText = cell.date.getDate();
+                
+                if (!cell.isCurrent || isPast) {
+                    div.className = 'py-2 rounded-full text-on-surface-variant/30 cursor-not-allowed';
+                } else {
+                    if (isSelected) {
+                        div.className = 'py-2 rounded-full bg-primary-container text-white font-bold shadow-[0_0_10px_rgba(37,99,235,0.4)] cursor-pointer date-btn transition-all';
+                        selectedDateText = `${cell.date.getDate()} ${monthsThaiShort[cell.date.getMonth()]} ${cell.date.getFullYear() + 543}`;
+                    } else {
+                        div.className = 'py-2 rounded-full hover:bg-surface-variant text-on-surface cursor-pointer date-btn transition-colors border border-transparent hover:border-outline-variant/50';
+                    }
+                    
+                    div.addEventListener('click', () => {
+                        selectedDate = cell.date;
+                        renderCalendar(currentDate); // Re-render to update selected state
+                        updateSummary();
+                    });
+                }
+                dateContainer.appendChild(div);
+            });
+        }
+        
+        renderCalendar(currentDate);
+        updateSummary(); // Initial load
+        
+        document.getElementById('prev-month').addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar(currentDate);
+        });
+        document.getElementById('next-month').addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar(currentDate);
+        });
+
+        // --- 2. Time Logic ---
+        const times = document.querySelectorAll('.time-btn');
+        times.forEach(time => {
+            time.addEventListener('click', () => {
+                times.forEach(t => {
+                    t.className = 'time-btn py-3 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all';
+                });
+                time.className = 'time-btn active-time py-3 px-2 rounded-xl border-2 border-primary bg-primary-container/20 text-primary font-bold shadow-[0_0_15px_rgba(37,99,235,0.2)] transition-all';
+                selectedTimeText = time.innerText.trim();
+                updateSummary();
+            });
+        });
+    });
+
+    // --- Update Summary Texts ---
+    window.updatePaymentSummary = function() {
+        const paymentRadio = document.querySelector('input[name="payment_method"]:checked');
+        if (paymentRadio) {
+            document.querySelectorAll('.summary-payment-text').forEach(el => el.innerText = paymentRadio.value);
+            
+            // Adjust "ยอดชำระที่ร้าน" text logic based on payment method
+            const amountEl = document.querySelector('.text-3xl.font-black.text-white');
+            if(amountEl) {
+                amountEl.innerText = '฿50';
+            }
+        }
+    }
+
+    window.updateSummary = function() {
+        const carRadio = document.querySelector('input[name="selected_car"]:checked');
+        const carName = carRadio ? `${carRadio.value} (${carRadio.dataset.plate})` : '';
+
+        document.querySelectorAll('.summary-car-text').forEach(el => el.innerText = carName);
+        
+        if (selectedDateText) {
+            document.querySelectorAll('.summary-date-text').forEach(el => el.innerText = selectedDateText);
+        }
+        if (selectedTimeText) {
+            document.querySelectorAll('.summary-time-text').forEach(el => el.innerText = selectedTimeText);
+        }
+        
+        updatePaymentSummary();
+    }
+
+    // --- Master Shops Data (Dynamic from Supabase) ---
+    const SHOPS_DATA = {};
+
+    let currentShopId = null;
+    let currentShop = null;
+    let selectedServiceName = 'พรีเมียมดีเทลลิ่ง';
+    let selectedServicePrice = '450';
+
+    // --- My Vehicles Sync (Point 3 Vehicle Sync) ---
+    const DEFAULT_CARS = [];
+
+    function getCars() {
+        const stored = localStorage.getItem('customerCars');
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) return parsed;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        return [];
+    }
+
+    function saveCarsToStorage(cars) {
+        localStorage.setItem('customerCars', JSON.stringify(cars));
+    }
+
+    function renderCarsList() {
+        const grid = document.getElementById('car-list-grid');
+        if (!grid) return;
+        const cars = getCars();
+        if (!cars || cars.length === 0) {
+            grid.innerHTML = `
+                <div class="col-span-full p-6 text-center bg-surface-container rounded-xl border border-dashed border-outline-variant/40">
+                    <span class="material-symbols-outlined text-[32px] text-outline mb-2">directions_car</span>
+                    <p class="text-sm font-bold text-on-surface">ยังไม่มีข้อมูลรถยนต์ในบัญชีนี้</p>
+                    <p class="text-xs text-outline mt-1">กรุณากดปุ่ม "+ เพิ่มรถใหม่" ด้านบนเพื่อเพิ่มข้อมูลรถของคุณ</p>
+                </div>
+            `;
+            updateSummary();
+            return;
+        }
+        let html = '';
+        cars.forEach((car, index) => {
+            const isChecked = car.isPrimary || (index === 0 && !cars.some(c => c.isPrimary));
+            html += `
+                <label class="cursor-pointer group relative block">
+                    <input type="radio" name="selected_car" value="${car.brand}" data-plate="${car.plate} | ${car.size}" class="peer sr-only" ${isChecked ? 'checked' : ''} onchange="updateSummary()">
+                    <div class="rounded-xl border-2 border-outline-variant/40 bg-surface-container p-4 transition-all hover:bg-surface-variant/50 peer-checked:border-primary peer-checked:bg-primary-container/10">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant transition-colors">
+                                <span class="material-symbols-outlined">${car.size && car.size.includes('SUV') ? 'directions_car' : (car.size && car.size.includes('ตู้') ? 'airport_shuttle' : 'directions_car')}</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-bold text-on-surface text-base truncate">${car.brand}</h4>
+                                    ${car.isPrimary ? '<span class="text-[10px] bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded-full font-bold">คันหลัก</span>' : ''}
+                                </div>
+                                <span class="text-xs text-on-surface-variant bg-surface-container-highest px-2 py-0.5 rounded-md mt-1 inline-block border border-outline-variant/30 truncate max-w-full">${car.plate} | ${car.size}</span>
+                            </div>
+                            <div class="w-6 h-6 rounded-full border-2 border-outline-variant group-has-[:checked]:border-primary flex items-center justify-center shrink-0 transition-colors">
+                                <div class="w-3.5 h-3.5 rounded-full bg-primary scale-0 group-has-[:checked]:scale-100 transition-transform shadow-[0_0_8px_rgba(180,197,255,0.8)]"></div>
+                            </div>
+                        </div>
+                    </div>
+                </label>
+            `;
+        });
+        grid.innerHTML = html;
+        updateSummary();
+    }
+
+    // --- Add New Car Logic ---
+    window.openAddCarModal = function() {
+        const modal = document.getElementById('add-car-modal');
+        const content = document.getElementById('add-car-modal-content');
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        
+        // Reset inputs
+        document.getElementById('new-car-brand').value = '';
+        document.getElementById('new-car-plate').value = '';
+
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+        }, 10);
+    }
+
+    window.closeAddCarModal = function() {
+        const modal = document.getElementById('add-car-modal');
+        const content = document.getElementById('add-car-modal-content');
+        
+        modal.classList.add('opacity-0');
+        content.classList.remove('scale-100');
+        content.classList.add('scale-95');
+        
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }, 300);
+    }
+
+    window.saveNewCar = async function() {
+        const brand = document.getElementById('new-car-brand').value.trim();
+        const plate = document.getElementById('new-car-plate').value.trim();
+        const size = document.getElementById('new-car-size').value;
+        
+        if (!brand || !plate) {
+            alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+            return;
+        }
+
+        const cars = getCars();
+        const isPrimary = cars.length === 0;
+        const newCar = {
+            id: 'car_' + Date.now(),
+            brand: brand,
+            plate: plate,
+            size: size,
+            isPrimary: isPrimary
+        };
+        cars.push(newCar);
+        saveCarsToStorage(cars);
+        renderCarsList();
+
+        // Select the newly added car
+        const inputs = document.querySelectorAll('input[name="selected_car"]');
+        inputs.forEach(input => {
+            if (input.value === brand) input.checked = true;
+        });
+
+        updateSummary();
+        closeAddCarModal();
+
+        // Persist to Supabase
+        try {
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (client?.auth) {
+                const { data: { user } } = await client.auth.getUser();
+                if (user) {
+                    await client.from('vehicles').insert({
+                        customer_id: user.id,
+                        brand_model: brand,
+                        plate_number: plate,
+                        car_size: size,
+                        is_default: isPrimary
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn('Supabase car insert notice:', e);
+        }
+    }
+
+    // --- Terms & Conditions Logic ---
+    window.toggleConfirmButton = function() {
+        const isChecked = document.getElementById('desktop-terms-check').checked;
+        const btn = document.getElementById('desktop-confirm-btn');
+        if (btn) btn.disabled = !isChecked;
+        
+        // Sync with mobile
+        const mobileCheck = document.getElementById('mobile-terms-check');
+        const mobileBtn = document.getElementById('mobile-confirm-btn');
+        if (mobileCheck && mobileBtn) {
+            mobileCheck.checked = isChecked;
+            mobileBtn.disabled = !isChecked;
+        }
+    }
+    
+    window.toggleConfirmButtonMobile = function() {
+        const isChecked = document.getElementById('mobile-terms-check').checked;
+        const btn = document.getElementById('mobile-confirm-btn');
+        if (btn) btn.disabled = !isChecked;
+        
+        // Sync with desktop
+        const desktopCheck = document.getElementById('desktop-terms-check');
+        const desktopBtn = document.getElementById('desktop-confirm-btn');
+        if (desktopCheck && desktopBtn) {
+            desktopCheck.checked = isChecked;
+            desktopBtn.disabled = !isChecked;
+        }
+    }
+
+    // --- Booking, Payment & Success Modal Logic ---
+    let currentBookingId = '';
+    let uploadedSlipData = null;
+    let paymentTimerSeconds = 900;
+    let paymentTimerInterval = null;
+
+    window.confirmBooking = function(btn) {
+        // Generate random simulated booking ID
+        const randomNum = Math.floor(1000 + Math.random() * 9000);
+        currentBookingId = `#BK-${randomNum}`;
+
+        // Open Payment Modal directly for customer to scan QR & upload slip
+        openPaymentModal();
+    };
+
+    window.openPaymentModal = function() {
+        if (!currentBookingId) {
+            const randomNum = Math.floor(1000 + Math.random() * 9000);
+            currentBookingId = `#BK-${randomNum}`;
+        }
+
+        const payBookingId = document.getElementById('payment-booking-id');
+        if (payBookingId) payBookingId.innerText = currentBookingId;
+
+        // Load Shop QR Code if uploaded by the car wash shop owner
+        const shopQr = localStorage.getItem('ownerQrCode') || localStorage.getItem('shopPromptPayQr');
+        const qrImgEl = document.getElementById('shop-qr-image');
+        const defaultQrSvg = document.getElementById('default-qr-svg');
+        if (shopQr && qrImgEl) {
+            qrImgEl.src = shopQr;
+            qrImgEl.classList.remove('hidden');
+            if (defaultQrSvg) defaultQrSvg.classList.add('hidden');
+        } else if (qrImgEl) {
+            qrImgEl.classList.add('hidden');
+            if (defaultQrSvg) defaultQrSvg.classList.remove('hidden');
+        }
+
+        // Load Shop PromptPay number if customized
+        const savedPromptPay = localStorage.getItem('ownerPromptPay') || localStorage.getItem('shopPromptPay');
+        const promptPayEl = document.getElementById('promptpay-number');
+        if (savedPromptPay && promptPayEl) {
+            promptPayEl.innerText = savedPromptPay;
+        }
+
+        // Load Shop Name if customized
+        const savedAccountName = localStorage.getItem('ownerAccountName') || localStorage.getItem('shopAccountName');
+        const accountNameEl = document.getElementById('shop-account-name');
+        if (savedAccountName && accountNameEl) {
+            accountNameEl.innerText = savedAccountName;
+        }
+
+        const modal = document.getElementById('payment-modal');
+        const content = document.getElementById('payment-modal-content');
+        if (modal && content) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            startPaymentTimer();
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 30);
+        }
+    };
+
+    window.closePaymentModal = function() {
+        clearInterval(paymentTimerInterval);
+        const modal = document.getElementById('payment-modal');
+        const content = document.getElementById('payment-modal-content');
+        if (modal && content) {
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }, 300);
+        }
+
+        // Re-enable confirm buttons
+        document.querySelectorAll('button[onclick="confirmBooking(this)"]').forEach(b => {
+            b.disabled = false;
+            b.classList.remove('opacity-80', 'cursor-not-allowed');
+            b.querySelector('.btnText').innerText = 'ยืนยันการจองคิว';
+            b.querySelector('.btnIcon').innerText = 'check_circle';
+        });
+
+        // Reset payment modal confirm button
+        const payBtn = document.getElementById('payment-confirm-btn');
+        const payBtnText = document.getElementById('payment-confirm-btn-text');
+        if (payBtn) payBtn.disabled = false;
+        if (payBtnText) payBtnText.innerText = 'ยืนยันการชำระเงิน';
+        const payBtnIcon = payBtn?.querySelector('.material-symbols-outlined');
+        if (payBtnIcon) {
+            payBtnIcon.classList.remove('animate-spin');
+            payBtnIcon.innerText = 'verified';
+        }
+    };
+
+    function startPaymentTimer() {
+        clearInterval(paymentTimerInterval);
+        paymentTimerSeconds = 900;
+        updatePaymentTimerDisplay();
+        paymentTimerInterval = setInterval(() => {
+            paymentTimerSeconds--;
+            if (paymentTimerSeconds <= 0) {
+                clearInterval(paymentTimerInterval);
+                paymentTimerSeconds = 0;
+                alert("⏰ หมดเวลาทำรายการชำระเงิน กรุณากดทำรายการใหม่อีกครั้ง");
+                closePaymentModal();
+            }
+            updatePaymentTimerDisplay();
+        }, 1000);
+    }
+
+    function updatePaymentTimerDisplay() {
+        const timerEl = document.getElementById('payment-timer');
+        if (timerEl) {
+            const mins = Math.floor(paymentTimerSeconds / 60).toString().padStart(2, '0');
+            const secs = (paymentTimerSeconds % 60).toString().padStart(2, '0');
+            timerEl.innerText = `${mins}:${secs}`;
+        }
+    }
+
+    window.copyPromptPayNumber = function() {
+        const number = "0891234567";
+        navigator.clipboard.writeText(number).then(() => {
+            const copyText = document.getElementById('copy-text');
+            const copyIcon = document.getElementById('copy-icon');
+            if (copyText) copyText.innerText = 'คัดลอกแล้ว!';
+            if (copyIcon) copyIcon.innerText = 'check';
+            setTimeout(() => {
+                if (copyText) copyText.innerText = 'คัดลอก';
+                if (copyIcon) copyIcon.innerText = 'content_copy';
+            }, 2000);
+        }).catch(() => {
+            alert("หมายเลขพร้อมเพย์: " + number);
+        });
+    };
+
+    window.handleSlipFile = function(input) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedSlipData = e.target.result;
+                const previewImg = document.getElementById('slip-preview-img');
+                const filenameEl = document.getElementById('slip-filename');
+                const dropzone = document.getElementById('slip-dropzone');
+                const previewContainer = document.getElementById('slip-preview-container');
+
+                if (previewImg) previewImg.src = e.target.result;
+                if (filenameEl) filenameEl.innerText = file.name;
+                if (dropzone) dropzone.classList.add('hidden');
+                if (previewContainer) {
+                    previewContainer.classList.remove('hidden');
+                    previewContainer.style.display = 'flex';
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    window.removeSlip = function() {
+        uploadedSlipData = null;
+        const input = document.getElementById('slip-file-input');
+        if (input) input.value = '';
+        const dropzone = document.getElementById('slip-dropzone');
+        const previewContainer = document.getElementById('slip-preview-container');
+        if (dropzone) dropzone.classList.remove('hidden');
+        if (previewContainer) {
+            previewContainer.classList.add('hidden');
+            previewContainer.style.display = 'none';
+        }
+    };
+
+    window.useSampleSlip = function() {
+        // Generate realistic bank transfer slip on canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = 400;
+        canvas.height = 540;
+        const ctx = canvas.getContext('2d');
+
+        // Background gradient
+        const grad = ctx.createLinearGradient(0, 0, 0, 540);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(1, '#f8fafc');
+        ctx.fillStyle = grad;
+        if (ctx.roundRect) ctx.roundRect(0, 0, 400, 540, 24);
+        else ctx.rect(0, 0, 400, 540);
+        ctx.fill();
+
+        // Top Green Header
+        ctx.fillStyle = '#059669';
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(0, 0, 400, 95, [24, 24, 0, 0]);
+        else ctx.rect(0, 0, 400, 95);
+        ctx.fill();
+
+        // Header Text
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('โอนเงินสำเร็จ (มัดจำล้างรถ)', 200, 42);
+
+        ctx.font = '12px sans-serif';
+        ctx.fillStyle = '#e6f4ea';
+        const now = new Date();
+        const timeStr = `${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`;
+        ctx.fillText(timeStr, 200, 72);
+
+        // Amount
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 36px sans-serif';
+        ctx.fillText('฿ 50.00', 200, 155);
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('ยอดชำระมัดจำล็อกคิว', 200, 180);
+
+        // Divider
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(30, 205);
+        ctx.lineTo(370, 205);
+        ctx.stroke();
+
+        // Details Rows
+        ctx.textAlign = 'left';
+        ctx.font = '13px sans-serif';
+        ctx.fillStyle = '#64748b';
+
+        ctx.fillText('จาก:', 35, 235);
+        ctx.fillStyle = '#1e293b';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText('คุณลูกค้า (ผู้จอง)', 140, 235);
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('ไปยัง:', 35, 270);
+        ctx.fillStyle = '#1e293b';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText(currentShop?.name || 'Sparkle Wash & Detailing', 140, 270);
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('พร้อมเพย์:', 35, 305);
+        ctx.fillStyle = '#003b6d';
+        ctx.font = 'bold 14px monospace';
+        ctx.fillText(currentShop?.promptpay || '089-123-4567', 140, 305);
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('รหัสการจอง:', 35, 340);
+        ctx.fillStyle = '#2563eb';
+        ctx.font = 'bold 14px monospace';
+        ctx.fillText(currentBookingId || '#BK-9821', 140, 340);
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('บริการ:', 35, 375);
+        ctx.fillStyle = '#1e293b';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.fillText(selectedServiceName || 'พรีเมียมดีเทลลิ่ง', 140, 375);
+
+        // QR Verified Stamp Box
+        ctx.fillStyle = '#f1f5f9';
+        if (ctx.roundRect) ctx.roundRect(30, 415, 340, 85, 12);
+        else ctx.rect(30, 415, 340, 85);
+        ctx.fill();
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.stroke();
+
+        ctx.fillStyle = '#059669';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillText('✓ สลิปได้รับการตรวจสอบผ่านระบบ PromptPay', 45, 450);
+        ctx.fillStyle = '#64748b';
+        ctx.font = '11px monospace';
+        ctx.fillText('REF: ' + Math.random().toString(36).substring(2, 14).toUpperCase(), 45, 475);
+
+        const dataUrl = canvas.toDataURL('image/png');
+        uploadedSlipData = dataUrl;
+
+        const previewImg = document.getElementById('slip-preview-img');
+        const filenameEl = document.getElementById('slip-filename');
+        const dropzone = document.getElementById('slip-dropzone');
+        const previewContainer = document.getElementById('slip-preview-container');
+
+        if (previewImg) previewImg.src = dataUrl;
+        if (filenameEl) filenameEl.innerText = `slip-promptpay-50thb-${(currentBookingId || 'test').replace('#','')}.png`;
+        if (dropzone) dropzone.classList.add('hidden');
+        if (previewContainer) {
+            previewContainer.classList.remove('hidden');
+            previewContainer.style.display = 'flex';
+        }
+    };
+
+    window.submitPaymentAndBooking = function(btn) {
+        if (!uploadedSlipData) {
+            const dropzone = document.getElementById('slip-dropzone');
+            if (dropzone) {
+                dropzone.classList.add('border-error', 'bg-error/10');
+                setTimeout(() => dropzone.classList.remove('border-error', 'bg-error/10'), 2000);
+            }
+            alert("⚠️ กรุณาแนบสลิปการโอนเงินเพื่อยืนยันการจองคิว");
+            return;
+        }
+
+        const btnText = document.getElementById('payment-confirm-btn-text');
+        if (btn) btn.disabled = true;
+        if (btnText) btnText.innerText = 'กำลังตรวจสอบสลิป...';
+        const icon = btn?.querySelector('.material-symbols-outlined');
+        if (icon) {
+            icon.classList.add('animate-spin');
+            icon.innerText = 'autorenew';
+        }
+
+        setTimeout(() => {
+            clearInterval(paymentTimerInterval);
+
+            // Retrieve customer profile for realistic contact details
+            let customerName = 'ผู้ใช้บริการ';
+            let customerPhone = '-';
+            try {
+                const profileStr = localStorage.getItem('customerProfile');
+                if (profileStr) {
+                    const p = JSON.parse(profileStr);
+                    if (p.fullName) customerName = p.fullName;
+                    if (p.phone) customerPhone = p.phone;
+                }
+            } catch(e) {}
+
+            // Extract selected vehicle info
+            const checkedCar = document.querySelector('input[name="selected_car"]:checked');
+            const carBrand = checkedCar ? checkedCar.value : 'รถยนต์';
+            const carPlateData = checkedCar ? (checkedCar.getAttribute('data-plate') || '') : '';
+            const plateParts = carPlateData.split('|');
+            const carPlate = plateParts[0]?.trim() || '-';
+            const carSize = plateParts[1]?.trim() || 'รถเก๋ง';
+
+            // Save active booking to localStorage for live tracking (Point 1 Continuity)
+            const activeBooking = {
+                bookingId: currentBookingId,
+                shopId: currentShop?.id || 'shop1',
+                shopName: currentShop?.name || 'Sparkle Wash & Detailing',
+                shopPhone: currentShop?.phone || '089-123-4567',
+                customerName: customerName,
+                customerPhone: customerPhone,
+                serviceName: selectedServiceName || 'ล้างสี ดูดฝุ่น',
+                carBrand: carBrand,
+                carPlate: carPlate,
+                carSize: carSize,
+                carName: `${carBrand} (${carPlate})`,
+                dateTime: `${selectedDateText || 'วันนี้'}, ${selectedTimeText || '10:00 น.'}`,
+                depositAmount: '฿50.00',
+                totalAmount: `฿${selectedServicePrice || '450'}`,
+                status: 'incoming', // initially incoming for shop to accept
+                step: 0,
+                slipImage: uploadedSlipData,
+                slipUploaded: true,
+                createdAt: new Date().toISOString(),
+                isNew: true
+            };
+            localStorage.setItem('activeCustomerBooking', JSON.stringify(activeBooking));
+
+            // Also append/prepend into shared appBookingsList for owner synchronization
+            try {
+                let list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
+                list = list.filter(b => b.bookingId !== activeBooking.bookingId);
+                list.unshift(activeBooking);
+                localStorage.setItem('appBookingsList', JSON.stringify(list));
+            } catch(e) {}
+
+            // Sync to Supabase bookings table
+            (async () => {
+                try {
+                    const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                    if (client?.auth) {
+                        const { data: { user } } = await client.auth.getUser();
+                        if (user) {
+                            await client.from('bookings').insert({
+                                customer_id: user.id,
+                                status: 'PENDING',
+                                booking_date: new Date().toISOString().split('T')[0],
+                                total_price: parseFloat(selectedServicePrice) || 450,
+                                deposit_amount: 50.00,
+                                notes: `${activeBooking.serviceName} - ${activeBooking.carName}`
+                            });
+                        }
+                    }
+                } catch(bErr) {
+                    console.warn('Supabase booking insert notice:', bErr);
+                }
+            })();
+
+            // Close Payment Modal
+            closePaymentModal();
+
+            // Populate Success Modal
+            const successModal = document.getElementById('success-modal');
+            const successContent = document.getElementById('success-modal-content');
+            const bookingIdEl = document.getElementById('success-booking-id');
+            const dtEl = document.getElementById('success-booking-datetime');
+
+            if (bookingIdEl) bookingIdEl.innerText = currentBookingId;
+            if (dtEl) dtEl.innerText = activeBooking.dateTime;
+
+            if (successModal && successContent) {
+                successModal.classList.remove('hidden');
+                successModal.style.display = 'flex';
+                setTimeout(() => {
+                    successModal.classList.remove('opacity-0');
+                    successContent.classList.remove('scale-95');
+                    successContent.classList.add('scale-100');
+                }, 50);
+            }
+
+            // Reset payment button state
+            if (btn) btn.disabled = false;
+            if (btnText) btnText.innerText = 'ยืนยันการชำระเงิน';
+            if (icon) {
+                icon.classList.remove('animate-spin');
+                icon.innerText = 'verified';
+            }
+        }, 1200);
+    };
+
+    window.goToHistory = function() {
+        window.location.href = 'booking-history-Customer.html';
+    };
+
+    window.openLineConnectModal = function() {
+        const modal = document.getElementById('line-connect-modal');
+        const content = document.getElementById('line-connect-modal-content');
+        if (modal && content) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+    };
+
+    window.closeLineConnectModal = function() {
+        const modal = document.getElementById('line-connect-modal');
+        const content = document.getElementById('line-connect-modal-content');
+        if (modal && content) {
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }, 300);
+        }
+    };
+
+    window.simulateLineConnected = function() {
+        // Save connection state in localStorage
+        const settings = JSON.parse(localStorage.getItem('customerNotificationSettings') || '{}');
+        settings.lineConnected = true;
+        settings.channelLine = true;
+        localStorage.setItem('customerNotificationSettings', JSON.stringify(settings));
+
+        alert("🎉 เพิ่มเพื่อน BestCarWash และเชื่อมต่อระบบแจ้งเตือนสำเร็จ!\nระบบจะส่งแจ้งเตือนสถานะคิวและสลิปคืนเงินผ่าน LINE ให้คุณโดยอัตโนมัติ");
+        closeLineConnectModal();
+        goToHistory();
+    };
+
+    // --- Custom Dropdown Logic ---
+    window.toggleCarSizeDropdown = function() {
+        const menu = document.getElementById('car-size-menu');
+        const icon = document.getElementById('car-size-icon');
+        
+        if (menu.classList.contains('opacity-0')) {
+            menu.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-2');
+            icon.classList.add('rotate-180');
+        } else {
+            closeCarSizeDropdown();
+        }
+    }
+
+    window.closeCarSizeDropdown = function() {
+        const menu = document.getElementById('car-size-menu');
+        const icon = document.getElementById('car-size-icon');
+        if(menu && !menu.classList.contains('opacity-0')) {
+            menu.classList.add('opacity-0', 'pointer-events-none', '-translate-y-2');
+            icon.classList.remove('rotate-180');
+        }
+    }
+
+    window.selectCarSize = function(size) {
+        document.getElementById('new-car-size').value = size;
+        document.getElementById('car-size-display').firstElementChild.innerText = size;
+        closeCarSizeDropdown();
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        const display = document.getElementById('car-size-display');
+        const menu = document.getElementById('car-size-menu');
+        // If clicking outside both display and menu, close the menu
+        if (display && menu && !display.contains(e.target) && !menu.contains(e.target)) {
+            closeCarSizeDropdown();
+        }
+    });
+
+    // Initialize Page Data, Shop Details, Customer Cars, and Avatar
+    document.addEventListener('DOMContentLoaded', async () => {
+        // 1. Read URL Parameters for Shop & Service (Point 1 Continuity)
+        const urlParams = new URLSearchParams(window.location.search);
+        let paramShopId = urlParams.get('shopId');
+        if (!paramShopId) {
+            paramShopId = localStorage.getItem('selectedShopId');
+        }
+
+        // Fetch Live Shop from Supabase
+        const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+        if (client) {
+            try {
+                let dbShop = null;
+                if (paramShopId) {
+                    const { data } = await client.from('shops').select('*').eq('id', paramShopId).maybeSingle();
+                    dbShop = data;
+                }
+                if (!dbShop && client.auth) {
+                    const { data: userData } = await client.auth.getUser();
+                    if (userData?.user) {
+                        const { data } = await client.from('shops').select('*').eq('owner_id', userData.user.id).maybeSingle();
+                        dbShop = data;
+                    }
+                }
+                if (!dbShop) {
+                    const localName = localStorage.getItem('ownerShopName');
+                    if (localName) {
+                        const { data } = await client.from('shops').select('*').eq('name', localName).maybeSingle();
+                        dbShop = data;
+                    }
+                }
+                if (!dbShop) {
+                    const { data } = await client.from('shops').select('*').limit(1).maybeSingle();
+                    dbShop = data;
+                }
+                if (dbShop) {
+                    const { data: dbServices } = await client.from('services').select('*').eq('shop_id', dbShop.id);
+                    SHOPS_DATA[dbShop.id] = {
+                        id: dbShop.id,
+                        name: dbShop.name || 'ร้านคาร์แคร์',
+                        address: dbShop.address || '',
+                        phone: dbShop.phone_number || '',
+                        promptpay: dbShop.phone_number || '080-000-0000',
+                        services: (dbServices && dbServices.length > 0) ? dbServices.map((s, idx) => ({
+                            id: s.id,
+                            name: s.name,
+                            price: parseFloat(s.price) || 200,
+                            popular: idx === 0
+                        })) : [
+                            { id: 'srv1', name: 'บริการล้างรถมาตรฐาน', price: 200, popular: true }
+                        ]
+                    };
+                    paramShopId = dbShop.id;
+                    localStorage.setItem('selectedShopId', dbShop.id);
+                }
+            } catch(e) {
+                console.warn('Supabase shop query in booking notice:', e);
+            }
+        }
+
+        if (paramShopId && SHOPS_DATA[paramShopId]) {
+            currentShopId = paramShopId;
+        } else {
+            const firstAvailable = Object.keys(SHOPS_DATA)[0];
+            if (firstAvailable) {
+                currentShopId = firstAvailable;
+            } else {
+                // ไม่พบร้านค้าในระบบ (เช่น ถูกลบออกไปทั้งหมด)
+                const mainEl = document.querySelector('main');
+                if (mainEl) {
+                    mainEl.innerHTML = `
+                        <div class="w-full max-w-xl mx-auto py-24 px-4 text-center flex flex-col items-center">
+                            <div class="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center text-outline mb-4 border border-outline-variant/30 shadow-inner">
+                                <span class="material-symbols-outlined text-4xl text-outline-variant">storefront</span>
+                            </div>
+                            <h2 class="text-2xl font-bold text-on-surface mb-2">ไม่พบข้อมูลร้านค้านี้</h2>
+                            <p class="text-sm text-on-surface-variant mb-6">ร้านค้านี้อาจถูกลบออกจากระบบแล้ว หรือไม่มีร้านค้าเปิดให้บริการ</p>
+                            <a href="discovery.html" class="inline-flex items-center gap-2 px-6 py-3 bg-primary-container text-on-primary-container font-bold rounded-xl shadow-md hover:bg-primary transition-all active:scale-95 text-sm">
+                                <span class="material-symbols-outlined text-[20px]">explore</span>
+                                <span>กลับไปหน้าค้นหาร้านค้า</span>
+                            </a>
+                        </div>
+                    `;
+                }
+                return;
+            }
+        }
+        currentShop = SHOPS_DATA[currentShopId];
+        localStorage.setItem('selectedShopId', currentShopId);
+
+        const paramService = urlParams.get('service');
+        const paramPrice = urlParams.get('price');
+        if (paramService) {
+            selectedServiceName = paramService;
+            selectedServicePrice = paramPrice || (currentShop.services[0]?.price || '450');
+        } else if (currentShop.services && currentShop.services.length > 0) {
+            const pop = currentShop.services.find(s => s.popular) || currentShop.services[0];
+            selectedServiceName = pop.name;
+            selectedServicePrice = pop.price.toString();
+        }
+
+        // 2. Update UI Elements for Selected Shop & Service
+        document.title = `จองคิวและเวลา - ${currentShop.name}`;
+        const mobTitle = document.getElementById('mobile-page-title');
+        if (mobTitle) mobTitle.innerText = `จองคิว: ${currentShop.name}`;
+
+        const deskBack = document.getElementById('desktop-back-btn');
+        const mobBack = document.getElementById('mobile-back-btn');
+        if (deskBack) deskBack.href = `shop-details.html?shopId=${encodeURIComponent(currentShopId)}`;
+        if (mobBack) mobBack.href = `shop-details.html?shopId=${encodeURIComponent(currentShopId)}`;
+
+        const shopNameEl = document.getElementById('summary-shop-name');
+        if (shopNameEl) shopNameEl.innerText = currentShop.name;
+
+        const srvNameEl = document.getElementById('summary-service-name');
+        if (srvNameEl) srvNameEl.innerText = selectedServiceName;
+
+        const srvPriceEl = document.getElementById('summary-service-price');
+        if (srvPriceEl) srvPriceEl.innerText = `฿${selectedServicePrice}`;
+
+        const origPriceEl = document.getElementById('summary-total-original-price');
+        if (origPriceEl) origPriceEl.innerText = `(จากราคาเริ่มต้น ฿${selectedServicePrice})`;
+
+        const mobSrvNameEl = document.getElementById('mobile-summary-service-name');
+        if (mobSrvNameEl) mobSrvNameEl.innerText = `${selectedServiceName} (มัดจำ)`;
+
+        const promptPayEl = document.getElementById('promptpay-number');
+        if (promptPayEl) promptPayEl.innerText = currentShop.promptpay;
+
+        // 3. Render Vehicles from customerCars (Point 3 Vehicle Sync)
+        renderCarsList();
+
+        // 3.1 Fetch live vehicles from Supabase database
+        (async () => {
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (!client?.auth) return;
+                const { data: { user } } = await client.auth.getUser();
+                if (!user) return;
+
+                const { data: dbVehicles } = await client
+                    .from('vehicles')
+                    .select('*')
+                    .eq('customer_id', user.id)
+                    .order('is_default', { ascending: false });
+
+                if (dbVehicles) {
+                    const mapped = dbVehicles.map(v => ({
+                        id: v.id,
+                        brand: v.brand_model,
+                        plate: v.plate_number,
+                        size: v.car_size || 'M',
+                        isPrimary: v.is_default || false
+                    }));
+                    saveCarsToStorage(mapped);
+                    renderCarsList();
+                }
+            } catch(e) {
+                console.warn('Book page vehicles fetch notice:', e);
+            }
+        })();
+
+        // 4. Sync Customer Avatar & Name
+        const saved = localStorage.getItem('customerProfile');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                if (data.avatar && !data.avatar.includes('googleusercontent')) {
+                    const avatar = document.getElementById('customer-header-avatar');
+                    if (avatar) avatar.src = data.avatar;
+                }
+                if (data.name) {
+                    const nameEl = document.getElementById('desktop-header-name');
+                    if (nameEl) nameEl.textContent = data.name;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    });
+</script>
+</body>
+</html>

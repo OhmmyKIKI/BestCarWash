@@ -1,0 +1,376 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>BestCarWash - การแจ้งเตือน</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="../supabase-client.js"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              "spacing": {
+                      "margin-mobile": "1rem",
+                      "gutter": "1rem",
+                      "touch-target-min": "3rem",
+                      "stack-sm": "0.5rem",
+                      "stack-md": "1rem",
+                      "stack-lg": "1.5rem"
+              },
+              "fontFamily": {
+                      "sans": ["Prompt", "Inter", "sans-serif"]
+              }
+            }
+          }
+        }
+      </script>
+      <style>
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Notification entrance animation */
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .notif-item {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+      </style>
+</head>
+<body class="bg-background text-on-background min-h-screen font-sans flex flex-col relative overflow-x-hidden pb-28 md:pb-12 pt-0 md:pt-20">
+    
+<!-- Desktop Header (App Bar) -->
+<header class="hidden md:flex justify-between items-center px-6 lg:px-10 h-20 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md z-50 fixed top-0 w-full">
+    <!-- Brand Logo -->
+    <div class="flex items-center gap-6">
+        <a href="discovery.html" class="flex items-center gap-3 group">
+            <div class="w-11 h-11 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center group-hover:bg-primary/20 transition-all shadow-sm">
+                <span class="material-symbols-outlined text-primary text-[28px] group-hover:rotate-12 transition-transform duration-300">local_car_wash</span>
+            </div>
+            <span class="text-2xl lg:text-3xl font-extrabold text-primary tracking-tight">BestCarWash</span>
+        </a>
+    </div>
+
+    <!-- Navigation & User Profile -->
+    <div class="flex items-center gap-6">
+        <nav class="flex items-center gap-5 lg:gap-7">
+            <a class="text-base font-semibold text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5 py-1" href="discovery.html">
+                <span class="material-symbols-outlined text-[20px]">explore</span> ค้นหาร้าน
+            </a>
+            <a class="text-base font-semibold text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5 py-1" href="booking-history-Customer.html">
+                <span class="material-symbols-outlined text-[20px]">receipt_long</span> การจองของฉัน
+            </a>
+            <a class="text-base font-semibold text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5 py-1" href="favorite-shops.html">
+                <span class="material-symbols-outlined text-[20px]">favorite</span> ร้านโปรด
+            </a>
+        </nav>
+
+        <div class="flex items-center gap-4 border-l border-outline-variant/30 pl-5 lg:pl-6">
+            <a href="customer-notifications-list.html" class="w-11 h-11 rounded-full flex items-center justify-center bg-primary/20 text-primary transition-colors relative border border-primary/40 shadow-sm" title="การแจ้งเตือน">
+                <span class="material-symbols-outlined text-[24px]">notifications</span>
+                <span class="absolute top-2.5 right-3 w-2.5 h-2.5 bg-error rounded-full shadow-[0_0_5px_rgba(255,180,171,0.8)]"></span>
+            </a>
+
+            <!-- User Profile Chip -->
+            <a href="Customer%20Profile.html" class="flex items-center gap-3 pl-1.5 pr-4 py-1.5 rounded-full bg-surface-container hover:bg-surface-variant border border-outline-variant/40 hover:border-primary transition-all shadow-md group" title="โปรไฟล์ของฉัน">
+                <div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest border border-outline-variant/40 flex-shrink-0">
+                    <img id="desktop-header-avatar" alt="User profile" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
+                </div>
+                <span class="hidden md:inline-block text-base font-semibold text-on-surface group-hover:text-primary transition-colors" id="desktop-header-name">โปรไฟล์</span>
+            </a>
+        </div>
+    </div>
+</header>
+
+<!-- Mobile Header -->
+<header class="md:hidden sticky top-0 w-full z-50 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-sm px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2.5">
+        <button onclick="history.back()" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container text-on-surface hover:text-primary active:scale-95 border border-outline-variant/30">
+            <span class="material-symbols-outlined text-[22px]">arrow_back</span>
+        </button>
+        <h1 class="text-xl font-bold text-on-surface tracking-tight">การแจ้งเตือน</h1>
+    </div>
+    <div>
+        <button onclick="markAllAsRead()" class="text-primary text-sm font-bold hover:text-primary/80 transition-colors active:scale-95 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20">อ่านทั้งหมด</button>
+    </div>
+</header>
+
+<main class="pt-4 md:pt-8 px-4 md:px-6 max-w-3xl mx-auto flex flex-col gap-4 pb-12 w-full">
+    
+    <!-- Category Filter Pills -->
+    <div class="flex gap-2 overflow-x-auto hide-scrollbar py-2 -mx-margin-mobile px-margin-mobile md:mx-0 md:px-0 sticky top-16 bg-background/95 backdrop-blur-sm z-40 border-b border-outline-variant/10">
+        <button onclick="filterNotifs('all')" id="btn-all" class="flex-shrink-0 px-4 py-1.5 bg-primary-container text-on-primary-container rounded-full text-xs font-bold border border-primary/50 shadow-sm transition-colors">ทั้งหมด</button>
+        <button onclick="filterNotifs('booking')" id="btn-booking" class="flex-shrink-0 px-4 py-1.5 bg-surface-container-highest text-on-surface hover:text-primary rounded-full text-xs font-medium border border-outline-variant hover:border-primary transition-colors">การจอง</button>
+        <button onclick="filterNotifs('system')" id="btn-system" class="flex-shrink-0 px-4 py-1.5 bg-surface-container-highest text-on-surface hover:text-primary rounded-full text-xs font-medium border border-outline-variant hover:border-primary transition-colors">ระบบ</button>
+    </div>
+
+    <div id="notifications-container" class="flex flex-col gap-3 mt-2">
+        <!-- Dynamically loaded from Supabase notifications table -->
+    </div>
+
+    <!-- Empty State (Hidden by default) -->
+    <div id="empty-state" class="hidden flex-col items-center justify-center py-20 text-center opacity-0 transition-opacity duration-300">
+        <div class="w-24 h-24 bg-surface-container rounded-full flex items-center justify-center mb-4 border border-outline-variant/30 shadow-inner">
+            <span class="material-symbols-outlined text-[48px] text-outline-variant">notifications_off</span>
+        </div>
+        <h3 class="text-lg font-bold text-on-surface mb-2">ไม่มีการแจ้งเตือน</h3>
+        <p class="text-sm text-on-surface-variant">คุณยังไม่มีการแจ้งเตือนในหมวดหมู่นี้</p>
+    </div>
+
+</main>
+
+<script>
+    let userNotifications = [];
+
+    function formatTimeAgo(dateString) {
+        if (!dateString) return 'เมื่อสักครู่';
+        const d = new Date(dateString);
+        const diffMs = Date.now() - d.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) return 'เพิ่งส่งมา';
+        if (diffMins < 60) return `${diffMins} นาทีที่แล้ว`;
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours} ชม. ที่แล้ว`;
+        const diffDays = Math.floor(diffHours / 24);
+        return `${diffDays} วันที่แล้ว`;
+    }
+
+    function showEmptyState(show) {
+        const emptyState = document.getElementById('empty-state');
+        const container = document.getElementById('notifications-container');
+        if (show) {
+            container.innerHTML = '';
+            emptyState.classList.remove('hidden');
+            emptyState.classList.add('flex');
+            setTimeout(() => emptyState.classList.remove('opacity-0'), 10);
+        } else {
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+            emptyState.classList.add('opacity-0');
+        }
+    }
+
+    function renderNotificationsList(list) {
+        const container = document.getElementById('notifications-container');
+        if (!list || list.length === 0) {
+            showEmptyState(true);
+            return;
+        }
+
+        showEmptyState(false);
+        container.innerHTML = list.map(item => {
+            const isUnread = !item.is_read;
+            const category = (item.type && item.type.toLowerCase().includes('booking')) ? 'booking' : 'system';
+            const iconName = category === 'booking' ? 'event_available' : 'notifications';
+            const iconColor = category === 'booking' ? 'text-primary bg-primary-container/20 border-primary/30' : 'text-secondary bg-secondary/10 border-secondary/30';
+
+            return `
+                <a href="booking-history-Customer.html" class="notif-item ${isUnread ? 'bg-surface-container/80 shadow-lg shadow-background/50' : 'bg-surface-container-low opacity-80'} hover:bg-surface-container-highest transition-all rounded-xl p-4 flex gap-4 cursor-pointer relative overflow-hidden border border-outline-variant/30 active:scale-[0.98] block" data-category="${category}">
+                    ${isUnread ? '<div class="unread-indicator absolute top-0 left-0 w-1.5 h-full bg-primary shadow-[0_0_10px_rgba(37,99,235,0.8)] transition-opacity duration-300"></div>' : ''}
+                    <div class="w-12 h-12 rounded-full ${iconColor} flex items-center justify-center shrink-0 border">
+                        <span class="material-symbols-outlined">${iconName}</span>
+                    </div>
+                    <div class="flex flex-col gap-1 flex-1">
+                        <div class="flex justify-between items-start">
+                            <span class="font-bold text-on-surface text-base flex items-center gap-2">
+                                ${item.title || 'การแจ้งเตือน'}
+                                ${isUnread ? '<span class="unread-dot w-2 h-2 bg-primary rounded-full animate-pulse transition-opacity duration-300"></span>' : ''}
+                            </span>
+                            <span class="text-[10px] text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">${formatTimeAgo(item.created_at)}</span>
+                        </div>
+                        <p class="text-sm text-on-surface-variant leading-relaxed mt-0.5">
+                            ${item.message || ''}
+                        </p>
+                    </div>
+                </a>
+            `;
+        }).join('');
+    }
+
+    async function loadLiveNotifications() {
+        try {
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (!client?.auth) {
+                showEmptyState(true);
+                return;
+            }
+
+            const { data: { user } } = await client.auth.getUser();
+            if (!user) {
+                showEmptyState(true);
+                return;
+            }
+
+            const { data: notifs, error } = await client
+                .from('notifications')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.warn('Notifications fetch error:', error);
+                showEmptyState(true);
+                return;
+            }
+
+            userNotifications = notifs || [];
+            renderNotificationsList(userNotifications);
+
+        } catch (e) {
+            console.warn('Notifications exception:', e);
+            showEmptyState(true);
+        }
+    }
+
+    // Tab switching logic
+    function filterNotifs(category) {
+        const tabs = ['all', 'booking', 'system'];
+        tabs.forEach(tab => {
+            const btn = document.getElementById(`btn-${tab}`);
+            if (tab === category) {
+                btn.className = 'flex-shrink-0 px-4 py-1.5 bg-primary-container text-on-primary-container rounded-full text-xs font-bold border border-primary/50 shadow-sm transition-colors';
+            } else {
+                btn.className = 'flex-shrink-0 px-4 py-1.5 bg-surface-container-highest text-on-surface hover:text-primary rounded-full text-xs font-medium border border-outline-variant hover:border-primary transition-colors';
+            }
+        });
+
+        const items = document.querySelectorAll('.notif-item');
+        let visibleCount = 0;
+        
+        items.forEach(item => {
+            if (category === 'all' || item.dataset.category === category) {
+                item.style.display = 'flex';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        if (visibleCount === 0) {
+            showEmptyState(true);
+        } else {
+            showEmptyState(false);
+        }
+    }
+
+    // Mark all as read logic
+    async function markAllAsRead() {
+        const indicators = document.querySelectorAll('.unread-indicator');
+        const dots = document.querySelectorAll('.unread-dot');
+        const unreadItems = document.querySelectorAll('.notif-item.bg-surface-container\\/80');
+
+        indicators.forEach(el => el.classList.add('opacity-0'));
+        dots.forEach(el => el.classList.add('opacity-0'));
+
+        unreadItems.forEach(item => {
+            item.classList.remove('bg-surface-container/80', 'shadow-lg', 'shadow-background/50');
+            item.classList.add('bg-surface-container-low', 'opacity-80');
+        });
+
+        setTimeout(() => {
+            indicators.forEach(el => el.remove());
+            dots.forEach(el => el.remove());
+        }, 300);
+
+        try {
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (client?.auth) {
+                const { data: { user } } = await client.auth.getUser();
+                if (user) {
+                    await client.from('notifications').update({ is_read: true }).eq('user_id', user.id);
+                }
+            }
+        } catch(e) {}
+    }
+
+    // Avatar and Profile Synchronization
+    document.addEventListener('DOMContentLoaded', async () => {
+        const saved = localStorage.getItem('customerProfile');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                if (data.avatar && !data.avatar.includes('googleusercontent')) {
+                    const avatar = document.getElementById('desktop-header-avatar');
+                    if (avatar) avatar.src = data.avatar;
+                }
+                const displayName = data.fullName || data.name;
+                if (displayName) {
+                    const nameEl = document.getElementById('desktop-header-name');
+                    if (nameEl) nameEl.innerText = displayName;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // Live Supabase check
+        try {
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (client?.auth) {
+                const { data: { user } } = await client.auth.getUser();
+                if (user) {
+                    const { data: prof } = await client.from('profiles').select('avatar_url, full_name').eq('id', user.id).maybeSingle();
+                    if (prof?.avatar_url) {
+                        const avatar = document.getElementById('desktop-header-avatar');
+                        if (avatar) avatar.src = prof.avatar_url;
+                    }
+                }
+            }
+        } catch(e) {}
+
+        await loadLiveNotifications();
+    });
+</script>
+
+<!-- Mobile Bottom Navigation -->
+<nav class="md:hidden bg-surface-container/95 backdrop-blur-xl fixed bottom-5 left-4 right-4 rounded-2xl z-50 border border-outline-variant/30 shadow-2xl shadow-background/80 flex justify-around items-center p-2.5 pb-[calc(0.6rem+env(safe-area-inset-bottom,0))]">
+    <a class="flex flex-col items-center justify-center w-20 h-14 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-all active:scale-95" href="discovery.html">
+        <span class="material-symbols-outlined text-[26px]">explore</span>
+        <span class="text-xs font-semibold mt-1">ค้นหา</span>
+    </a>
+    <a class="flex flex-col items-center justify-center w-20 h-14 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-all active:scale-95" href="booking-history-Customer.html">
+        <span class="material-symbols-outlined text-[26px]">receipt_long</span>
+        <span class="text-xs font-semibold mt-1">การจอง</span>
+    </a>
+    <a class="flex flex-col items-center justify-center w-20 h-14 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-all active:scale-95" href="Customer%20Profile.html">
+        <span class="material-symbols-outlined text-[26px]">person</span>
+        <span class="text-xs font-semibold mt-1">โปรไฟล์</span>
+    </a>
+</nav>
+
+</body>
+</html>

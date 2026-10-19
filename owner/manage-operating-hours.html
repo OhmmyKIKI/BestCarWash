@@ -1,0 +1,1147 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>BestCarWash - จัดการเวลาเปิดทำการ</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="../supabase-client.js"></script>
+    <script>
+        if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
+            var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+            var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+    </script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              fontFamily: {
+                sans: ["Prompt", "Inter", "sans-serif"]
+              }
+            }
+          }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #0f172a;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+        }
+        .glass-card:hover {
+            border-color: #cbd5e1;
+        }
+        #toast {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+            transform: translateY(20px);
+        }
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #4edea3;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #4edea3;
+        }
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            /* icon natural */
+            opacity: 0.6;
+            cursor: pointer;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    </style>
+</head>
+<body class="antialiased flex flex-col min-h-screen bg-background text-on-background pb-28 md:pb-12">
+
+<!-- Top Header (App Bar) -->
+<header class="sticky top-0 w-full z-50 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md">
+    <div class="w-full px-4 md:px-8 lg:px-10 h-20 flex items-center justify-between">
+        <!-- Left: Back Button & Page Identification -->
+        <div class="flex items-center gap-3.5">
+            <a href="Owner%20Profile.html" class="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/40 transition-all active:scale-95 group" title="กลับไปโปรไฟล์">
+                <span class="material-symbols-outlined text-[22px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+            </a>
+            <div>
+                <h1 class="text-lg md:text-xl font-bold text-on-surface tracking-tight flex items-center gap-2.5">
+                    <span class="material-symbols-outlined text-secondary text-[26px]">schedule</span>
+                    <span>เวลาเปิด-ปิดทำการ & วันหยุด</span>
+                </h1>
+                <div id="cloud-sync-badge" class="flex items-center gap-1.5 text-[11px] font-medium text-primary transition-all duration-500 mt-0.5">
+                    <span class="material-symbols-outlined text-[14px] animate-spin">sync</span>
+                    <span id="cloud-sync-text">กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Action Buttons -->
+        <div class="flex items-center gap-2.5 sm:gap-3">
+            <a href="public-shop-preview.html" class="h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl bg-surface-container hover:bg-surface-variant border border-outline-variant/40 text-on-surface text-sm sm:text-base font-semibold flex items-center gap-2 transition-all hover:border-secondary/40 active:scale-95" title="ดูหน้าร้าน">
+                <span class="material-symbols-outlined text-[20px] text-secondary">visibility</span>
+                <span class="hidden sm:inline">ดูหน้าร้าน</span>
+            </a>
+            <button form="hoursForm" type="submit" class="h-11 sm:h-12 px-4 sm:px-6 rounded-xl bg-secondary hover:bg-secondary-fixed text-on-secondary-container text-sm sm:text-base font-bold flex items-center gap-2 shadow-lg shadow-secondary/20 transition-all active:scale-95">
+                <span class="material-symbols-outlined text-[20px]">save</span>
+                <span>บันทึก</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- Main Container -->
+<main class="w-full max-w-7xl px-4 sm:px-6 pt-6 mx-auto flex-1">
+    <form id="hoursForm" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Left Column: Weekly Schedule (lg:col-span-7) -->
+        <div class="lg:col-span-7 space-y-6">
+
+            <!-- Quick Presets & Copy Bar -->
+            <div class="glass-card rounded-2xl p-4 shadow-xl space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px]">tune</span>
+                        พรีเซ็ตเวลารวดเร็ว
+                    </span>
+                    <button type="button" id="copyHoursBtn" class="flex items-center gap-1 text-xs font-semibold text-secondary hover:text-secondary-fixed bg-secondary/10 hover:bg-secondary/20 px-2.5 py-1 rounded-lg transition-colors">
+                        <span class="material-symbols-outlined text-[14px]">content_copy</span>
+                        คัดลอกเวลา จันทร์ ไปทุกวัน
+                    </button>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="applyPreset('everyday')" class="px-3 py-1.5 rounded-lg bg-surface-container-highest hover:bg-surface-container border border-outline-variant/30 text-xs font-medium text-on-surface transition-colors">
+                        📅 เปิดทุกวัน 08:00 - 18:00
+                    </button>
+                    <button type="button" onclick="applyPreset('closedSunday')" class="px-3 py-1.5 rounded-lg bg-surface-container-highest hover:bg-surface-container border border-outline-variant/30 text-xs font-medium text-on-surface transition-colors">
+                        🚫 หยุดวันอาทิตย์
+                    </button>
+                    <button type="button" onclick="applyPreset('mallHours')" class="px-3 py-1.5 rounded-lg bg-surface-container-highest hover:bg-surface-container border border-outline-variant/30 text-xs font-medium text-on-surface transition-colors">
+                        🏬 เปิด 09:00 - 20:00
+                    </button>
+                </div>
+            </div>
+
+            <!-- Weekly Days List -->
+            <div class="glass-card rounded-2xl p-5 shadow-xl space-y-3 divide-y divide-outline-variant/20">
+                <div class="flex items-center justify-between pb-2">
+                    <h2 class="text-sm font-bold text-on-surface flex items-center gap-2">
+                        <span class="material-symbols-outlined text-secondary text-[20px]">calendar_view_week</span>
+                        ตารางเวลาเปิด-ปิดประจำสัปดาห์
+                    </h2>
+                    <span class="text-xs text-outline">เปิด/ปิดสวิตช์ตามวัน</span>
+                </div>
+
+                <!-- Monday -->
+                <div class="day-row flex items-center justify-between py-3.5 gap-2" data-day="mon">
+                    <div class="w-24 sm:w-28 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+                        <span class="text-sm font-bold text-on-surface">วันจันทร์</span>
+                    </div>
+                    <div class="flex-1 flex items-center justify-center gap-2 time-inputs">
+                        <input type="time" name="monOpen" value="08:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                        <span class="text-outline text-xs">-</span>
+                        <input type="time" name="monClose" value="18:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                    </div>
+                    <div class="w-12 flex justify-end">
+                        <div class="relative inline-block w-10 align-middle select-none">
+                            <input type="checkbox" name="monActive" id="monActive" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200" checked/>
+                            <label for="monActive" class="toggle-label block overflow-hidden h-5 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tuesday -->
+                <div class="day-row flex items-center justify-between py-3.5 gap-2" data-day="tue">
+                    <div class="w-24 sm:w-28 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+                        <span class="text-sm font-bold text-on-surface">วันอังคาร</span>
+                    </div>
+                    <div class="flex-1 flex items-center justify-center gap-2 time-inputs">
+                        <input type="time" name="tueOpen" value="08:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                        <span class="text-outline text-xs">-</span>
+                        <input type="time" name="tueClose" value="18:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                    </div>
+                    <div class="w-12 flex justify-end">
+                        <div class="relative inline-block w-10 align-middle select-none">
+                            <input type="checkbox" name="tueActive" id="tueActive" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200" checked/>
+                            <label for="tueActive" class="toggle-label block overflow-hidden h-5 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wednesday -->
+                <div class="day-row flex items-center justify-between py-3.5 gap-2" data-day="wed">
+                    <div class="w-24 sm:w-28 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+                        <span class="text-sm font-bold text-on-surface">วันพุธ</span>
+                    </div>
+                    <div class="flex-1 flex items-center justify-center gap-2 time-inputs">
+                        <input type="time" name="wedOpen" value="08:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                        <span class="text-outline text-xs">-</span>
+                        <input type="time" name="wedClose" value="18:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                    </div>
+                    <div class="w-12 flex justify-end">
+                        <div class="relative inline-block w-10 align-middle select-none">
+                            <input type="checkbox" name="wedActive" id="wedActive" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200" checked/>
+                            <label for="wedActive" class="toggle-label block overflow-hidden h-5 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thursday -->
+                <div class="day-row flex items-center justify-between py-3.5 gap-2" data-day="thu">
+                    <div class="w-24 sm:w-28 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+                        <span class="text-sm font-bold text-on-surface">วันพฤหัสบดี</span>
+                    </div>
+                    <div class="flex-1 flex items-center justify-center gap-2 time-inputs">
+                        <input type="time" name="thuOpen" value="08:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                        <span class="text-outline text-xs">-</span>
+                        <input type="time" name="thuClose" value="18:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                    </div>
+                    <div class="w-12 flex justify-end">
+                        <div class="relative inline-block w-10 align-middle select-none">
+                            <input type="checkbox" name="thuActive" id="thuActive" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200" checked/>
+                            <label for="thuActive" class="toggle-label block overflow-hidden h-5 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Friday -->
+                <div class="day-row flex items-center justify-between py-3.5 gap-2" data-day="fri">
+                    <div class="w-24 sm:w-28 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+                        <span class="text-sm font-bold text-on-surface">วันศุกร์</span>
+                    </div>
+                    <div class="flex-1 flex items-center justify-center gap-2 time-inputs">
+                        <input type="time" name="friOpen" value="08:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                        <span class="text-outline text-xs">-</span>
+                        <input type="time" name="friClose" value="18:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                    </div>
+                    <div class="w-12 flex justify-end">
+                        <div class="relative inline-block w-10 align-middle select-none">
+                            <input type="checkbox" name="friActive" id="friActive" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200" checked/>
+                            <label for="friActive" class="toggle-label block overflow-hidden h-5 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Saturday -->
+                <div class="day-row flex items-center justify-between py-3.5 gap-2" data-day="sat">
+                    <div class="w-24 sm:w-28 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+                        <span class="text-sm font-bold text-on-surface">วันเสาร์</span>
+                    </div>
+                    <div class="flex-1 flex items-center justify-center gap-2 time-inputs">
+                        <input type="time" name="satOpen" value="09:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                        <span class="text-outline text-xs">-</span>
+                        <input type="time" name="satClose" value="17:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                    </div>
+                    <div class="w-12 flex justify-end">
+                        <div class="relative inline-block w-10 align-middle select-none">
+                            <input type="checkbox" name="satActive" id="satActive" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200" checked/>
+                            <label for="satActive" class="toggle-label block overflow-hidden h-5 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sunday -->
+                <div class="day-row flex items-center justify-between py-3.5 gap-2 opacity-50" data-day="sun">
+                    <div class="w-24 sm:w-28 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-error"></span>
+                        <span class="text-sm font-bold text-on-surface">วันอาทิตย์</span>
+                    </div>
+                    <div class="flex-1 flex items-center justify-center gap-2 time-inputs pointer-events-none">
+                        <input type="time" name="sunOpen" value="09:00" disabled class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                        <span class="text-outline text-xs">-</span>
+                        <input type="time" name="sunClose" value="16:00" disabled class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                    </div>
+                    <div class="w-12 flex justify-end">
+                        <div class="relative inline-block w-10 align-middle select-none">
+                            <input type="checkbox" name="sunActive" id="sunActive" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200"/>
+                            <label for="sunActive" class="toggle-label block overflow-hidden h-5 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200"></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Desktop Bottom Actions -->
+            <div class="hidden md:flex justify-end gap-3 pt-2">
+                <a href="Owner%20Profile.html" class="px-6 py-3 rounded-xl bg-surface-container hover:bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm font-semibold transition-colors">
+                    ยกเลิก
+                </a>
+                <button type="submit" class="px-8 py-3 rounded-xl bg-secondary hover:bg-secondary-fixed text-on-secondary-container text-sm font-bold shadow-lg shadow-secondary/20 flex items-center gap-2 transition-all active:scale-95">
+                    <span class="material-symbols-outlined text-[20px]">save</span>
+                    บันทึกเวลาเปิดทำการ
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Column: Live Status & Special Holidays (lg:col-span-5) -->
+        <div class="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
+            
+            <!-- Live Status Card -->
+            <div id="liveStatusCard" class="glass-card rounded-2xl p-5 shadow-xl border border-secondary/30 relative overflow-hidden transition-all duration-300">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5" id="liveStatusHeader">
+                        <span class="material-symbols-outlined text-[16px]">sensors</span>
+                        <span>สถานะร้านขณะนี้ (Live Status)</span>
+                    </span>
+                    <span id="liveStatusIndicator" class="w-2.5 h-2.5 rounded-full bg-secondary animate-pulse"></span>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <div id="liveStatusIconBg" class="w-12 h-12 rounded-xl bg-secondary/20 border border-secondary/40 flex items-center justify-center text-secondary shrink-0 transition-colors">
+                        <span id="liveStatusIcon" class="material-symbols-outlined text-[28px]">storefront</span>
+                    </div>
+                    <div>
+                        <div id="liveStatusText" class="text-lg font-bold text-secondary flex items-center gap-1.5 transition-colors">
+                            กำลังเปิดให้บริการ
+                        </div>
+                        <div id="liveStatusDetail" class="text-xs text-on-surface-variant">
+                            วันนี้ปิดเวลา <strong>18:00 น.</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Special Holidays & Closures -->
+            <div class="glass-card rounded-2xl p-5 shadow-xl space-y-4">
+                <div class="flex items-center justify-between border-b border-outline-variant/20 pb-3">
+                    <div>
+                        <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
+                            <span class="material-symbols-outlined text-amber-400 text-[18px]">event_busy</span>
+                            วันหยุดพิเศษ / วันปิดร้านชั่วคราว
+                        </h3>
+                        <p class="text-[11px] text-outline">ระบบจะไม่เปิดให้ลูกค้ากดจองคิวในวันเหล่านี้</p>
+                    </div>
+                    <button type="button" id="openAddHolidayBtn" class="p-1.5 rounded-lg bg-surface-container-highest hover:bg-secondary/20 text-on-surface hover:text-secondary transition-colors" title="เพิ่มวันหยุด">
+                        <span class="material-symbols-outlined text-[20px]">add</span>
+                    </button>
+                </div>
+
+                <!-- Dynamic Holiday Items -->
+                <div id="holidayList" class="space-y-2.5">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+
+        </div>
+    </form>
+</main>
+
+<!-- Add Holiday Modal -->
+<div id="holidayModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-background/80 backdrop-blur-md px-4 opacity-0 transition-opacity duration-300">
+    <div class="glass-card w-full max-w-sm rounded-3xl p-5 shadow-2xl transform scale-95 transition-transform duration-300 border border-outline-variant/40" id="holidayModalContent">
+        <div class="flex justify-between items-center pb-3 border-b border-outline-variant/30 mb-3">
+            <h4 class="font-bold text-sm text-on-surface flex items-center gap-2">
+                <span class="material-symbols-outlined text-amber-400">calendar_add_on</span>
+                เพิ่มวันหยุดพิเศษ
+            </h4>
+            <button type="button" id="closeHolidayModalBtn" class="text-outline hover:text-error p-1">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="space-y-3">
+            <div class="space-y-1">
+                <label class="text-xs font-medium text-on-surface-variant">วันที่หยุด</label>
+                <input type="date" id="holidayDateInput" class="w-full h-10 px-3 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-xs focus:border-secondary focus:outline-none">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-medium text-on-surface-variant">เหตุผล / ชื่องาน</label>
+                <input type="text" id="holidayReasonInput" placeholder="เช่น ซ่อมระบบไฟ, วันหยุดชดเชย" class="w-full h-10 px-3 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-xs focus:border-secondary focus:outline-none">
+            </div>
+        </div>
+        <div class="flex gap-2 mt-5">
+            <button type="button" id="cancelHolidayModalBtn" class="flex-1 py-2 rounded-xl text-xs font-medium text-on-surface-variant hover:bg-surface-container-highest transition-colors">ยกเลิก</button>
+            <button type="button" id="confirmAddHolidayBtn" class="flex-1 py-2 rounded-xl text-xs font-bold bg-secondary text-on-secondary-container hover:bg-secondary-fixed transition-colors">เพิ่มวันหยุด</button>
+        </div>
+    </div>
+</div>
+
+<!-- Mobile Bottom Fixed Save Bar -->
+<div class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-background/90 backdrop-blur-xl border-t border-outline-variant/30 py-3 px-4 flex gap-3 shadow-[0_-4px_25px_rgba(0,0,0,0.6)]">
+    <a href="Owner%20Profile.html" class="w-1/3 h-12 bg-surface-container border border-outline-variant/30 text-on-surface font-semibold rounded-xl flex items-center justify-center text-sm">
+        ยกเลิก
+    </a>
+    <button type="submit" form="hoursForm" class="flex-1 h-12 bg-secondary text-on-secondary-container font-bold rounded-xl hover:bg-secondary/90 transition-all active:scale-[0.98] shadow-lg shadow-secondary/25 flex items-center justify-center gap-2 text-sm">
+        <span class="material-symbols-outlined text-[20px]">save</span>
+        บันทึกเวลา
+    </button>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-24 md:bottom-8 left-1/2 transform -translate-x-1/2 bg-secondary-container text-on-secondary-container px-6 py-3 rounded-full shadow-2xl border border-secondary/40 flex items-center gap-2 z-50 pointer-events-none">
+    <span class="material-symbols-outlined text-secondary-fixed">check_circle</span>
+    <span class="font-bold text-sm">อัปเดตเวลาเปิดทำการสำเร็จแล้ว!</span>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('hoursForm');
+        const toast = document.getElementById('toast');
+        const dayRows = document.querySelectorAll('.day-row');
+        const copyBtn = document.getElementById('copyHoursBtn');
+
+        const dayMap = { 'sun': 0, 'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6 };
+        const revDayMap = { 0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat' };
+        const thaiDayNames = { 0: 'วันอาทิตย์', 1: 'วันจันทร์', 2: 'วันอังคาร', 3: 'วันพุธ', 4: 'วันพฤหัสบดี', 5: 'วันศุกร์', 6: 'วันเสาร์' };
+        
+        let currentShopId = localStorage.getItem('currentShopId') || null;
+        let specialHolidays = [];
+
+        // 1. Toggle Visual State and Real-Time Live Status Reaction
+        dayRows.forEach(row => {
+            const toggle = row.querySelector('.toggle-checkbox');
+            const timeInputs = row.querySelector('.time-inputs');
+            const fields = row.querySelectorAll('.time-field');
+
+            const updateState = () => {
+                if (toggle.checked) {
+                    row.classList.remove('opacity-50');
+                    timeInputs.classList.remove('pointer-events-none');
+                    fields.forEach(f => f.disabled = false);
+                } else {
+                    row.classList.add('opacity-50');
+                    timeInputs.classList.add('pointer-events-none');
+                    fields.forEach(f => f.disabled = true);
+                }
+                updateLiveStatus();
+            };
+            toggle.addEventListener('change', updateState);
+            fields.forEach(f => f.addEventListener('input', updateLiveStatus));
+            fields.forEach(f => f.addEventListener('change', updateLiveStatus));
+        });
+
+        // 2. Special Holidays Management
+        function formatThaiDate(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const day = parseInt(parts[2], 10);
+                const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+                const thaiYear = year > 2500 ? year : year + 543;
+                return `${day} ${thaiMonths[month]} ${thaiYear}`;
+            }
+            return dateStr;
+        }
+
+        function loadSpecialHolidays() {
+            try {
+                const stored = localStorage.getItem('ownerSpecialHolidays');
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    if (Array.isArray(parsed)) {
+                        specialHolidays = parsed;
+                    }
+                }
+            } catch (e) {
+                console.warn('Notice loading ownerSpecialHolidays:', e);
+                specialHolidays = [];
+            }
+            renderHolidays();
+        }
+
+        function renderHolidays() {
+            const holidayList = document.getElementById('holidayList');
+            if (!holidayList) return;
+
+            if (!specialHolidays || specialHolidays.length === 0) {
+                holidayList.innerHTML = `
+                    <div class="p-6 text-center rounded-xl bg-surface-container-low/50 border border-outline-variant/20 flex flex-col items-center">
+                        <span class="material-symbols-outlined text-outline/60 text-[32px] mb-1">event_available</span>
+                        <p class="text-xs text-outline font-medium">ไม่มีวันหยุดพิเศษที่กำลังจะมาถึง</p>
+                        <p class="text-[11px] text-outline/70 mt-0.5">กดปุ่ม + ด้านบนเพื่อเพิ่มวันหยุดหรือวันปิดร้านชั่วคราว</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort by date ascending
+            specialHolidays.sort((a, b) => (a.date > b.date ? 1 : -1));
+
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const todayStr = `${yyyy}-${mm}-${dd}`;
+
+            holidayList.innerHTML = specialHolidays.map((h, index) => {
+                const isToday = h.date === todayStr;
+                const isPast = h.date < todayStr;
+                const tagBadge = isToday
+                    ? `<span class="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold text-[10px] border border-amber-500/30">วันนี้</span>`
+                    : (isPast ? `<span class="px-2 py-0.5 rounded-md bg-surface-container-highest text-outline text-[10px]">ผ่านไปแล้ว</span>` : '');
+
+                const itemKey = h.id || `hol_${index}`;
+                return `
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs transition-colors hover:border-outline-variant/60 group">
+                        <div class="flex items-center gap-2.5">
+                            <span class="material-symbols-outlined text-amber-400 text-[20px] shrink-0">event_busy</span>
+                            <div>
+                                <div class="font-bold text-on-surface flex items-center gap-2">
+                                    <span>${formatThaiDate(h.date)}</span>
+                                    ${tagBadge}
+                                </div>
+                                <div class="text-outline text-[11px] mt-0.5">${h.reason || 'วันหยุดพิเศษ'}</div>
+                            </div>
+                        </div>
+                        <button type="button" class="delete-holiday-btn text-outline hover:text-error p-1.5 rounded-lg hover:bg-error/10 transition-colors" data-id="${itemKey}" title="ลบวันหยุดนี้">
+                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Delete holiday listener via delegation
+        document.getElementById('holidayList')?.addEventListener('click', (e) => {
+            const delBtn = e.target.closest('.delete-holiday-btn');
+            if (!delBtn) return;
+            const targetId = delBtn.getAttribute('data-id');
+            specialHolidays = specialHolidays.filter((h, idx) => (h.id || `hol_${idx}`) !== targetId);
+            localStorage.setItem('ownerSpecialHolidays', JSON.stringify(specialHolidays));
+            renderHolidays();
+            updateLiveStatus();
+        });
+
+        // 3. Dynamic Real-Time Live Status Calculation
+        function updateLiveStatus() {
+            const card = document.getElementById('liveStatusCard');
+            const indicator = document.getElementById('liveStatusIndicator');
+            const iconBg = document.getElementById('liveStatusIconBg');
+            const icon = document.getElementById('liveStatusIcon');
+            const text = document.getElementById('liveStatusText');
+            const detail = document.getElementById('liveStatusDetail');
+            if (!card || !indicator || !iconBg || !icon || !text || !detail) return;
+
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const todayStr = `${yyyy}-${mm}-${dd}`;
+            const todayDayOfWeek = now.getDay();
+            const currentHours = String(now.getHours()).padStart(2, '0');
+            const currentMinutes = String(now.getMinutes()).padStart(2, '0');
+            const currentTimeStr = `${currentHours}:${currentMinutes}`;
+
+            // Check if today is a Special Holiday
+            const holidayToday = specialHolidays.find(h => h.date === todayStr);
+            if (holidayToday) {
+                card.className = 'glass-card rounded-2xl p-5 shadow-xl border border-amber-500/40 bg-amber-500/5 relative overflow-hidden transition-all duration-300';
+                indicator.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
+                iconBg.className = 'w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 transition-colors';
+                icon.textContent = 'event_busy';
+                text.className = 'text-lg font-bold text-amber-400 flex items-center gap-1.5 transition-colors';
+                text.textContent = 'ปิดทำการ (วันหยุดพิเศษ)';
+                detail.innerHTML = `วันนี้ตรงกับ: <strong class="text-on-surface font-semibold">${holidayToday.reason || 'วันหยุดร้าน'}</strong>`;
+                return;
+            }
+
+            // Check regular day schedule
+            const dayKey = revDayMap[todayDayOfWeek];
+            const row = document.querySelector(`.day-row[data-day="${dayKey}"]`);
+            if (!row) return;
+
+            const toggle = row.querySelector('.toggle-checkbox');
+            const openInput = row.querySelector(`input[name="${dayKey}Open"]`);
+            const closeInput = row.querySelector(`input[name="${dayKey}Close"]`);
+
+            const isOpenToday = toggle ? toggle.checked : false;
+            const openTime = openInput?.value ? openInput.value.slice(0, 5) : '08:00';
+            const closeTime = closeInput?.value ? closeInput.value.slice(0, 5) : '18:00';
+
+            if (!isOpenToday) {
+                card.className = 'glass-card rounded-2xl p-5 shadow-xl border border-error/40 bg-error/5 relative overflow-hidden transition-all duration-300';
+                indicator.className = 'w-2.5 h-2.5 rounded-full bg-error';
+                iconBg.className = 'w-12 h-12 rounded-xl bg-error/20 border border-error/40 flex items-center justify-center text-error shrink-0 transition-colors';
+                icon.textContent = 'store';
+                text.className = 'text-lg font-bold text-error flex items-center gap-1.5 transition-colors';
+                text.textContent = 'ปิดทำการวันนี้';
+                detail.innerHTML = `ร้านหยุดให้บริการทุก<strong class="text-on-surface font-semibold">${thaiDayNames[todayDayOfWeek]}</strong>`;
+                return;
+            }
+
+            if (currentTimeStr < openTime) {
+                card.className = 'glass-card rounded-2xl p-5 shadow-xl border border-primary/40 bg-primary/5 relative overflow-hidden transition-all duration-300';
+                indicator.className = 'w-2.5 h-2.5 rounded-full bg-primary';
+                iconBg.className = 'w-12 h-12 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary shrink-0 transition-colors';
+                icon.textContent = 'schedule';
+                text.className = 'text-lg font-bold text-primary flex items-center gap-1.5 transition-colors';
+                text.textContent = 'ยังไม่ถึงเวลาเปิดทำการ';
+                detail.innerHTML = `จะเปิดให้บริการเวลา <strong class="text-on-surface font-semibold">${openTime} น.</strong>`;
+            } else if (currentTimeStr >= openTime && currentTimeStr < closeTime) {
+                card.className = 'glass-card rounded-2xl p-5 shadow-xl border border-secondary/40 bg-secondary/5 relative overflow-hidden transition-all duration-300';
+                indicator.className = 'w-2.5 h-2.5 rounded-full bg-secondary animate-pulse';
+                iconBg.className = 'w-12 h-12 rounded-xl bg-secondary/20 border border-secondary/40 flex items-center justify-center text-secondary shrink-0 transition-colors';
+                icon.textContent = 'storefront';
+                text.className = 'text-lg font-bold text-secondary flex items-center gap-1.5 transition-colors';
+                text.textContent = 'กำลังเปิดให้บริการ';
+                detail.innerHTML = `วันนี้เปิดถึงเวลา <strong class="text-on-surface font-semibold">${closeTime} น.</strong>`;
+            } else {
+                card.className = 'glass-card rounded-2xl p-5 shadow-xl border border-error/40 bg-error/5 relative overflow-hidden transition-all duration-300';
+                indicator.className = 'w-2.5 h-2.5 rounded-full bg-error';
+                iconBg.className = 'w-12 h-12 rounded-xl bg-error/20 border border-error/40 flex items-center justify-center text-error shrink-0 transition-colors';
+                icon.textContent = 'lock_clock';
+                text.className = 'text-lg font-bold text-error flex items-center gap-1.5 transition-colors';
+                text.textContent = 'ปิดทำการแล้วสำหรับวันนี้';
+                detail.innerHTML = `ปิดให้บริการแล้ว (ปิดเมื่อเวลา <strong class="text-on-surface font-semibold">${closeTime} น.</strong>)`;
+            }
+        }
+
+        // 4. Apply Stored Data to Row
+        function applyHoursRow(dayNum, openTime, closeTime, isClosed) {
+            const dayKey = revDayMap[dayNum];
+            if (!dayKey) return;
+            const row = document.querySelector(`.day-row[data-day="${dayKey}"]`);
+            if (!row) return;
+
+            const toggle = row.querySelector('.toggle-checkbox');
+            const openInput = row.querySelector(`input[name="${dayKey}Open"]`);
+            const closeInput = row.querySelector(`input[name="${dayKey}Close"]`);
+
+            if (toggle) toggle.checked = !isClosed;
+            if (openInput && openTime) openInput.value = openTime.substring(0, 5);
+            if (closeInput && closeTime) closeInput.value = closeTime.substring(0, 5);
+            if (toggle) toggle.dispatchEvent(new Event('change'));
+        }
+
+        // Cloud Sync Status Controller
+        function setCloudSyncStatus(status, customText) {
+            const badge = document.getElementById('cloud-sync-badge');
+            if (!badge) return;
+            badge.classList.remove('opacity-0', 'text-primary', 'text-secondary', 'text-amber-400');
+
+            if (status === 'syncing') {
+                badge.classList.add('text-primary');
+                badge.innerHTML = `
+                    <span class="material-symbols-outlined text-[14px] animate-spin text-primary">sync</span>
+                    <span id="cloud-sync-text">${customText || 'กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...'}</span>
+                `;
+            } else if (status === 'synced') {
+                badge.classList.add('text-secondary');
+                badge.innerHTML = `
+                    <span class="material-symbols-outlined text-[14px] text-secondary">cloud_done</span>
+                    <span id="cloud-sync-text">${customText || 'ข้อมูลเป็นปัจจุบันแล้ว'}</span>
+                `;
+                setTimeout(() => {
+                    badge.classList.add('opacity-0');
+                }, 1800);
+            } else if (status === 'offline') {
+                badge.classList.add('text-amber-400');
+                badge.innerHTML = `
+                    <span class="material-symbols-outlined text-[14px] text-amber-400">cloud_off</span>
+                    <span id="cloud-sync-text">${customText || 'แสดงผลจากข้อมูลในเครื่อง (ออฟไลน์)'}</span>
+                `;
+                setTimeout(() => {
+                    badge.classList.add('opacity-0');
+                }, 2500);
+            }
+        }
+
+        // 5. Dual-Layer Loading: Cache-First (0ms Instant Display) + Fast-Track Background Sync
+        async function loadOperatingHours() {
+            // Layer 1: INSTANT 0ms RENDER from LocalStorage (Stale-While-Revalidate)
+            let hasCache = false;
+            try {
+                const localHours = localStorage.getItem('ownerOperatingHours');
+                if (localHours) {
+                    const parsed = JSON.parse(localHours);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        parsed.forEach(h => {
+                            applyHoursRow(h.day_of_week, h.open_time, h.close_time, h.is_closed);
+                        });
+                        hasCache = true;
+                    }
+                }
+            } catch (err) {
+                console.warn('Local operating hours load notice:', err);
+            }
+
+            // Immediately display special holidays and live status (0ms)
+            loadSpecialHolidays();
+            updateLiveStatus();
+
+            setCloudSyncStatus('syncing', hasCache ? 'กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...' : 'กำลังโหลดเวลาเปิด-ปิด...');
+
+            // Layer 2: Fast-Track Background Sync with Supabase (Parallel Execution)
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (!client) {
+                    setCloudSyncStatus(hasCache ? 'offline' : 'offline', 'ระบบออฟไลน์ (ใช้ข้อมูลในเครื่อง)');
+                    return;
+                }
+
+                const savedShopId = localStorage.getItem('currentShopId');
+                const fallbackUserId = localStorage.getItem('lastLoggedInUserId');
+
+                // FAST-TRACK: If shop ID is cached, query operating hours immediately in parallel!
+                let fastHoursPromise = null;
+                if (savedShopId && savedShopId.length > 20) {
+                    fastHoursPromise = client
+                        .from('shop_operating_hours')
+                        .select('*')
+                        .eq('shop_id', savedShopId)
+                        .order('day_of_week', { ascending: true });
+                }
+
+                // In parallel, retrieve session
+                const sessionPromise = client.auth ? client.auth.getSession() : Promise.resolve({ data: null });
+
+                const [hoursRes, sessRes] = await Promise.all([
+                    fastHoursPromise || Promise.resolve(null),
+                    sessionPromise
+                ]);
+
+                const user = sessRes?.data?.session?.user;
+                const effectiveUserId = user?.id || fallbackUserId;
+
+                // Cloud hydration: Sync special holidays from user_metadata if local is empty
+                const cloudHolidays = user?.user_metadata?.special_holidays;
+                if (Array.isArray(cloudHolidays) && cloudHolidays.length > 0 && (!specialHolidays || specialHolidays.length === 0)) {
+                    specialHolidays = cloudHolidays;
+                    localStorage.setItem('ownerSpecialHolidays', JSON.stringify(specialHolidays));
+                    renderHolidays();
+                    updateLiveStatus();
+                }
+
+                // Non-blocking Role Guard check in background
+                if (effectiveUserId && client) {
+                    client.from('profiles').select('role').eq('id', effectiveUserId).maybeSingle().then(({ data: prof }) => {
+                        if (prof?.role === 'CUSTOMER' || user?.user_metadata?.role === 'CUSTOMER') {
+                            const mainContainer = document.querySelector('main');
+                            if (mainContainer) {
+                                mainContainer.innerHTML = `
+                                    <div class="max-w-md mx-auto my-16 p-8 bg-surface-container rounded-2xl border border-outline-variant/40 shadow-xl text-center space-y-4">
+                                        <div class="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto">
+                                            <span class="material-symbols-outlined text-[36px]">switch_account</span>
+                                        </div>
+                                        <h3 class="text-xl font-bold text-on-surface">คุณกำลังเข้าใช้งานในฐานะลูกค้า</h3>
+                                        <p class="text-sm text-outline">หน้านี้สำหรับเจ้าของร้านคาร์แคร์เท่านั้น หากต้องการจัดการเวลาเปิด-ปิด กรุณาสลับเข้าสู่ระบบด้วยบัญชีเจ้าของร้าน</p>
+                                        <div class="pt-2 flex flex-col gap-2.5">
+                                            <a href="../auth/login.html" class="w-full py-3 bg-secondary hover:brightness-110 text-[#0b1326] font-bold rounded-xl shadow-md transition-all active:scale-95 text-sm">
+                                                เข้าสู่ระบบด้วยบัญชีเจ้าของร้าน
+                                            </a>
+                                            <a href="../customer/discovery.html" class="w-full py-2.5 bg-surface-variant hover:bg-surface-container-highest text-on-surface font-semibold rounded-xl border border-outline-variant/40 transition-all text-xs">
+                                                กลับสู่หน้าหลักลูกค้า
+                                            </a>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        }
+                    }).catch(() => {});
+                }
+
+                // If fast-track returned hours directly from Supabase, apply and cache immediately!
+                if (hoursRes && !hoursRes.error && hoursRes.data && hoursRes.data.length > 0) {
+                    currentShopId = savedShopId;
+                    hoursRes.data.forEach(h => {
+                        applyHoursRow(h.day_of_week, h.open_time, h.close_time, h.is_closed);
+                    });
+                    localStorage.setItem('ownerOperatingHours', JSON.stringify(hoursRes.data));
+                    updateLiveStatus();
+                    setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
+                    return;
+                }
+
+                // Fallback: If no savedShopId yet, resolve shop by effectiveUserId or ownerShopName
+                let shop = null;
+                if (effectiveUserId) {
+                    const { data } = await client.from('shops').select('id, name').eq('owner_id', effectiveUserId).maybeSingle();
+                    shop = data;
+                }
+
+                if (!shop && localStorage.getItem('ownerShopName')) {
+                    const { data } = await client.from('shops').select('id, name').eq('name', localStorage.getItem('ownerShopName')).maybeSingle();
+                    shop = data;
+                }
+
+                if (shop?.id) {
+                    currentShopId = shop.id;
+                    localStorage.setItem('currentShopId', shop.id);
+                    if (shop.name) localStorage.setItem('ownerShopName', shop.name);
+
+                    let { data: hours, error } = await client
+                        .from('shop_operating_hours')
+                        .select('*')
+                        .eq('shop_id', shop.id)
+                        .order('day_of_week', { ascending: true });
+
+                    // Self-healing: If DB has shop record but no hours configured, seed custom or standard hours
+                    if (!error && (!hours || hours.length === 0)) {
+                        let hoursToSeed = null;
+                        try {
+                            const local = JSON.parse(localStorage.getItem('ownerOperatingHours') || 'null');
+                            if (Array.isArray(local) && local.length > 0) {
+                                hoursToSeed = local.map(h => ({
+                                    shop_id: shop.id,
+                                    day_of_week: h.day_of_week,
+                                    open_time: h.open_time || '08:00:00',
+                                    close_time: h.close_time || '18:00:00',
+                                    is_closed: !!h.is_closed
+                                }));
+                            }
+                        } catch(_) {}
+
+                        const defaultHours = hoursToSeed || [
+                            { shop_id: shop.id, day_of_week: 1, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                            { shop_id: shop.id, day_of_week: 2, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                            { shop_id: shop.id, day_of_week: 3, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                            { shop_id: shop.id, day_of_week: 4, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                            { shop_id: shop.id, day_of_week: 5, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                            { shop_id: shop.id, day_of_week: 6, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                            { shop_id: shop.id, day_of_week: 0, open_time: '08:00:00', close_time: '18:00:00', is_closed: true }
+                        ];
+                        try {
+                            const { data: seededHours } = await client.from('shop_operating_hours').upsert(defaultHours, { onConflict: 'shop_id,day_of_week' }).select();
+                            hours = seededHours || defaultHours;
+                        } catch(seedErr) {
+                            console.warn('Seed operating hours notice:', seedErr);
+                        }
+                    }
+
+                    if (hours && hours.length > 0) {
+                        hours.forEach(h => {
+                            applyHoursRow(h.day_of_week, h.open_time, h.close_time, h.is_closed);
+                        });
+                        localStorage.setItem('ownerOperatingHours', JSON.stringify(hours));
+                        updateLiveStatus();
+                    }
+                    setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
+                } else {
+                    currentShopId = localStorage.getItem('currentShopId') || null;
+                    setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
+                }
+            } catch (err) {
+                console.warn('Supabase hours load notice:', err);
+                setCloudSyncStatus('offline', 'แสดงผลจากข้อมูลในเครื่อง (ออฟไลน์)');
+            }
+        }
+
+        loadOperatingHours();
+
+        // 6. Copy Monday to other days
+        copyBtn?.addEventListener('click', () => {
+            const monRow = document.querySelector('.day-row[data-day="mon"]');
+            if (!monRow) return;
+            const monOpen = monRow.querySelector('input[name="monOpen"]').value;
+            const monClose = monRow.querySelector('input[name="monClose"]').value;
+            const monActive = monRow.querySelector('.toggle-checkbox').checked;
+
+            dayRows.forEach(row => {
+                if (row.getAttribute('data-day') === 'mon') return;
+                const toggle = row.querySelector('.toggle-checkbox');
+                const fields = row.querySelectorAll('.time-field');
+
+                toggle.checked = monActive;
+                fields[0].value = monOpen;
+                fields[1].value = monClose;
+                toggle.dispatchEvent(new Event('change'));
+            });
+
+            updateLiveStatus();
+
+            const originalHtml = copyBtn.innerHTML;
+            copyBtn.innerHTML = `<span class="material-symbols-outlined text-[14px]">check</span> คัดลอกสำเร็จ!`;
+            setTimeout(() => { copyBtn.innerHTML = originalHtml; }, 2000);
+        });
+
+        // 7. Holiday Modal Handling
+        const holidayModal = document.getElementById('holidayModal');
+        const holidayModalContent = document.getElementById('holidayModalContent');
+        const openAddHolidayBtn = document.getElementById('openAddHolidayBtn');
+        const closeHolidayModalBtn = document.getElementById('closeHolidayModalBtn');
+        const cancelHolidayModalBtn = document.getElementById('cancelHolidayModalBtn');
+        const confirmAddHolidayBtn = document.getElementById('confirmAddHolidayBtn');
+        const holidayDateInput = document.getElementById('holidayDateInput');
+        const holidayReasonInput = document.getElementById('holidayReasonInput');
+
+        // Set default minimum date to today
+        if (holidayDateInput) {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            holidayDateInput.value = todayStr;
+        }
+
+        const showHolidayModal = () => {
+            if (!holidayModal || !holidayModalContent) return;
+            holidayModal.classList.remove('hidden');
+            setTimeout(() => {
+                holidayModal.classList.remove('opacity-0');
+                holidayModalContent.classList.remove('scale-95');
+            }, 10);
+        };
+
+        const hideHolidayModal = () => {
+            if (!holidayModal || !holidayModalContent) return;
+            holidayModal.classList.add('opacity-0');
+            holidayModalContent.classList.add('scale-95');
+            setTimeout(() => { holidayModal.classList.add('hidden'); }, 300);
+        };
+
+        openAddHolidayBtn?.addEventListener('click', showHolidayModal);
+        closeHolidayModalBtn?.addEventListener('click', hideHolidayModal);
+        cancelHolidayModalBtn?.addEventListener('click', hideHolidayModal);
+
+        confirmAddHolidayBtn?.addEventListener('click', () => {
+            const date = holidayDateInput?.value;
+            const reason = holidayReasonInput?.value.trim() || 'วันหยุดพิเศษ';
+
+            if (!date) {
+                alert('กรุณาเลือกวันที่');
+                return;
+            }
+
+            // Check if already exists
+            const existingIdx = specialHolidays.findIndex(h => h.date === date);
+            if (existingIdx >= 0) {
+                specialHolidays[existingIdx].reason = reason;
+            } else {
+                specialHolidays.push({
+                    id: 'hol_' + Date.now(),
+                    date: date,
+                    reason: reason
+                });
+            }
+
+            localStorage.setItem('ownerSpecialHolidays', JSON.stringify(specialHolidays));
+            renderHolidays();
+            updateLiveStatus();
+            hideHolidayModal();
+            if (holidayReasonInput) holidayReasonInput.value = '';
+        });
+
+        // 8. Dual-Layer Form Submit (Supabase + LocalStorage)
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const saveBtns = [
+                document.querySelector('header button[type="submit"]'),
+                document.querySelector('header button[form="hoursForm"]'),
+                document.querySelector('div.hidden.md\\:flex button[type="submit"]'),
+                document.querySelector('div.md\\:hidden button[form="hoursForm"]'),
+                document.querySelector('div.md\\:hidden button[type="submit"]')
+            ].filter(Boolean);
+
+            saveBtns.forEach(btn => {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> กำลังบันทึก...';
+            });
+
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+
+            // Dynamically ensure target shop id is resolved
+            let targetShopId = currentShopId || localStorage.getItem('currentShopId');
+            if ((!targetShopId || targetShopId === 'local-shop-default') && client) {
+                try {
+                    const sessRes = client.auth ? await client.auth.getSession() : null;
+                    const uid = sessRes?.data?.session?.user?.id || localStorage.getItem('lastLoggedInUserId');
+                    if (uid) {
+                        const { data: s } = await client.from('shops').select('id').eq('owner_id', uid).maybeSingle();
+                        if (s?.id) {
+                            targetShopId = s.id;
+                            currentShopId = s.id;
+                            localStorage.setItem('currentShopId', s.id);
+                        }
+                    }
+                    if (!targetShopId && localStorage.getItem('ownerShopName')) {
+                        const { data: s } = await client.from('shops').select('id').eq('name', localStorage.getItem('ownerShopName')).maybeSingle();
+                        if (s?.id) {
+                            targetShopId = s.id;
+                            currentShopId = s.id;
+                            localStorage.setItem('currentShopId', s.id);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Resolve shop error before save:', e);
+                }
+            }
+
+            const effectiveShopId = targetShopId || 'local-shop-default';
+
+            const hoursToSave = [];
+            dayRows.forEach(row => {
+                const dayKey = row.getAttribute('data-day');
+                if (dayKey in dayMap) {
+                    const dayNum = dayMap[dayKey];
+                    const toggle = row.querySelector('.toggle-checkbox');
+                    const openInput = row.querySelector(`input[name="${dayKey}Open"]`);
+                    const closeInput = row.querySelector(`input[name="${dayKey}Close"]`);
+
+                    const openVal = openInput?.value ? `${openInput.value.slice(0, 5)}:00` : '08:00:00';
+                    const closeVal = closeInput?.value ? `${closeInput.value.slice(0, 5)}:00` : '18:00:00';
+                    const isClosed = !toggle?.checked;
+
+                    hoursToSave.push({
+                        shop_id: effectiveShopId,
+                        day_of_week: dayNum,
+                        open_time: openVal,
+                        close_time: closeVal,
+                        is_closed: isClosed
+                    });
+                }
+            });
+
+            // 1. Persist to LocalStorage cache
+            try {
+                localStorage.setItem('ownerOperatingHours', JSON.stringify(hoursToSave));
+                localStorage.setItem('ownerSpecialHolidays', JSON.stringify(specialHolidays));
+                window.dispatchEvent(new Event('storage'));
+            } catch (err) {
+                console.warn('LocalStorage save error:', err);
+            }
+
+            // 2. Persist to Supabase if available
+            let supabaseSuccess = false;
+            let supabaseErrorMessage = null;
+
+            if (client && targetShopId && targetShopId !== 'local-shop-default') {
+                try {
+                    const toUpsert = hoursToSave.map(h => ({
+                        shop_id: targetShopId,
+                        day_of_week: h.day_of_week,
+                        open_time: h.open_time,
+                        close_time: h.close_time,
+                        is_closed: h.is_closed
+                    }));
+
+                    const { data: savedRows, error: upsertErr } = await client
+                        .from('shop_operating_hours')
+                        .upsert(toUpsert, { onConflict: 'shop_id,day_of_week' })
+                        .select();
+
+                    if (upsertErr) {
+                        console.error('Supabase operating hours upsert error:', upsertErr);
+                        // Fallback: Delete then insert
+                        const { error: delErr } = await client.from('shop_operating_hours').delete().eq('shop_id', targetShopId);
+                        if (!delErr) {
+                            const { error: insErr } = await client.from('shop_operating_hours').insert(toUpsert);
+                            if (insErr) {
+                                supabaseErrorMessage = insErr.message;
+                            } else {
+                                supabaseSuccess = true;
+                            }
+                        } else {
+                            supabaseErrorMessage = delErr.message;
+                        }
+                    } else {
+                        supabaseSuccess = true;
+                        if (savedRows && savedRows.length > 0) {
+                            localStorage.setItem('ownerOperatingHours', JSON.stringify(savedRows));
+                        }
+                    }
+
+                    // Also save special holidays to user metadata on Supabase
+                    if (client.auth) {
+                        try {
+                            await client.auth.updateUser({
+                                data: { special_holidays: specialHolidays }
+                            });
+                        } catch (_) {}
+                    }
+                } catch(err) {
+                    console.error('Save operating hours error:', err);
+                    supabaseErrorMessage = err.message;
+                }
+            }
+
+            updateLiveStatus();
+
+            const toastText = toast?.querySelector('.font-bold');
+            if (toastText) {
+                if (supabaseSuccess) {
+                    toastText.textContent = 'บันทึกเวลาเปิดทำการลงฐานข้อมูลสำเร็จแล้ว!';
+                } else if (supabaseErrorMessage) {
+                    toastText.textContent = 'บันทึกในเครื่องแล้ว (คลาวด์: ' + supabaseErrorMessage + ')';
+                } else {
+                    toastText.textContent = 'อัปเดตเวลาเปิดทำการสำเร็จแล้ว!';
+                }
+            }
+
+            toast?.classList.add('show');
+            setTimeout(() => {
+                toast?.classList.remove('show');
+                window.location.href = 'Owner%20Profile.html';
+            }, 1000);
+        });
+
+        // 9. Periodic refresh for Live Status every 30 seconds
+        setInterval(updateLiveStatus, 30000);
+    });
+
+    // Preset Functions
+    function applyPreset(type) {
+        const dayRows = document.querySelectorAll('.day-row');
+        dayRows.forEach(row => {
+            const day = row.getAttribute('data-day');
+            const toggle = row.querySelector('.toggle-checkbox');
+            const openField = row.querySelectorAll('.time-field')[0];
+            const closeField = row.querySelectorAll('.time-field')[1];
+
+            if (type === 'everyday') {
+                toggle.checked = true;
+                openField.value = '08:00';
+                closeField.value = '18:00';
+            } else if (type === 'closedSunday') {
+                if (day === 'sun') {
+                    toggle.checked = false;
+                } else {
+                    toggle.checked = true;
+                    openField.value = '08:00';
+                    closeField.value = '18:00';
+                }
+            } else if (type === 'mallHours') {
+                toggle.checked = true;
+                openField.value = '09:00';
+                closeField.value = '20:00';
+            }
+            toggle.dispatchEvent(new Event('change'));
+        });
+    }
+</script>
+
+</body>
+</html>

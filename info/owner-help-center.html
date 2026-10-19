@@ -1,0 +1,238 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BestCarWash - ศูนย์ช่วยเหลือสำหรับเจ้าของร้าน</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              "spacing": {
+                      "margin-mobile": "1rem",
+                      "gutter": "1rem",
+                      "touch-target-min": "3rem",
+                      "stack-sm": "0.5rem",
+                      "stack-md": "1rem",
+                      "stack-lg": "1.5rem"
+              },
+              "fontFamily": {
+                      "sans": ["Prompt", "Inter", "sans-serif"]
+              },
+            }
+          }
+        }
+      </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Accordion transition */
+        .accordion-content {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .accordion-content[aria-hidden="false"] {
+            grid-template-rows: 1fr;
+        }
+        .accordion-inner {
+            overflow: hidden;
+        }
+        
+        /* Arrow rotation */
+        .accordion-button[aria-expanded="true"] .chevron-icon {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body class="antialiased flex flex-col min-h-screen bg-background text-on-background pb-12">
+
+<!-- Top Header (App Bar) -->
+<header class="sticky top-0 w-full z-50 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md">
+    <div class="w-full px-4 md:px-8 h-20 flex items-center justify-between">
+        <!-- Left: Back Button & Page Identification -->
+        <div class="flex items-center gap-3.5">
+            <a href="../owner/Owner%20Profile.html" class="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/40 transition-all active:scale-95 group" title="กลับไปโปรไฟล์">
+                <span class="material-symbols-outlined text-[22px] md:text-[24px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+            </a>
+            <h1 class="text-lg md:text-xl font-bold text-on-surface tracking-tight flex items-center gap-2.5">
+                <span class="material-symbols-outlined text-secondary text-[26px]">help_center</span>
+                <span>ศูนย์ช่วยเหลือพาร์ทเนอร์</span>
+            </h1>
+        </div>
+
+        <!-- Right: Action Buttons -->
+        <div class="flex items-center gap-2.5 sm:gap-3.5">
+            <a href="https://line.me" target="_blank" class="h-11 px-3.5 sm:px-5 rounded-xl bg-surface-container hover:bg-surface-variant border border-outline-variant/40 text-on-surface text-sm font-semibold flex items-center gap-2 transition-all hover:border-secondary/40 active:scale-95" title="ติดต่อฝ่ายบริการลูกค้า">
+                <span class="material-symbols-outlined text-[20px] text-secondary">support_agent</span>
+                <span class="hidden sm:inline">ติดต่อเจ้าหน้าที่</span>
+            </a>
+        </div>
+    </div>
+</header>
+
+<main class="w-full max-w-3xl px-4 pt-8 pb-24 md:pt-10 mx-auto space-y-6 flex-1">
+    
+    <!-- Search Bar -->
+    <div class="relative w-full">
+        <input type="text" placeholder="ค้นหาคำถามหรือหัวข้อที่ต้องการความช่วยเหลือ..." class="w-full h-14 pl-12 pr-4 bg-surface-container/80 backdrop-blur-md border border-outline-variant/30 rounded-2xl text-on-surface placeholder-outline-variant focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors shadow-lg">
+        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[24px]">search</span>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="space-y-4">
+        <h2 class="text-sm font-bold text-secondary flex items-center gap-2 px-1">
+            <span class="material-symbols-outlined text-[18px]">quick_reference_all</span> คำถามที่พบบ่อยสำหรับเจ้าของร้าน
+        </h2>
+        
+        <div class="space-y-3">
+            
+            <!-- FAQ Item 1 -->
+            <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden group hover:border-secondary/30 transition-colors">
+                <button class="accordion-button w-full flex items-center justify-between p-4 text-left focus:outline-none" aria-expanded="false">
+                    <span class="text-sm font-semibold text-on-surface pr-4">การเบิกจ่ายใช้เวลาดำเนินการนานแค่ไหน?</span>
+                    <span class="material-symbols-outlined text-outline-variant chevron-icon transition-transform duration-300">expand_more</span>
+                </button>
+                <div class="accordion-content" aria-hidden="true">
+                    <div class="accordion-inner">
+                        <div class="px-4 pb-4 pt-1 text-sm text-on-surface-variant leading-relaxed">
+                            โดยปกติระบบจะทำการรวบรวมยอดและโอนเงินเข้าบัญชีธนาคารที่คุณผูกไว้ภายใน 1-3 วันทำการ นับจากวันที่ลูกค้าทำการเข้ารับบริการสำเร็จ (ไม่รวมวันหยุดนักขัตฤกษ์)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 2 -->
+            <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden group hover:border-secondary/30 transition-colors">
+                <button class="accordion-button w-full flex items-center justify-between p-4 text-left focus:outline-none" aria-expanded="false">
+                    <span class="text-sm font-semibold text-on-surface pr-4">ฉันควรทำอย่างไรหากลูกค้าไม่มาตามนัด?</span>
+                    <span class="material-symbols-outlined text-outline-variant chevron-icon transition-transform duration-300">expand_more</span>
+                </button>
+                <div class="accordion-content" aria-hidden="true">
+                    <div class="accordion-inner">
+                        <div class="px-4 pb-4 pt-1 text-sm text-on-surface-variant leading-relaxed">
+                            หากลูกค้าไม่มาแสดงตัว (No-Show) เกินเวลาที่กำหนดไว้ 15 นาที คุณสามารถกดยกเลิกคิวในหน้ารายละเอียดการจอง และเลือกเหตุผล "ลูกค้าไม่มาตามนัด" ระบบจะทำการปรับสถานะและคืนเงิน/หักเครดิตลูกค้าตามเงื่อนไขอัตโนมัติ
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 3 -->
+            <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden group hover:border-secondary/30 transition-colors">
+                <button class="accordion-button w-full flex items-center justify-between p-4 text-left focus:outline-none" aria-expanded="false">
+                    <span class="text-sm font-semibold text-on-surface pr-4">ฉันสามารถหยุดรับคิวชั่วคราวได้อย่างไร?</span>
+                    <span class="material-symbols-outlined text-outline-variant chevron-icon transition-transform duration-300">expand_more</span>
+                </button>
+                <div class="accordion-content" aria-hidden="true">
+                    <div class="accordion-inner">
+                        <div class="px-4 pb-4 pt-1 text-sm text-on-surface-variant leading-relaxed">
+                            คุณสามารถตั้งสถานะร้านเป็น 'ปิดรับคิวชั่วคราว' ได้โดยไปที่เมนู <span class="font-semibold text-on-surface">"เวลาเปิดทำการ"</span> ในหน้าโปรไฟล์ของคุณ และทำการปิดสวิตช์ในวันที่คุณต้องการหยุดรับงาน ลูกค้าจะไม่สามารถจองคิวเข้ามาในวันนั้นได้
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 4 -->
+            <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden group hover:border-secondary/30 transition-colors">
+                <button class="accordion-button w-full flex items-center justify-between p-4 text-left focus:outline-none" aria-expanded="false">
+                    <span class="text-sm font-semibold text-on-surface pr-4">วิธีการอัปเดตข้อมูลภาษีหรือนิติบุคคลของร้านค้า?</span>
+                    <span class="material-symbols-outlined text-outline-variant chevron-icon transition-transform duration-300">expand_more</span>
+                </button>
+                <div class="accordion-content" aria-hidden="true">
+                    <div class="accordion-inner">
+                        <div class="px-4 pb-4 pt-1 text-sm text-on-surface-variant leading-relaxed">
+                            หากร้านของคุณมีการจดทะเบียนหรือเปลี่ยนแปลงข้อมูลภาษี ภ.พ.20 กรุณาติดต่อทีมสนับสนุนพาร์ทเนอร์โดยตรงผ่านทางอีเมลพร้อมแนบเอกสารรับรอง เพื่อให้เจ้าหน้าที่ทำการอัปเดตข้อมูลในระบบบัญชีหลังบ้านให้ถูกต้อง
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Dedicated Partner Support Section -->
+    <div class="space-y-4 pt-4 border-t border-outline-variant/30">
+        <h2 class="text-sm font-bold text-secondary flex items-center gap-2 px-1">
+            <span class="material-symbols-outlined text-[18px]">support_agent</span> ต้องการความช่วยเหลือเพิ่มเติม?
+        </h2>
+        
+        <div class="bg-surface-container/80 backdrop-blur-xl border border-secondary/20 p-5 rounded-3xl shadow-[0_8px_30px_rgba(37,99,235,0.05)] relative overflow-hidden flex flex-col gap-4 text-center items-center">
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-secondary/5 rounded-full blur-2xl pointer-events-none"></div>
+            
+            <div class="w-16 h-16 rounded-full bg-secondary-container text-secondary flex items-center justify-center mb-2">
+                <span class="material-symbols-outlined text-[32px]">headset_mic</span>
+            </div>
+            
+            <p class="text-sm text-on-surface-variant mb-2">ทีมดูแลพาร์ทเนอร์ของเราพร้อมช่วยเหลือคุณเสมอในเวลาทำการ (จันทร์-ศุกร์ 09:00 - 18:00 น.)</p>
+
+            <button class="w-full h-12 bg-secondary text-on-secondary-container font-bold rounded-xl hover:bg-secondary/90 transition-colors shadow-lg shadow-secondary/20 active:scale-[0.98] flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-[20px]">call</span> ติดต่อทีมดูแลพาร์ทเนอร์
+            </button>
+            
+            <button class="w-full h-12 bg-transparent border-2 border-secondary text-secondary font-bold rounded-xl hover:bg-secondary/10 transition-colors active:scale-[0.98] flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-[20px]">mail</span> ส่งอีเมลหาทีมสนับสนุน
+            </button>
+        </div>
+    </div>
+
+</main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const accordions = document.querySelectorAll('.accordion-button');
+
+        accordions.forEach(button => {
+            button.addEventListener('click', () => {
+                const isExpanded = button.getAttribute('aria-expanded') === 'true';
+                
+                // Optional: Close all other accordions
+                accordions.forEach(otherBtn => {
+                    if (otherBtn !== button) {
+                        otherBtn.setAttribute('aria-expanded', 'false');
+                        otherBtn.nextElementSibling.setAttribute('aria-hidden', 'true');
+                    }
+                });
+
+                // Toggle current accordion
+                button.setAttribute('aria-expanded', !isExpanded);
+                button.nextElementSibling.setAttribute('aria-hidden', isExpanded);
+            });
+        });
+    });
+</script>
+
+</body>
+</html>
+
+
+

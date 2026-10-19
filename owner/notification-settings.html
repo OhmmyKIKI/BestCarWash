@@ -1,0 +1,369 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>BestCarWash - การตั้งค่าการแจ้งเตือน</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="../supabase-client.js"></script>
+    <script>
+        if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
+            var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+            var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+    </script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              "spacing": {
+                      "margin-mobile": "1rem",
+                      "gutter": "1rem",
+                      "touch-target-min": "3rem",
+                      "stack-sm": "0.5rem",
+                      "stack-md": "1rem",
+                      "stack-lg": "1.5rem"
+              },
+              "fontFamily": {
+                      "sans": ["Prompt", "Inter", "sans-serif"]
+              }
+            }
+          }
+        }
+      </script>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-24 md:pb-12 font-sans">
+
+<!-- Top Header (App Bar) -->
+<header class="sticky top-0 w-full z-50 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md">
+    <div class="w-full px-4 md:px-8 lg:px-10 h-20 flex items-center justify-between">
+        <!-- Left: Back Button & Page Identification -->
+        <div class="flex items-center gap-3.5">
+            <a href="Owner%20Profile.html" class="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/40 transition-all active:scale-95 group" title="กลับไปโปรไฟล์">
+                <span class="material-symbols-outlined text-[22px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+            </a>
+            <h1 class="text-lg md:text-xl font-bold text-on-surface tracking-tight flex items-center gap-2.5">
+                <span class="material-symbols-outlined text-secondary text-[26px]">notifications</span>
+                <span>การตั้งค่าการแจ้งเตือน</span>
+            </h1>
+        </div>
+
+        <!-- Right: Action Buttons -->
+        <div class="flex items-center gap-2.5 sm:gap-3">
+            <button form="notificationsForm" type="submit" id="saveTopBtn" class="h-11 sm:h-12 px-4 sm:px-6 rounded-xl bg-secondary hover:bg-secondary-fixed text-on-secondary-container text-sm sm:text-base font-bold flex items-center gap-2 shadow-lg shadow-secondary/20 transition-all active:scale-95">
+                <span class="material-symbols-outlined text-[20px]">save</span>
+                <span>บันทึกการตั้งค่า</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<main class="w-full max-w-2xl px-4 pt-6 pb-28 mx-auto space-y-6 flex-1">
+    <form id="notificationsForm" class="flex flex-col space-y-6">
+        
+        <!-- Group 1: Booking Alerts -->
+        <div class="bg-surface-container-low border border-outline-variant/30 p-5 rounded-2xl shadow-lg relative overflow-hidden group hover:border-secondary/30 transition-colors">
+            <h2 class="text-sm font-bold text-primary flex items-center gap-2 mb-4 border-b border-outline-variant/30 pb-2">
+                <span class="material-symbols-outlined text-[18px]">calendar_month</span> การแจ้งเตือนการจองและคิว
+            </h2>
+            
+            <div class="space-y-4">
+                <label class="flex items-center justify-between cursor-pointer group/toggle">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-semibold text-on-surface">ได้รับคำขอจองคิวใหม่</span>
+                        <span class="text-xs text-on-surface-variant">แจ้งเตือนพร้อมสลิปมัดจำเมื่อลูกค้าทำการจอง</span>
+                    </div>
+                    <div class="relative inline-block w-11 h-6 align-middle select-none transition duration-200 ease-in flex-shrink-0">
+                        <input type="checkbox" id="notifyNewBooking" checked class="peer absolute opacity-0 w-0 h-0"/>
+                        <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/50 transition-colors duration-200 ease-in-out peer-checked:bg-secondary peer-checked:border-secondary"></span>
+                        <span class="absolute left-1 top-1 bg-outline-variant w-4 h-4 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-on-secondary-container"></span>
+                    </div>
+                </label>
+                
+                <label class="flex items-center justify-between cursor-pointer group/toggle">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-semibold text-on-surface">ลูกค้ายกเลิกการจอง / ขอคืนมัดจำ</span>
+                        <span class="text-xs text-on-surface-variant">แจ้งเตือนทันทีเมื่อมีรายการยกเลิกหรือขอคืนเงินมัดจำ</span>
+                    </div>
+                    <div class="relative inline-block w-11 h-6 align-middle select-none transition duration-200 ease-in flex-shrink-0">
+                        <input type="checkbox" id="notifyCancelBooking" checked class="peer absolute opacity-0 w-0 h-0"/>
+                        <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/50 transition-colors duration-200 ease-in-out peer-checked:bg-secondary peer-checked:border-secondary"></span>
+                        <span class="absolute left-1 top-1 bg-outline-variant w-4 h-4 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-on-secondary-container"></span>
+                    </div>
+                </label>
+
+                <label class="flex items-center justify-between cursor-pointer group/toggle">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-semibold text-on-surface">เตือนคิวที่กำลังจะถึงในอีก 30 นาที</span>
+                        <span class="text-xs text-on-surface-variant">ช่วยเตรียมความพร้อมหน้าร้านก่อนที่ลูกค้าจะนำรถมาถึง</span>
+                    </div>
+                    <div class="relative inline-block w-11 h-6 align-middle select-none transition duration-200 ease-in flex-shrink-0">
+                        <input type="checkbox" id="notifyUpcomingQueue" checked class="peer absolute opacity-0 w-0 h-0"/>
+                        <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/50 transition-colors duration-200 ease-in-out peer-checked:bg-secondary peer-checked:border-secondary"></span>
+                        <span class="absolute left-1 top-1 bg-outline-variant w-4 h-4 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-on-secondary-container"></span>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Group 2: Customer Reviews & Ratings -->
+        <div class="bg-surface-container-low border border-outline-variant/30 p-5 rounded-2xl shadow-lg relative overflow-hidden group hover:border-secondary/30 transition-colors">
+            <h2 class="text-sm font-bold text-primary flex items-center gap-2 mb-4 border-b border-outline-variant/30 pb-2">
+                <span class="material-symbols-outlined text-[18px]">star</span> รีวิวและคะแนนความพึงพอใจ
+            </h2>
+            
+            <div class="space-y-4">
+                <label class="flex items-center justify-between cursor-pointer group/toggle">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-semibold text-on-surface">รีวิวใหม่จากลูกค้า</span>
+                        <span class="text-xs text-on-surface-variant">แจ้งเตือนเมื่อลูกค้าให้คะแนนและเขียนรีวิวหลังรับรถ</span>
+                    </div>
+                    <div class="relative inline-block w-11 h-6 align-middle select-none transition duration-200 ease-in flex-shrink-0">
+                        <input type="checkbox" id="notifyNewReview" checked class="peer absolute opacity-0 w-0 h-0"/>
+                        <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/50 transition-colors duration-200 ease-in-out peer-checked:bg-secondary peer-checked:border-secondary"></span>
+                        <span class="absolute left-1 top-1 bg-outline-variant w-4 h-4 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-on-secondary-container"></span>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Group 3: Notification Channels -->
+        <div class="bg-surface-container-low border border-outline-variant/30 p-5 rounded-2xl shadow-lg relative overflow-hidden group hover:border-secondary/30 transition-colors">
+            <h2 class="text-sm font-bold text-primary flex items-center gap-2 mb-4 border-b border-outline-variant/30 pb-2">
+                <span class="material-symbols-outlined text-[18px]">cell_tower</span> ช่องทางการรับแจ้งเตือน
+            </h2>
+            
+            <div class="space-y-4">
+                <!-- LINE Notification -->
+                <label class="flex items-center justify-between cursor-pointer group/toggle">
+                    <div class="flex flex-col">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-semibold text-on-surface">แจ้งเตือนผ่าน LINE (LINE Official / Notify)</span>
+                            <span class="text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30">แนะนำ</span>
+                        </div>
+                        <span class="text-xs text-on-surface-variant">รับข้อความแจ้งเตือนคิวใหม่และสลิปเข้ากลุ่ม LINE ของร้านทันที</span>
+                    </div>
+                    <div class="relative inline-block w-11 h-6 align-middle select-none transition duration-200 ease-in flex-shrink-0">
+                        <input type="checkbox" id="notifyLine" checked class="peer absolute opacity-0 w-0 h-0"/>
+                        <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/50 transition-colors duration-200 ease-in-out peer-checked:bg-secondary peer-checked:border-secondary"></span>
+                        <span class="absolute left-1 top-1 bg-outline-variant w-4 h-4 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-on-secondary-container"></span>
+                    </div>
+                </label>
+
+                <!-- Push Notification -->
+                <label class="flex items-center justify-between cursor-pointer group/toggle">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-semibold text-on-surface">การแจ้งเตือนแบบ Push (บนอุปกรณ์)</span>
+                        <span class="text-xs text-on-surface-variant">แจ้งเตือนเด้งหน้าจอมือถือและเบราว์เซอร์</span>
+                    </div>
+                    <div class="relative inline-block w-11 h-6 align-middle select-none transition duration-200 ease-in flex-shrink-0">
+                        <input type="checkbox" id="notifyPush" checked class="peer absolute opacity-0 w-0 h-0"/>
+                        <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/50 transition-colors duration-200 ease-in-out peer-checked:bg-secondary peer-checked:border-secondary"></span>
+                        <span class="absolute left-1 top-1 bg-outline-variant w-4 h-4 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-on-secondary-container"></span>
+                    </div>
+                </label>
+                
+            </div>
+        </div>
+
+        <!-- Submit Button for Desktop View -->
+        <div class="hidden md:flex justify-end pt-2">
+            <button type="submit" id="saveBottomBtn" class="h-12 px-8 bg-secondary-container text-on-secondary-container font-bold rounded-xl hover:bg-secondary transition-colors shadow-lg shadow-secondary/20 flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-[20px]">save</span> บันทึกการตั้งค่า
+            </button>
+        </div>
+
+    </form>
+</main>
+
+<!-- Action Area (Fixed Bottom for Mobile) -->
+<div class="md:hidden fixed bottom-0 w-full z-40 bg-background/80 backdrop-blur-xl border-t border-outline-variant/30 py-3 px-4 flex justify-center shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
+    <button type="submit" form="notificationsForm" class="w-full max-w-md h-12 bg-secondary text-on-secondary-container font-bold rounded-xl hover:bg-secondary/90 transition-colors active:scale-[0.98] shadow-lg shadow-secondary/20 flex items-center justify-center gap-2 text-base">
+        <span class="material-symbols-outlined text-[22px]">save</span> บันทึกการตั้งค่า
+    </button>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed bottom-24 md:bottom-8 left-1/2 transform -translate-x-1/2 bg-secondary-container text-on-secondary-container px-6 py-3 rounded-full shadow-lg border border-secondary/30 flex items-center gap-2 z-50 opacity-0 translate-y-10 pointer-events-none transition-all duration-300">
+    <span class="material-symbols-outlined">check_circle</span>
+    <span class="font-medium text-sm">บันทึกการตั้งค่าเรียบร้อยแล้ว!</span>
+</div>
+
+<script>
+    let currentUserId = null;
+    let currentUser = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const form = document.getElementById('notificationsForm');
+        const toast = document.getElementById('toast');
+
+        // Target all save buttons for loading state
+        const saveBtns = [
+            document.getElementById('saveTopBtn'),
+            document.getElementById('saveBottomBtn'),
+            document.querySelector('button[form="notificationsForm"]')
+        ].filter(Boolean);
+
+        // Helper: Apply settings object to form checkboxes
+        const applySettingsToUI = (settings) => {
+            if (!settings) return;
+            ['notifyNewBooking', 'notifyCancelBooking', 'notifyUpcomingQueue', 'notifyNewReview', 'notifyLine', 'notifyPush'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && typeof settings[id] === 'boolean') {
+                    el.checked = settings[id];
+                }
+            });
+        };
+
+        // 1. Immediately resolve current user ID from local storage cache
+        try {
+            const cachedUid = localStorage.getItem('lastLoggedInUserId') || localStorage.getItem('currentUserId');
+            if (cachedUid) currentUserId = cachedUid;
+
+            const cachedUserStr = localStorage.getItem('currentUser');
+            if (cachedUserStr) {
+                currentUser = JSON.parse(cachedUserStr);
+                if (currentUser?.id) currentUserId = currentUser.id;
+            }
+        } catch (_) {}
+
+        // 2. Immediately restore saved preferences from localStorage (zero flicker)
+        try {
+            let localSettings = null;
+            if (currentUserId) {
+                const scoped = localStorage.getItem('ownerNotificationSettings_' + currentUserId);
+                if (scoped) localSettings = JSON.parse(scoped);
+            }
+            if (!localSettings) {
+                const gen = localStorage.getItem('ownerNotificationSettings');
+                if (gen) localSettings = JSON.parse(gen);
+            }
+            if (!localSettings) {
+                const guest = localStorage.getItem('ownerNotificationSettings_guest');
+                if (guest) localSettings = JSON.parse(guest);
+            }
+            if (localSettings) {
+                applySettingsToUI(localSettings);
+            }
+        } catch (e) {
+            console.warn('Local settings load notice:', e);
+        }
+
+        // 3. Robust Supabase session resolution
+        const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+        if (client?.auth) {
+            try {
+                const { data: sessData } = await client.auth.getSession();
+                let user = sessData?.session?.user;
+                if (!user) {
+                    const { data: userData } = await client.auth.getUser();
+                    user = userData?.user;
+                }
+
+                if (user) {
+                    currentUser = user;
+                    currentUserId = user.id;
+                    localStorage.setItem('lastLoggedInUserId', user.id);
+
+                    if (user.user_metadata?.notification_settings) {
+                        applySettingsToUI(user.user_metadata.notification_settings);
+                        localStorage.setItem('ownerNotificationSettings_' + user.id, JSON.stringify(user.user_metadata.notification_settings));
+                        localStorage.setItem('ownerNotificationSettings', JSON.stringify(user.user_metadata.notification_settings));
+                    }
+                }
+            } catch (err) {
+                console.warn('Supabase auth resolution notice:', err);
+            }
+        }
+
+        // 4. Form Submit with Loading State and Dual-Layer Save
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Set loading state on save buttons
+            saveBtns.forEach(btn => {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> บันทึก...';
+            });
+
+            const settings = {
+                notifyNewBooking: document.getElementById('notifyNewBooking')?.checked ?? true,
+                notifyCancelBooking: document.getElementById('notifyCancelBooking')?.checked ?? true,
+                notifyUpcomingQueue: document.getElementById('notifyUpcomingQueue')?.checked ?? true,
+                notifyNewReview: document.getElementById('notifyNewReview')?.checked ?? true,
+                notifyLine: document.getElementById('notifyLine')?.checked ?? true,
+                notifyPush: document.getElementById('notifyPush')?.checked ?? true,
+                updatedAt: new Date().toISOString()
+            };
+
+            const jsonStr = JSON.stringify(settings);
+
+            // Layer 1: Immediately persist to localStorage
+            try {
+                if (currentUserId) {
+                    localStorage.setItem('ownerNotificationSettings_' + currentUserId, jsonStr);
+                }
+                localStorage.setItem('ownerNotificationSettings', jsonStr);
+                localStorage.setItem('ownerNotificationSettings_guest', jsonStr);
+                window.dispatchEvent(new Event('storage'));
+            } catch (err) {
+                console.warn('LocalStorage save error:', err);
+            }
+
+            // Layer 2: Persist to Supabase auth user metadata
+            if (client?.auth && currentUserId) {
+                try {
+                    await client.auth.updateUser({
+                        data: {
+                            notification_settings: settings
+                        }
+                    });
+                } catch (err) {
+                    console.warn('Supabase notification setting sync notice:', err);
+                }
+            }
+
+            // Show Toast feedback
+            toast.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none');
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                window.location.href = 'Owner%20Profile.html';
+            }, 1000);
+        });
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,812 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>BestCarWash - โปรไฟล์เจ้าของร้าน</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="../supabase-client.js"></script>
+    <script>
+        if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
+            var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+            var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+        var supabaseClient = window.supabaseClient;
+    </script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              "spacing": {
+                      "margin-mobile": "1rem",
+                      "gutter": "1rem",
+                      "touch-target-min": "3rem",
+                      "stack-sm": "0.5rem",
+                      "stack-md": "1rem",
+                      "stack-lg": "1.5rem"
+              },
+              "fontFamily": {
+                      "sans": ["Prompt", "Inter", "sans-serif"]
+              }
+            }
+          }
+        }
+      </script>
+    <style>
+        .glass-panel {
+            background: rgba(45, 52, 73, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(141, 144, 160, 0.2);
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-24 md:pb-12 font-sans">
+
+<!-- Desktop Header (App Bar) -->
+<header class="hidden md:flex justify-between items-center px-6 lg:px-10 h-20 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md z-50 fixed top-0 w-full">
+    <div class="flex items-center gap-4">
+        <a href="Owner%20Dashboard.html" class="flex items-center gap-2.5 group">
+            <span class="material-symbols-outlined text-secondary text-[32px] group-hover:rotate-12 transition-transform duration-300">storefront</span>
+            <span class="text-2xl font-bold text-secondary tracking-tight">BestCarWash</span>
+            <span class="text-xs font-bold text-on-secondary-container bg-secondary/20 border border-secondary/30 px-2.5 py-0.5 rounded-full uppercase ml-1">Partner</span>
+        </a>
+    </div>
+    <div class="flex items-center gap-8">
+        <nav class="flex gap-7">
+            <a class="text-base font-semibold text-on-surface-variant hover:text-secondary transition-colors flex items-center gap-1.5" href="Owner%20Dashboard.html">
+                <span class="material-symbols-outlined text-[20px]">dashboard</span> หน้าหลัก
+            </a>
+            <a class="text-base font-semibold text-on-surface-variant hover:text-secondary transition-colors flex items-center gap-1.5" href="owner-bookings.html">
+                <span class="material-symbols-outlined text-[20px]">calendar_month</span> การจอง
+            </a>
+            <a class="text-base font-semibold text-on-surface-variant hover:text-secondary transition-colors flex items-center gap-1.5" href="owner-booking-history.html">
+                <span class="material-symbols-outlined text-[20px]">history</span> ประวัติ
+            </a>
+            <a class="text-base font-bold text-secondary flex items-center gap-1.5" href="Owner%20Profile.html">
+                <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">person</span> จัดการร้าน
+            </a>
+        </nav>
+        <div class="flex items-center gap-4 border-l border-outline-variant/30 pl-6">
+            <a href="owner-notifications-list.html" class="w-11 h-11 rounded-full flex items-center justify-center bg-surface-container text-on-surface hover:text-secondary hover:bg-surface-variant transition-colors relative border border-outline-variant/50">
+                <span class="material-symbols-outlined text-[24px]">notifications</span>
+                <span class="absolute top-2.5 right-2.5 w-2 h-2 bg-error rounded-full shadow-[0_0_5px_rgba(255,180,171,0.8)]"></span>
+            </a>
+            <a href="Owner%20Profile.html" class="flex items-center gap-3 pl-3 pr-4 py-1.5 rounded-full bg-surface-container hover:bg-surface-variant transition-all border border-secondary group">
+                <div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden border-2 border-secondary transition-colors flex-shrink-0">
+                    <img id="owner-desktop-avatar" alt="Owner profile" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
+                </div>
+                <span class="hidden md:inline-block text-base font-semibold text-on-surface" id="owner-desktop-name">เจ้าของร้าน</span>
+            </a>
+        </div>
+    </div>
+</header>
+
+<!-- Mobile Header -->
+<header class="md:hidden fixed top-0 w-full z-50 bg-background/90 backdrop-blur-md border-b border-outline-variant/30 shadow-sm shadow-secondary/10">
+    <div class="flex justify-between items-center px-4 h-16">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-secondary text-[26px]">storefront</span>
+            <h1 class="text-lg font-bold text-secondary tracking-tight">โปรไฟล์ร้านค้า</h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="owner-notifications-list.html" class="w-10 h-10 rounded-full hover:bg-surface-container flex items-center justify-center text-outline hover:text-secondary transition-colors relative">
+                <span class="material-symbols-outlined text-[22px]">notifications</span>
+                <span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-error animate-pulse"></span>
+            </a>
+            <a href="Owner%20Profile.html" class="w-9 h-9 rounded-full overflow-hidden border border-secondary block">
+                <img id="owner-header-avatar" alt="User profile avatar" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
+            </a>
+        </div>
+    </div>
+</header>
+
+<main class="pt-20 md:pt-28 px-margin-mobile max-w-4xl mx-auto space-y-stack-lg">
+    <!-- Profile Header -->
+    <section class="flex flex-col items-center justify-center py-4 md:py-6">
+        <div class="relative mb-2">
+            <img id="ownerProfileImg" class="w-28 h-28 md:w-32 md:h-32 rounded-full object-cover border-2 border-secondary shadow-[0_0_15px_rgba(78,222,163,0.3)] cursor-pointer" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
+            <input type="file" id="ownerProfileInput" accept="image/*" class="hidden">
+            <button id="editOwnerProfileBtn" type="button" class="absolute bottom-0 right-0 bg-secondary-container text-on-secondary-container rounded-full p-1.5 shadow-md border-2 border-surface active:scale-90 transition-transform">
+                <span class="material-symbols-outlined text-[16px]" data-icon="edit">edit</span>
+            </button>
+        </div>
+        <button type="button" id="resetOwnerAvatarBtn" onclick="resetOwnerDefaultAvatar()" class="text-[11px] text-error hover:underline transition-colors mb-2 hidden">
+            ลบรูปและใช้รูปเริ่มต้น
+        </button>
+        <h2 id="owner-shop-name-display" class="text-2xl md:text-3xl font-extrabold text-on-surface mb-1 text-center">ร้านค้าของฉัน</h2>
+        <p id="owner-person-name-display" class="text-xs md:text-sm text-outline font-medium flex items-center justify-center gap-1.5 mb-2.5">
+            <span class="material-symbols-outlined text-[16px] text-secondary">badge</span>
+            <span>เจ้าของร้าน: <span id="owner-person-name" class="text-on-surface font-semibold">เจ้าของร้าน</span></span>
+        </p>
+        <div class="flex items-center space-x-1 bg-secondary-container/20 text-secondary px-3.5 py-1 rounded-full border border-secondary/30 shadow-sm">
+            <span class="material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+            <span class="text-xs font-semibold">พาร์ทเนอร์ยืนยันตัวตนแล้ว</span>
+        </div>
+    </section>
+
+    <!-- Quick Stats Bento -->
+    <section class="bento-grid">
+        <a href="owner-booking-history.html" class="glass-panel p-4 rounded-xl flex flex-col justify-between active:scale-[0.98] transition-transform cursor-pointer block hover:border-secondary/30">
+            <div class="flex items-center justify-between mb-2">
+                <span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+                <span id="owner-stat-completed-tag" class="text-secondary text-xs font-bold">สัปดาห์นี้</span>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-on-surface-variant">บริการสำเร็จสัปดาห์นี้</p>
+                <p id="owner-stat-completed" class="text-xl font-bold text-on-surface">0 คัน</p>
+            </div>
+        </a>
+        <a href="owner-bookings.html" class="glass-panel p-4 rounded-xl flex flex-col justify-between active:scale-[0.98] transition-transform cursor-pointer block hover:border-secondary/30">
+            <div class="flex items-center justify-between mb-2">
+                <span class="material-symbols-outlined text-primary">calendar_month</span>
+                <span id="owner-stat-pending-tag" class="text-primary text-xs font-bold">คิววันนี้</span>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-on-surface-variant">ยอดจองวันนี้</p>
+                <p id="owner-stat-today" class="text-xl font-bold text-on-surface">0 คิว</p>
+            </div>
+        </a>
+        <a href="owner-reviews.html" class="glass-panel p-4 rounded-xl flex flex-col justify-between active:scale-[0.98] transition-transform cursor-pointer block hover:border-secondary/30">
+            <div class="flex items-center justify-between mb-2">
+                <span class="material-symbols-outlined text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span>
+                <span id="owner-stat-rating-badge" class="text-yellow-400 text-xs font-bold">ใหม่</span>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-on-surface-variant">คะแนนรีวิวร้าน</p>
+                <p id="owner-stat-reviews" class="text-xl font-bold text-on-surface">0 รีวิว</p>
+            </div>
+        </a>
+    </section>
+
+    <!-- My Business Section -->
+    <section>
+        <h3 class="text-lg font-semibold text-on-surface mb-2 px-1">จัดการร้านค้า</h3>
+        <div class="glass-panel rounded-2xl overflow-hidden divide-y divide-outline-variant/30">
+            <a href="manage-shop-details.html" class="w-full flex items-center justify-between p-4 hover:bg-surface-variant/50 transition-colors">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-surface-container w-10 h-10 rounded-xl flex items-center justify-center text-secondary">
+                        <span class="material-symbols-outlined">info</span>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-base font-semibold text-on-surface">ข้อมูลร้านค้า</p>
+                        <p class="text-xs text-on-surface-variant">ชื่อร้าน, รูปภาพ, ตำแหน่งแผนที่ GPS, เบอร์ติดต่อ</p>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-outline">chevron_right</span>
+            </a>
+
+            <a href="manage-services.html" class="w-full flex items-center justify-between p-4 hover:bg-surface-variant/50 transition-colors">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-surface-container w-10 h-10 rounded-xl flex items-center justify-center text-secondary">
+                        <span class="material-symbols-outlined">local_car_wash</span>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-base font-semibold text-on-surface">จัดการแพ็กเกจและบริการ</p>
+                        <p class="text-xs text-on-surface-variant">กำหนดราคาตามประเภทรถ และระยะเวลาบริการ</p>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-outline">chevron_right</span>
+            </a>
+
+            <a href="manage-operating-hours.html" class="w-full flex items-center justify-between p-4 hover:bg-surface-variant/50 transition-colors">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-surface-container w-10 h-10 rounded-xl flex items-center justify-center text-secondary">
+                        <span class="material-symbols-outlined">schedule</span>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-base font-semibold text-on-surface">เวลาเปิดทำการ &amp; วันหยุด</p>
+                        <p id="owner-profile-hours-summary" class="text-xs text-on-surface-variant">เวลาทำการแต่ละวัน และวันหยุดพิเศษของร้าน</p>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-outline">chevron_right</span>
+            </a>
+
+            <a href="owner-reviews.html" class="w-full flex items-center justify-between p-4 hover:bg-surface-variant/50 transition-colors">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-surface-container w-10 h-10 rounded-xl flex items-center justify-center text-yellow-400">
+                        <span class="material-symbols-outlined">star</span>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-base font-semibold text-on-surface">รีวิวและคะแนนร้านค้า</p>
+                        <p class="text-xs text-on-surface-variant">อ่านและตอบกลับรีวิวจากลูกค้า</p>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-outline">chevron_right</span>
+            </a>
+
+            <a href="public-shop-preview.html" class="w-full flex items-center justify-between p-4 hover:bg-surface-variant/50 transition-colors">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-surface-container w-10 h-10 rounded-xl flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined">preview</span>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-base font-semibold text-on-surface">ดูตัวอย่างหน้าร้าน (Preview)</p>
+                        <p class="text-xs text-on-surface-variant">มุมมองที่ลูกค้าเห็นบนหน้าแอปจริง</p>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-outline">chevron_right</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- Account & Financial Settings Section -->
+    <section>
+        <h3 class="text-lg font-semibold text-on-surface mb-2 px-1">การเงินและการตั้งค่า</h3>
+        <div class="glass-panel rounded-2xl overflow-hidden divide-y divide-outline-variant/30">
+            <a href="payouts.html" class="w-full flex items-center justify-between p-4 hover:bg-surface-variant/50 transition-colors">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-surface-container w-10 h-10 rounded-xl flex items-center justify-center text-secondary">
+                        <span class="material-symbols-outlined">account_balance</span>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-base font-semibold text-on-surface">บัญชีธนาคารและรับเงินมัดจำ</p>
+                        <p class="text-xs text-on-surface-variant">บัญชีพร้อมเพย์/ธนาคารสำหรับรับเงินโอนจากลูกค้า</p>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-outline">chevron_right</span>
+            </a>
+
+            <a href="notification-settings.html" class="w-full flex items-center justify-between p-4 hover:bg-surface-variant/50 transition-colors">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-surface-container w-10 h-10 rounded-xl flex items-center justify-center text-secondary">
+                        <span class="material-symbols-outlined">notifications</span>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-base font-semibold text-on-surface">การตั้งค่าการแจ้งเตือน</p>
+                        <p class="text-xs text-on-surface-variant">ตั้งค่าเตือนคิวใหม่ผ่าน LINE, Push, และ SMS</p>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-outline">chevron_right</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- Support & Legal Section -->
+    <section>
+        <h3 class="text-lg font-semibold text-on-surface mb-2 px-1">ช่วยเหลือและข้อกำหนด</h3>
+        <div class="glass-panel rounded-2xl overflow-hidden divide-y divide-outline-variant/30">
+            <a href="../info/owner-help-center.html" class="w-full flex items-center justify-between p-4 hover:bg-surface-variant/50 transition-colors">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-surface-container w-10 h-10 rounded-xl flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined">help_center</span>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-base font-semibold text-on-surface">ศูนย์ช่วยเหลือสำหรับร้านค้า</p>
+                        <p class="text-xs text-on-surface-variant">คู่มือการใช้งานและวิธีแก้ปัญหา</p>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-outline">chevron_right</span>
+            </a>
+
+            <a href="../info/merchant-terms.html" class="w-full flex items-center justify-between p-4 hover:bg-surface-variant/50 transition-colors">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-surface-container w-10 h-10 rounded-xl flex items-center justify-center text-outline">
+                        <span class="material-symbols-outlined">gavel</span>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-base font-semibold text-on-surface">ข้อกำหนดและเงื่อนไขพาร์ทเนอร์</p>
+                        <p class="text-xs text-on-surface-variant">นโยบายค่ามัดจำและการยกเลิกคิว</p>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-outline">chevron_right</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- Logout Action -->
+    <div class="pt-2 pb-8">
+        <button onclick="showLogoutModal()" class="w-full h-12 rounded-xl bg-error/10 border border-error/40 text-error text-sm font-bold flex items-center justify-center space-x-2 hover:bg-error/20 active:scale-[0.99] transition-all">
+            <span class="material-symbols-outlined">logout</span>
+            <span>ออกจากระบบ</span>
+        </button>
+    </div>
+</main>
+
+<!-- BottomNavBar (Mobile Only - Standard 4 Tabs) -->
+<nav class="md:hidden fixed bottom-4 left-4 right-4 rounded-2xl z-50 bg-surface-container-low/95 backdrop-blur-xl border border-outline-variant/50 shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex justify-around items-center p-2.5 pb-[calc(0.6rem+env(safe-area-inset-bottom,0))]">
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform w-18 h-14" href="Owner%20Dashboard.html">
+        <span class="material-symbols-outlined text-[26px]">home</span>
+        <span class="text-xs font-semibold mt-0.5">หน้าแรก</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform w-18 h-14" href="owner-bookings.html">
+        <span class="material-symbols-outlined text-[26px]">calendar_month</span>
+        <span class="text-xs font-semibold mt-0.5">การจอง</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform w-18 h-14" href="owner-booking-history.html">
+        <span class="material-symbols-outlined text-[26px]">history</span>
+        <span class="text-xs font-semibold mt-0.5">ประวัติ</span>
+    </a>
+    <a class="flex flex-col items-center justify-center bg-secondary-container/20 text-secondary rounded-xl w-18 h-14 shadow-sm active:scale-95 transition-transform" href="Owner%20Profile.html">
+        <span class="material-symbols-outlined text-[26px] fill">person</span>
+        <span class="text-xs font-bold mt-0.5">โปรไฟล์</span>
+    </a>
+</nav>
+
+<!-- Logout Confirmation Modal -->
+<div id="logoutModal" class="hidden fixed inset-0 z-[100] items-center justify-center px-4 pointer-events-none" style="display: none;">
+    <div class="absolute inset-0 bg-background/80 backdrop-blur-sm transition-opacity opacity-0 duration-200" onclick="hideLogoutModal()"></div>
+    <div class="bg-surface-container-high w-full max-w-sm rounded-2xl p-6 relative z-10 shadow-2xl transition-all opacity-0 scale-95 duration-200 border border-outline-variant/30">
+        <div class="flex flex-col items-center text-center">
+            <div class="w-16 h-16 bg-error/10 text-error rounded-full flex items-center justify-center mb-4 border border-error/20">
+                <span class="material-symbols-outlined text-3xl">logout</span>
+            </div>
+            <h3 class="text-xl font-bold text-on-surface mb-2">ยืนยันการออกจากระบบ</h3>
+            <p class="text-sm text-outline mb-6">คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบบัญชีร้านค้าของคุณ?</p>
+            
+            <div class="flex w-full gap-3">
+                <button onclick="hideLogoutModal()" class="flex-1 py-3 rounded-xl font-semibold text-on-surface border border-outline-variant hover:bg-surface-variant transition-colors">
+                    ยกเลิก
+                </button>
+                <button onclick="executeLogout(this)" class="flex-1 py-3 rounded-xl font-semibold bg-error text-white hover:bg-error/90 transition-colors flex items-center justify-center gap-2">
+                    ออกจากระบบ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showLogoutModal() {
+        const modal = document.getElementById('logoutModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            modal.classList.remove('hidden', 'pointer-events-none');
+            setTimeout(() => {
+                modal.firstElementChild.classList.remove('opacity-0');
+                modal.lastElementChild.classList.remove('opacity-0', 'scale-95');
+            }, 10);
+        }
+    }
+
+    function hideLogoutModal() {
+        const modal = document.getElementById('logoutModal');
+        if (modal) {
+            modal.firstElementChild.classList.add('opacity-0');
+            modal.lastElementChild.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden', 'pointer-events-none');
+                modal.style.display = 'none';
+            }, 200);
+        }
+    }
+
+    async function executeLogout(btn) {
+        btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">sync</span> <span>กำลังออก...</span>';
+        btn.classList.add('opacity-80', 'pointer-events-none');
+        try {
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (client?.auth) {
+                await client.auth.signOut();
+            }
+        } catch(e) {
+            console.warn('Signout notice:', e);
+        }
+        try {
+            sessionStorage.clear();
+            localStorage.removeItem('lastLoggedInUserId');
+            localStorage.removeItem('currentShopId');
+            localStorage.removeItem('ownerShopName');
+            localStorage.removeItem('ownerProfileAvatar');
+            localStorage.removeItem('ownerProfileName');
+            localStorage.removeItem('ownerCoverImage');
+            localStorage.removeItem('ownerShopGallery');
+            localStorage.removeItem('ownerShopDesc');
+            localStorage.removeItem('shopDescription');
+            localStorage.removeItem('ownerShopStreet');
+            localStorage.removeItem('ownerShopCity');
+            localStorage.removeItem('ownerShopZip');
+            localStorage.removeItem('ownerShopPhone');
+            localStorage.removeItem('ownerShopLat');
+            localStorage.removeItem('ownerShopLng');
+            localStorage.removeItem('ownerShopMapLink');
+            localStorage.removeItem('ownerServices');
+            localStorage.removeItem('ownerOperatingHours');
+            localStorage.removeItem('ownerSpecialHolidays');
+            localStorage.removeItem('ownerReviewsReplies');
+        } catch (e) {
+            console.error("Storage clear error:", e);
+        }
+        setTimeout(() => {
+            window.location.href = '../auth/login.html';
+        }, 400);
+    }
+
+    const DEFAULT_OWNER_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='ograd' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%23064e3b'/><stop offset='100%' stop-color='%2310b981'/></linearGradient></defs><circle cx='50' cy='50' r='50' fill='url(%23ograd)'/><path d='M26 40l48 0l-5 14l-38 0zM28 58h44v24H28zM42 68h16v14H42z' fill='%23ffffff'/><circle cx='50' cy='30' r='7' fill='%23ffffff'/></svg>";
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('editOwnerProfileBtn');
+        const input = document.getElementById('ownerProfileInput');
+        const img = document.getElementById('ownerProfileImg');
+        const headerImg = document.getElementById('owner-header-avatar');
+        const desktopAvatar = document.getElementById('owner-desktop-avatar');
+        const resetBtn = document.getElementById('resetOwnerAvatarBtn');
+
+        function updateResetBtn() {
+            const saved = localStorage.getItem('ownerProfileAvatar');
+            if (resetBtn) {
+                if (saved && saved !== DEFAULT_OWNER_AVATAR && !saved.includes('googleusercontent')) {
+                    resetBtn.classList.remove('hidden');
+                } else {
+                    resetBtn.classList.add('hidden');
+                }
+            }
+        }
+
+        window.resetOwnerDefaultAvatar = function() {
+            localStorage.removeItem('ownerProfileAvatar');
+            if (img) img.src = DEFAULT_OWNER_AVATAR;
+            if (headerImg) headerImg.src = DEFAULT_OWNER_AVATAR;
+            if (desktopAvatar) desktopAvatar.src = DEFAULT_OWNER_AVATAR;
+            if (input) input.value = '';
+            updateResetBtn();
+        };
+
+        // Immediately populate avatar & shop name from localStorage
+        const savedAvatar = localStorage.getItem('ownerProfileAvatar');
+        if (savedAvatar && !savedAvatar.includes('googleusercontent')) {
+            if (img) img.src = savedAvatar;
+            if (headerImg) headerImg.src = savedAvatar;
+            if (desktopAvatar) desktopAvatar.src = savedAvatar;
+        }
+        updateResetBtn();
+
+        // 1. Immediately populate personal name from localStorage (Header & Profile Subtitle)
+        const savedPersonName = localStorage.getItem('ownerProfileName');
+        if (savedPersonName) {
+            const desktopName = document.getElementById('owner-desktop-name');
+            if (desktopName) desktopName.textContent = savedPersonName;
+            const personNameEl = document.getElementById('owner-person-name');
+            if (personNameEl) personNameEl.textContent = savedPersonName;
+        }
+
+        // 2. Immediately populate shop name from localStorage (Main Title only)
+        const savedShopName = localStorage.getItem('ownerShopName');
+        if (savedShopName) {
+            const shopNameDisplay = document.getElementById('owner-shop-name-display');
+            if (shopNameDisplay) shopNameDisplay.innerText = savedShopName;
+        }
+
+        // Layer 1: Instant 0ms Render of Cached Profile Stats & Hours Summary
+        updateHoursSummaryOnProfile();
+        const savedStats = localStorage.getItem('ownerProfileStats');
+        if (savedStats) {
+            try {
+                const s = JSON.parse(savedStats);
+                if (s) {
+                    const statCompleted = document.getElementById('owner-stat-completed');
+                    if (statCompleted && s.completed !== undefined) statCompleted.textContent = `${s.completed} คัน`;
+                    const statToday = document.getElementById('owner-stat-today');
+                    if (statToday && s.today !== undefined) statToday.textContent = `${s.today} คิว`;
+                }
+            } catch(e) {}
+        }
+
+        // Layer 2: Fast-Track Background Sync from Supabase
+        (async () => {
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (!client) return;
+
+                const savedShopId = localStorage.getItem('currentShopId');
+                const fallbackUserId = localStorage.getItem('lastLoggedInUserId');
+                const cachedShopName = localStorage.getItem('ownerShopName');
+
+                // FAST-TRACK: Query shop details and bookings immediately in parallel with session
+                let fastShopPromise = null;
+                let fastBookingsPromise = null;
+                if (savedShopId && savedShopId.length > 20) {
+                    fastShopPromise = client.from('shops').select('*').eq('id', savedShopId).maybeSingle();
+                    fastBookingsPromise = client.from('bookings').select('id, status').eq('shop_id', savedShopId);
+                }
+
+                const sessionPromise = client.auth ? client.auth.getSession() : Promise.resolve({ data: null });
+
+                const [shopRes, bookingsRes, sessRes] = await Promise.all([
+                    fastShopPromise || Promise.resolve(null),
+                    fastBookingsPromise || Promise.resolve(null),
+                    sessionPromise
+                ]);
+
+                const user = sessRes?.data?.session?.user || null;
+                const effectiveUserId = user?.id || fallbackUserId;
+
+                if (!effectiveUserId && !cachedShopName && !savedShopId) {
+                    return;
+                }
+
+                // Non-blocking Profile & Role Guard in background
+                if (effectiveUserId) {
+                    client.from('profiles').select('avatar_url, full_name, role').eq('id', effectiveUserId).maybeSingle().then(({ data: profile }) => {
+                        if (profile) {
+                            if (profile.role === 'CUSTOMER' || user?.user_metadata?.role === 'CUSTOMER') {
+                                const mainContainer = document.querySelector('main');
+                                if (mainContainer) {
+                                    mainContainer.innerHTML = `
+                                        <div class="max-w-md mx-auto my-16 p-8 bg-surface-container rounded-2xl border border-outline-variant/40 shadow-xl text-center space-y-4">
+                                            <div class="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto">
+                                                <span class="material-symbols-outlined text-[36px]">switch_account</span>
+                                            </div>
+                                            <h3 class="text-xl font-bold text-on-surface">คุณกำลังเข้าใช้งานในฐานะลูกค้า</h3>
+                                            <p class="text-sm text-outline">หน้านี้สำหรับเจ้าของร้านคาร์แคร์เท่านั้น หากต้องการจัดการร้าน กรุณาสลับเข้าสู่ระบบด้วยบัญชีเจ้าของร้าน</p>
+                                            <div class="pt-2 flex flex-col gap-2.5">
+                                                <a href="../auth/login.html" class="w-full py-3 bg-secondary hover:brightness-110 text-[#0b1326] font-bold rounded-xl shadow-md transition-all active:scale-95 text-sm">
+                                                    เข้าสู่ระบบด้วยบัญชีเจ้าของร้าน
+                                                </a>
+                                                <a href="../customer/discovery.html" class="w-full py-2.5 bg-surface-variant hover:bg-surface-container-highest text-on-surface font-semibold rounded-xl border border-outline-variant/40 transition-all text-xs">
+                                                    กลับสู่หน้าหลักลูกค้า
+                                                </a>
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+                                return;
+                            }
+
+                            if (profile.avatar_url) {
+                                if (img) img.src = profile.avatar_url;
+                                if (headerImg) headerImg.src = profile.avatar_url;
+                                if (desktopAvatar) desktopAvatar.src = profile.avatar_url;
+                                localStorage.setItem('ownerProfileAvatar', profile.avatar_url);
+                                updateResetBtn();
+                            }
+                            const pName = profile.full_name;
+                            if (pName) {
+                                const desktopName = document.getElementById('owner-desktop-name');
+                                if (desktopName) desktopName.textContent = pName;
+                                const personNameEl = document.getElementById('owner-person-name');
+                                if (personNameEl) personNameEl.textContent = pName;
+                                localStorage.setItem('ownerProfileName', pName);
+                            }
+                        }
+                    }).catch(() => {});
+                }
+
+                // Resolve shop (fast-track or fallback)
+                let shop = shopRes?.data || null;
+                if (!shop && effectiveUserId) {
+                    const { data: s } = await client.from('shops').select('*').eq('owner_id', effectiveUserId).maybeSingle();
+                    if (s) shop = s;
+                }
+                if (!shop && cachedShopName) {
+                    const { data: s } = await client.from('shops').select('*').eq('name', cachedShopName).maybeSingle();
+                    if (s) shop = s;
+                }
+
+                if (shop) {
+                    localStorage.setItem('currentShopId', shop.id);
+                    const shopNameDisplay = document.getElementById('owner-shop-name-display');
+                    if (shopNameDisplay && shop.name) shopNameDisplay.innerText = shop.name;
+                    localStorage.setItem('ownerShopName', shop.name);
+
+                    // Hydrate Avatar from Shop Logo if avatar is currently not set or default
+                    if (shop.logo_url) {
+                        const curAv = localStorage.getItem('ownerProfileAvatar');
+                        if (!curAv || curAv === DEFAULT_OWNER_AVATAR || curAv.includes('googleusercontent')) {
+                            if (img) img.src = shop.logo_url;
+                            if (headerImg) headerImg.src = shop.logo_url;
+                            if (desktopAvatar) desktopAvatar.src = shop.logo_url;
+                            localStorage.setItem('ownerProfileAvatar', shop.logo_url);
+                            updateResetBtn();
+                        }
+                    }
+
+                    // Query bookings for this shop to populate stats (or use fast-track)
+                    let bookings = bookingsRes?.data;
+                    if (!bookings) {
+                        const { data } = await client.from('bookings').select('id, status').eq('shop_id', shop.id);
+                        bookings = data;
+                    }
+                    if (bookings && bookings.length > 0) {
+                        const completedCount = bookings.filter(b => b.status === 'completed').length;
+                        const todayCount = bookings.filter(b => ['confirmed', 'arrived', 'washing', 'ready'].includes(b.status)).length;
+                        const statCompleted = document.getElementById('owner-stat-completed');
+                        if (statCompleted) statCompleted.textContent = `${completedCount} คัน`;
+                        const statToday = document.getElementById('owner-stat-today');
+                        if (statToday) statToday.textContent = `${todayCount} คิว`;
+                        localStorage.setItem('ownerProfileStats', JSON.stringify({ completed: completedCount, today: todayCount }));
+                    }
+
+                    // Query operating hours to display live summary on profile
+                    try {
+                        const { data: dbHours } = await client.from('shop_operating_hours').select('*').eq('shop_id', shop.id).order('day_of_week', { ascending: true });
+                        if (dbHours && dbHours.length > 0) {
+                            localStorage.setItem('ownerOperatingHours', JSON.stringify(dbHours));
+                            updateHoursSummaryOnProfile();
+                        }
+                    } catch(_) {}
+                }
+            } catch(e) {
+                console.warn('Owner profile fetch notice:', e);
+            }
+        })();
+
+        window.resetOwnerDefaultAvatar = async function() {
+            localStorage.removeItem('ownerProfileAvatar');
+            if (img) img.src = DEFAULT_OWNER_AVATAR;
+            if (headerImg) headerImg.src = DEFAULT_OWNER_AVATAR;
+            if (desktopAvatar) desktopAvatar.src = DEFAULT_OWNER_AVATAR;
+            if (input) input.value = '';
+            updateResetBtn();
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                let activeId = null;
+                if (client?.auth) {
+                    activeId = (await client.auth.getSession())?.data?.session?.user?.id || (await client.auth.getUser())?.data?.user?.id;
+                }
+                activeId = activeId || localStorage.getItem('lastLoggedInUserId');
+                if (activeId && client) {
+                    await client.from('profiles').update({ avatar_url: null }).eq('id', activeId);
+                }
+            } catch(err) {
+                console.warn('Reset profile avatar error:', err);
+            }
+        };
+        
+        if (btn && input && img) {
+            btn.addEventListener('click', () => input.click());
+            img.addEventListener('click', () => input.click());
+            
+            input.addEventListener('change', (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (file) {
+                    if (!file.type.startsWith('image/')) {
+                        alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+                        return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        const tempImg = new Image();
+                        tempImg.onload = async function() {
+                            const canvas = document.createElement('canvas');
+                            const maxDim = 400;
+                            let width = tempImg.width;
+                            let height = tempImg.height;
+                            if (width > height) {
+                                if (width > maxDim) {
+                                    height = Math.round((height * maxDim) / width);
+                                    width = maxDim;
+                                }
+                            } else {
+                                if (height > maxDim) {
+                                    width = Math.round((width * maxDim) / height);
+                                    height = maxDim;
+                                }
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(tempImg, 0, 0, width, height);
+
+                            const compressed = canvas.toDataURL('image/jpeg', 0.85);
+                            img.src = compressed;
+                            if (headerImg) headerImg.src = compressed;
+                            if (desktopAvatar) desktopAvatar.src = compressed;
+                            localStorage.setItem('ownerProfileAvatar', compressed);
+                            updateResetBtn();
+
+                            try {
+                                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                                let activeId = null;
+                                if (client?.auth) {
+                                    activeId = (await client.auth.getSession())?.data?.session?.user?.id || (await client.auth.getUser())?.data?.user?.id;
+                                }
+                                activeId = activeId || localStorage.getItem('lastLoggedInUserId');
+                                if (activeId && client) {
+                                    await client.from('profiles').update({ avatar_url: compressed }).eq('id', activeId);
+                                }
+                            } catch(err) {
+                                console.warn('Update profile avatar error:', err);
+                            }
+                        };
+                        tempImg.src = evt.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // Cross-tab real-time synchronization
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'ownerProfileName') {
+                const val = e.newValue || 'เจ้าของร้าน';
+                const dName = document.getElementById('owner-desktop-name');
+                if (dName) dName.textContent = val;
+                const pName = document.getElementById('owner-person-name');
+                if (pName) pName.textContent = val;
+            }
+            if (e.key === 'ownerShopName') {
+                const sName = e.newValue || 'ร้านค้าของฉัน';
+                const sDisplay = document.getElementById('owner-shop-name-display');
+                if (sDisplay) sDisplay.innerText = sName;
+            }
+            if (e.key === 'ownerProfileAvatar') {
+                const newAvatar = e.newValue;
+                if (newAvatar) {
+                    if (img) img.src = newAvatar;
+                    if (headerImg) headerImg.src = newAvatar;
+                    if (desktopAvatar) desktopAvatar.src = newAvatar;
+                    updateResetBtn();
+                }
+            }
+            if (e.key === 'ownerOperatingHours' || e.key === 'ownerSpecialHolidays') {
+                updateHoursSummaryOnProfile();
+            }
+        });
+
+        function updateHoursSummaryOnProfile() {
+            const summaryEl = document.getElementById('owner-profile-hours-summary');
+            if (!summaryEl) return;
+            try {
+                const stored = localStorage.getItem('ownerOperatingHours');
+                const holidaysStored = localStorage.getItem('ownerSpecialHolidays');
+                let holidaysCount = 0;
+                if (holidaysStored) {
+                    const h = JSON.parse(holidaysStored);
+                    if (Array.isArray(h)) holidaysCount = h.length;
+                }
+
+                if (stored) {
+                    const hours = JSON.parse(stored);
+                    if (Array.isArray(hours) && hours.length > 0) {
+                        const openDays = hours.filter(h => !h.is_closed);
+                        const closedDays = hours.filter(h => h.is_closed);
+                        const dayLabels = { 0: 'อา.', 1: 'จ.', 2: 'อ.', 3: 'พ.', 4: 'พฤ.', 5: 'ศ.', 6: 'ส.' };
+
+                        if (openDays.length === 7) {
+                            const sample = openDays[0];
+                            const oTime = (sample.open_time || '08:00').slice(0, 5);
+                            const cTime = (sample.close_time || '18:00').slice(0, 5);
+                            summaryEl.innerHTML = `<span class="text-secondary font-medium">เปิดทุกวัน ${oTime} - ${cTime} น.</span>${holidaysCount > 0 ? ` • <span class="text-amber-400 font-medium">วันหยุดพิเศษ: ${holidaysCount} วัน</span>` : ''}`;
+                        } else if (openDays.length > 0) {
+                            const sample = openDays[0];
+                            const oTime = (sample.open_time || '08:00').slice(0, 5);
+                            const cTime = (sample.close_time || '18:00').slice(0, 5);
+                            const closedStr = closedDays.map(c => dayLabels[c.day_of_week]).join(', ');
+                            summaryEl.innerHTML = `<span class="text-secondary font-medium">เปิด ${oTime} - ${cTime} น.</span>${closedStr ? ` (หยุด ${closedStr})` : ''}${holidaysCount > 0 ? ` • <span class="text-amber-400 font-medium">วันหยุดพิเศษ: ${holidaysCount} วัน</span>` : ''}`;
+                        }
+                        return;
+                    }
+                }
+            } catch(_) {}
+            summaryEl.textContent = 'เวลาทำการแต่ละวัน และวันหยุดพิเศษของร้าน';
+        }
+    });
+</script>
+</body>
+</html>

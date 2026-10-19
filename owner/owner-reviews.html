@@ -1,0 +1,716 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>BestCarWash - รีวิวและคะแนนร้านค้า</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="../supabase-client.js"></script>
+    <script>
+        if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
+            var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+            var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+    </script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              fontFamily: {
+                sans: ["Prompt", "Inter", "sans-serif"]
+              }
+            }
+          }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #0f172a;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+        }
+        .glass-card:hover {
+            border-color: #cbd5e1;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    </style>
+</head>
+<body class="antialiased flex flex-col min-h-screen bg-background text-on-background pb-16 md:pb-12">
+
+<!-- Top Header (App Bar) -->
+<header class="sticky top-0 w-full z-50 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md">
+    <div class="w-full px-4 md:px-8 lg:px-10 h-20 flex items-center justify-between">
+        <!-- Left: Back Button & Page Identification -->
+        <div class="flex items-center gap-3.5">
+            <a href="Owner%20Profile.html" class="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/40 transition-all active:scale-95 group" title="กลับไปโปรไฟล์">
+                <span class="material-symbols-outlined text-[22px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+            </a>
+            <div>
+                <h1 class="text-lg md:text-xl font-bold text-on-surface tracking-tight flex items-center gap-2">
+                    <span class="material-symbols-outlined text-yellow-400 text-[24px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                    <span>รีวิวและคะแนนร้านค้า</span>
+                </h1>
+                <p id="owner-shop-name-subtitle" class="text-xs text-secondary font-medium ml-8 hidden"></p>
+            </div>
+        </div>
+
+        <!-- Right: Action Button -->
+        <div class="flex items-center gap-2.5 sm:gap-3">
+            <a href="public-shop-preview.html" class="h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl bg-surface-container hover:bg-surface-variant border border-outline-variant/40 text-on-surface text-sm sm:text-base font-semibold flex items-center gap-2 transition-all hover:border-secondary/40 active:scale-95" title="ดูหน้าร้านจริง">
+                <span class="material-symbols-outlined text-[20px] text-secondary">visibility</span>
+                <span class="hidden sm:inline">ดูหน้าร้านจริง</span>
+            </a>
+        </div>
+    </div>
+</header>
+
+<!-- Main Container -->
+<main class="w-full max-w-7xl px-4 sm:px-6 pt-6 mx-auto flex-1 space-y-6">
+
+    <!-- Top Bento Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+        <!-- Rating Big Score Card (md:col-span-5 lg:col-span-4) -->
+        <div class="md:col-span-5 lg:col-span-4 glass-card rounded-2xl p-6 shadow-xl flex flex-col justify-between relative overflow-hidden">
+            <div class="absolute -top-12 -right-12 w-32 h-32 bg-yellow-400/10 rounded-full blur-2xl"></div>
+            <div>
+                <div class="text-xs text-outline font-semibold uppercase tracking-wider mb-2">คะแนนเฉลี่ยรวม</div>
+                <div class="flex items-baseline gap-3">
+                    <span id="overall-rating" class="text-5xl font-extrabold text-on-surface tracking-tight">0.0</span>
+                    <span class="text-sm text-outline">/ 5.0</span>
+                </div>
+                <div id="stars-visual" class="flex text-yellow-400 mt-2 gap-0.5">
+                    <span class="material-symbols-outlined text-[20px]">star</span>
+                    <span class="material-symbols-outlined text-[20px]">star</span>
+                    <span class="material-symbols-outlined text-[20px]">star</span>
+                    <span class="material-symbols-outlined text-[20px]">star</span>
+                    <span class="material-symbols-outlined text-[20px]">star</span>
+                </div>
+                <div id="review-count-text" class="text-xs text-on-surface-variant mt-2 font-medium">จากลูกค้าทั้งหมด 0 การจอง</div>
+            </div>
+
+            <!-- Quick Response Rate Badge -->
+            <div class="mt-4 pt-4 border-t border-outline-variant/20 flex items-center justify-between text-xs">
+                <span class="text-outline">สถานะการเชื่อมต่อ:</span>
+                <span class="text-secondary font-bold font-mono">เรียลไทม์จากระบบ</span>
+            </div>
+        </div>
+
+        <!-- Rating Distribution Bars (md:col-span-7 lg:col-span-8) -->
+        <div class="md:col-span-7 lg:col-span-8 glass-card rounded-2xl p-6 shadow-xl flex flex-col justify-center space-y-2.5">
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1 w-12 text-xs font-bold text-on-surface shrink-0">
+                    5 <span class="material-symbols-outlined text-[14px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span>
+                </div>
+                <div class="flex-1 h-2.5 rounded-full bg-surface-container-highest overflow-hidden">
+                    <div id="bar-5" class="h-full bg-yellow-400 rounded-full transition-all duration-500" style="width: 0%;"></div>
+                </div>
+                <span id="count-5" class="text-xs font-mono text-outline w-16 text-right">0 (0%)</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1 w-12 text-xs font-bold text-on-surface shrink-0">
+                    4 <span class="material-symbols-outlined text-[14px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span>
+                </div>
+                <div class="flex-1 h-2.5 rounded-full bg-surface-container-highest overflow-hidden">
+                    <div id="bar-4" class="h-full bg-yellow-400/80 rounded-full transition-all duration-500" style="width: 0%;"></div>
+                </div>
+                <span id="count-4" class="text-xs font-mono text-outline w-16 text-right">0 (0%)</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1 w-12 text-xs font-bold text-on-surface shrink-0">
+                    3 <span class="material-symbols-outlined text-[14px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span>
+                </div>
+                <div class="flex-1 h-2.5 rounded-full bg-surface-container-highest overflow-hidden">
+                    <div id="bar-3" class="h-full bg-outline rounded-full transition-all duration-500" style="width: 0%;"></div>
+                </div>
+                <span id="count-3" class="text-xs font-mono text-outline w-16 text-right">0 (0%)</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1 w-12 text-xs font-bold text-on-surface shrink-0">
+                    2 <span class="material-symbols-outlined text-[14px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span>
+                </div>
+                <div class="flex-1 h-2.5 rounded-full bg-surface-container-highest overflow-hidden">
+                    <div id="bar-2" class="h-full bg-error/70 rounded-full transition-all duration-500" style="width: 0%;"></div>
+                </div>
+                <span id="count-2" class="text-xs font-mono text-outline w-16 text-right">0 (0%)</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1 w-12 text-xs font-bold text-on-surface shrink-0">
+                    1 <span class="material-symbols-outlined text-[14px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span>
+                </div>
+                <div class="flex-1 h-2.5 rounded-full bg-surface-container-highest overflow-hidden">
+                    <div id="bar-1" class="h-full bg-error rounded-full transition-all duration-500" style="width: 0%;"></div>
+                </div>
+                <span id="count-1" class="text-xs font-mono text-outline w-16 text-right">0 (0%)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Buttons & Search Bar -->
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <!-- Horizontal Scrollable Filters on Mobile -->
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1" id="filter-container">
+            <button class="filter-btn px-4 py-2 rounded-xl bg-secondary text-on-secondary-container font-bold text-xs shrink-0 transition-colors shadow-sm" data-filter="all">
+                ทั้งหมด (<span id="filter-count-all">0</span>)
+            </button>
+            <button class="filter-btn px-3.5 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface hover:bg-surface-container-highest font-medium text-xs shrink-0 transition-colors flex items-center gap-1" data-filter="rating-5">
+                5 <span class="material-symbols-outlined text-[14px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span> (<span id="filter-count-5">0</span>)
+            </button>
+            <button class="filter-btn px-3.5 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface hover:bg-surface-container-highest font-medium text-xs shrink-0 transition-colors flex items-center gap-1" data-filter="rating-4">
+                4 <span class="material-symbols-outlined text-[14px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span> (<span id="filter-count-4">0</span>)
+            </button>
+            <button class="filter-btn px-3.5 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface hover:bg-surface-container-highest font-medium text-xs shrink-0 transition-colors flex items-center gap-1" data-filter="rating-3">
+                3 <span class="material-symbols-outlined text-[14px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span> (<span id="filter-count-3">0</span>)
+            </button>
+            <button class="filter-btn px-3.5 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface hover:bg-surface-container-highest font-medium text-xs shrink-0 transition-colors flex items-center gap-1" data-filter="no-reply">
+                <span class="material-symbols-outlined text-[14px] text-amber-400">mark_chat_unread</span> รอตอบกลับ (<span id="filter-count-noreply">0</span>)
+            </button>
+        </div>
+
+        <!-- Search Input -->
+        <div class="relative w-full sm:w-64 shrink-0">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+            <input type="text" id="searchInput" placeholder="ค้นหาตามชื่อ/เนื้อหารีวิว..." class="w-full h-10 pl-9 pr-3 bg-surface-container border border-outline-variant/30 rounded-xl text-on-surface text-xs focus:border-secondary focus:outline-none placeholder-outline">
+        </div>
+    </div>
+
+    <!-- Reviews List -->
+    <div class="space-y-4" id="reviews-list">
+        <div class="glass-card rounded-2xl p-12 text-center flex flex-col items-center justify-center">
+            <span class="material-symbols-outlined text-[36px] text-outline opacity-40 animate-spin mb-3">progress_activity</span>
+            <h3 class="text-base font-bold text-on-surface mb-1">กำลังโหลดข้อมูลรีวิว...</h3>
+            <p class="text-xs text-outline">ระบบกำลังดึงความคิดเห็นและคะแนนของร้านคุณจากฐานข้อมูล</p>
+        </div>
+    </div>
+
+</main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const searchInput = document.getElementById('searchInput');
+        const reviewsContainer = document.getElementById('reviews-list');
+
+        const overallRatingEl = document.getElementById('overall-rating');
+        const reviewCountTextEl = document.getElementById('review-count-text');
+        const starsVisualEl = document.getElementById('stars-visual');
+
+        const filterCountAll = document.getElementById('filter-count-all');
+        const filterCount5 = document.getElementById('filter-count-5');
+        const filterCount4 = document.getElementById('filter-count-4');
+        const filterCount3 = document.getElementById('filter-count-3');
+        const filterCountNoReply = document.getElementById('filter-count-noreply');
+
+        let currentShop = null;
+        let allReviews = [];
+
+        // Immediately populate shop name subtitle if available in localStorage
+        const savedShopName = localStorage.getItem('ownerShopName');
+        if (savedShopName) {
+            const sub = document.getElementById('owner-shop-name-subtitle');
+            if (sub) {
+                sub.textContent = savedShopName;
+                sub.classList.remove('hidden');
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function renderStars(rating) {
+            let r = Math.round(Number(rating) || 5);
+            let html = '';
+            for (let i = 1; i <= 5; i++) {
+                if (i <= r) {
+                    html += '<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: \'FILL\' 1;">star</span>';
+                } else {
+                    html += '<span class="material-symbols-outlined text-[18px] text-outline/40">star</span>';
+                }
+            }
+            return html;
+        }
+
+        function getStoredReplies() {
+            try {
+                return JSON.parse(localStorage.getItem('ownerReviewsReplies') || '{}');
+            } catch(e) {
+                return {};
+            }
+        }
+
+        function updateFilterCounts() {
+            const storedReplies = getStoredReplies();
+            const total = allReviews.length;
+            if (filterCountAll) filterCountAll.textContent = total;
+
+            let c5 = 0, c4 = 0, c3 = 0, noReplyCount = 0;
+            allReviews.forEach(r => {
+                const star = Math.min(5, Math.max(1, Math.round(parseFloat(r.rating) || 5)));
+                if (star === 5) c5++;
+                else if (star === 4) c4++;
+                else if (star === 3) c3++;
+
+                const hasRep = Boolean(r.reply || storedReplies[r.id]?.reply);
+                if (!hasRep) noReplyCount++;
+            });
+
+            if (filterCount5) filterCount5.textContent = c5;
+            if (filterCount4) filterCount4.textContent = c4;
+            if (filterCount3) filterCount3.textContent = c3;
+            if (filterCountNoReply) filterCountNoReply.textContent = noReplyCount;
+        }
+
+        function renderReviewCard(r) {
+            const customerName = r.customer?.full_name || 'ลูกค้าทั่วไป';
+            const firstChar = customerName.charAt(0).toUpperCase();
+            const avatarUrl = r.customer?.avatar_url;
+            const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'เมื่อเร็วๆ นี้';
+            const ratingNum = Math.min(5, Math.max(1, parseFloat(r.rating) || 5));
+            const starsHtml = renderStars(ratingNum);
+
+            const storedReplies = getStoredReplies();
+            const replyText = r.reply || storedReplies[r.id]?.reply;
+            const replyTime = r.replied_at ? new Date(r.replied_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : (storedReplies[r.id] ? 'เมื่อสักครู่' : '');
+            const hasReply = Boolean(replyText);
+
+            const shopName = currentShop?.name || localStorage.getItem('ownerShopName') || 'ทางร้าน';
+
+            const avatarHtml = avatarUrl ? `
+                <div class="w-11 h-11 rounded-2xl overflow-hidden border border-secondary/30 shrink-0 shadow-sm">
+                    <img src="${escapeHtml(avatarUrl)}" class="w-full h-full object-cover" alt="${escapeHtml(customerName)}">
+                </div>
+            ` : `
+                <div class="w-11 h-11 rounded-2xl bg-secondary/15 border border-secondary/30 text-secondary flex items-center justify-center font-bold text-base shrink-0 shadow-sm">
+                    ${escapeHtml(firstChar)}
+                </div>
+            `;
+
+            return `
+                <div class="review-card glass-card rounded-2xl p-5 sm:p-6 shadow-xl transition-all" data-rating="${Math.round(ratingNum)}" data-reply="${hasReply ? 'true' : 'false'}">
+                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
+                        <div class="flex items-center gap-3">
+                            ${avatarHtml}
+                            <div>
+                                <h4 class="font-bold text-on-surface text-sm sm:text-base">${escapeHtml(customerName)}</h4>
+                                <div class="flex items-center gap-2 text-xs text-outline mt-0.5">
+                                    <span>${dateStr}</span>
+                                    ${hasReply ? '<span class="text-secondary font-medium">• ตอบกลับแล้ว</span>' : '<span class="text-amber-400 font-medium">• รอการตอบกลับ</span>'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-1.5 bg-yellow-400/10 border border-yellow-400/30 px-3 py-1 rounded-xl text-yellow-400 self-start">
+                            <div class="flex">${starsHtml}</div>
+                            <span class="text-xs font-bold font-mono ml-0.5">${ratingNum.toFixed(1)}</span>
+                        </div>
+                    </div>
+
+                    <p class="text-sm text-on-surface-variant leading-relaxed mb-4">
+                        ${escapeHtml(r.comment || 'ลูกค้าไม่ได้ระบุความคิดเห็นเพิ่มเติม')}
+                    </p>
+
+                    <div id="reply-container-${r.id}" class="mt-3">
+                        ${hasReply ? `
+                            <div class="bg-surface-container-low rounded-xl p-4 border-l-4 border-secondary border border-outline-variant/30 ml-2 sm:ml-6 space-y-1 animate-fade-in">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold text-secondary flex items-center gap-1.5">
+                                        <span class="material-symbols-outlined text-[16px]">reply</span>
+                                        การตอบกลับจากทางร้าน (${escapeHtml(shopName)})
+                                    </span>
+                                    ${replyTime ? `<span class="text-[10px] text-outline">${replyTime}</span>` : ''}
+                                </div>
+                                <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
+                                    ${escapeHtml(replyText)}
+                                </p>
+                            </div>
+                        ` : `
+                            <div class="flex flex-col gap-2">
+                                <div class="flex flex-wrap gap-2 text-xs">
+                                    <span class="text-outline text-[11px] self-center">ตอบด่วน:</span>
+                                    <button type="button" onclick="fillReply('${r.id}', 'ขอบพระคุณมากครับ ทางร้านยินดีให้บริการและจะรักษามาตรฐานที่ดีเยี่ยมครับ 🙏✨')" class="px-2.5 py-1 rounded-lg bg-surface-container-highest hover:bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors">
+                                        ขอบพระคุณมากครับ...
+                                    </button>
+                                    <button type="button" onclick="fillReply('${r.id}', 'ยินดีให้บริการเสมอครับ ขอบคุณสำหรับคำติชมเพื่อการพัฒนาให้ดียิ่งขึ้นครับ 🙏')" class="px-2.5 py-1 rounded-lg bg-surface-container-highest hover:bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors">
+                                        ยินดีให้บริการเสมอครับ...
+                                    </button>
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="text" id="reply-input-${r.id}" placeholder="พิมพ์ข้อความตอบกลับลูกค้า..." class="flex-1 h-11 px-4 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-xs sm:text-sm focus:border-secondary focus:outline-none">
+                                    <button onclick="submitReply('${r.id}')" class="h-11 px-5 rounded-xl bg-secondary text-on-secondary-container font-bold text-xs sm:text-sm hover:bg-secondary-fixed transition-colors shadow-md shadow-secondary/20 flex items-center gap-1.5 shrink-0">
+                                        <span class="material-symbols-outlined text-[18px]">send</span> ตอบกลับ
+                                    </button>
+                                </div>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadReviews() {
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (!client) {
+                    showEmptyState('ไม่สามารถเชื่อมต่อระบบได้ กรุณารีเฟรชหน้านี้', true);
+                    return;
+                }
+
+                const savedShopId = localStorage.getItem('currentShopId');
+                const fallbackUserId = localStorage.getItem('lastLoggedInUserId');
+                const cachedShopName = localStorage.getItem('ownerShopName');
+
+                // FAST-TRACK: Query reviews & shop details in parallel with session
+                let fastReviewsPromise = null;
+                let fastShopPromise = null;
+                if (savedShopId && savedShopId.length > 20) {
+                    fastReviewsPromise = client
+                        .from('reviews')
+                        .select('*, customer:customer_id(full_name, avatar_url)')
+                        .eq('shop_id', savedShopId)
+                        .order('created_at', { ascending: false });
+                    fastShopPromise = client.from('shops').select('id, name, rating, review_count').eq('id', savedShopId).maybeSingle();
+                }
+
+                const sessionPromise = client.auth ? client.auth.getSession() : Promise.resolve({ data: null });
+
+                const [reviewsRes, shopRes, sessRes] = await Promise.all([
+                    fastReviewsPromise || Promise.resolve(null),
+                    fastShopPromise || Promise.resolve(null),
+                    sessionPromise
+                ]);
+
+                const user = sessRes?.data?.session?.user || null;
+                const effectiveUserId = user?.id || fallbackUserId;
+
+                if (!effectiveUserId && !cachedShopName && !savedShopId) {
+                    showEmptyState('ไม่พบเซสชันการเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่', true);
+                    return;
+                }
+
+                // Non-blocking Role Guard in background
+                if (effectiveUserId) {
+                    client.from('profiles').select('role').eq('id', effectiveUserId).maybeSingle().then(({ data: prof }) => {
+                        if (prof?.role === 'CUSTOMER' || user?.user_metadata?.role === 'CUSTOMER') {
+                            const mainContainer = document.querySelector('main');
+                            if (mainContainer) {
+                                mainContainer.innerHTML = `
+                                    <div class="max-w-md mx-auto my-16 p-8 bg-surface-container rounded-2xl border border-outline-variant/40 shadow-xl text-center space-y-4">
+                                        <div class="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto">
+                                            <span class="material-symbols-outlined text-[36px]">switch_account</span>
+                                        </div>
+                                        <h3 class="text-xl font-bold text-on-surface">คุณกำลังเข้าใช้งานในฐานะลูกค้า</h3>
+                                        <p class="text-sm text-outline">หน้านี้สำหรับเจ้าของร้านคาร์แคร์เท่านั้น หากต้องการจัดการรีวิว กรุณาสลับเข้าสู่ระบบด้วยบัญชีเจ้าของร้าน</p>
+                                        <div class="pt-2 flex flex-col gap-2.5">
+                                            <a href="../auth/login.html" class="w-full py-3 bg-secondary hover:brightness-110 text-[#0b1326] font-bold rounded-xl shadow-md transition-all active:scale-95 text-sm">
+                                                เข้าสู่ระบบด้วยบัญชีเจ้าของร้าน
+                                            </a>
+                                            <a href="../customer/discovery.html" class="w-full py-2.5 bg-surface-variant hover:bg-surface-container-highest text-on-surface font-semibold rounded-xl border border-outline-variant/40 transition-all text-xs">
+                                                กลับสู่หน้าหลักลูกค้า
+                                            </a>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        }
+                    }).catch(() => {});
+                }
+
+                // Resolve shop (fast-track or fallback)
+                let shop = shopRes?.data || null;
+                if (!shop && effectiveUserId) {
+                    const { data: shopByOwner } = await client.from('shops').select('id, name, rating, review_count').eq('owner_id', effectiveUserId).maybeSingle();
+                    if (shopByOwner) shop = shopByOwner;
+                }
+                if (!shop && cachedShopName) {
+                    const { data: shopByName } = await client.from('shops').select('id, name, rating, review_count').eq('name', cachedShopName).maybeSingle();
+                    if (shopByName) shop = shopByName;
+                }
+
+                if (!shop) {
+                    showEmptyState('ยังไม่พบข้อมูลร้านค้าของคุณ กรุณาตั้งค่าร้านค้าก่อนใช้งาน', false);
+                    return;
+                }
+                currentShop = shop;
+                localStorage.setItem('currentShopId', shop.id);
+                if (shop.name) {
+                    const sub = document.getElementById('owner-shop-name-subtitle');
+                    if (sub) {
+                        sub.textContent = shop.name;
+                        sub.classList.remove('hidden');
+                    }
+                    localStorage.setItem('ownerShopName', shop.name);
+                }
+
+                let reviews = reviewsRes?.data;
+                if (!reviews) {
+                    const { data } = await client
+                        .from('reviews')
+                        .select('*, customer:customer_id(full_name, avatar_url)')
+                        .eq('shop_id', shop.id)
+                        .order('created_at', { ascending: false });
+                    reviews = data;
+                }
+
+                allReviews = Array.isArray(reviews) ? reviews : [];
+
+                // Reset summary and counts
+                if (allReviews.length === 0) {
+                    if (overallRatingEl) overallRatingEl.textContent = '0.0';
+                    if (reviewCountTextEl) reviewCountTextEl.textContent = 'จากลูกค้าทั้งหมด 0 การจอง';
+                    if (starsVisualEl) starsVisualEl.innerHTML = renderStars(0);
+
+                    [1, 2, 3, 4, 5].forEach(star => {
+                        const bar = document.getElementById(`bar-${star}`);
+                        const count = document.getElementById(`count-${star}`);
+                        if (bar) bar.style.width = '0%';
+                        if (count) count.textContent = '0 (0%)';
+                    });
+
+                    updateFilterCounts();
+
+                    reviewsContainer.innerHTML = `
+                        <div class="glass-card rounded-2xl p-12 text-center flex flex-col items-center justify-center">
+                            <div class="w-16 h-16 rounded-full bg-surface-container-highest flex items-center justify-center text-yellow-400/60 mb-4">
+                                <span class="material-symbols-outlined text-[36px]">rate_review</span>
+                            </div>
+                            <h3 class="text-lg font-bold text-on-surface mb-1">ยังไม่มีรีวิวสำหรับร้านนี้</h3>
+                            <p class="text-sm text-outline max-w-md">เมื่อลูกค้าเข้ามาใช้บริการล้างรถและเขียนรีวิว ความคิดเห็นจะปรากฏที่นี่โดยอัตโนมัติ</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Calculate statistics
+                const total = allReviews.length;
+                const sum = allReviews.reduce((acc, r) => acc + (parseFloat(r.rating) || 5), 0);
+                const avg = (sum / total).toFixed(1);
+
+                if (overallRatingEl) overallRatingEl.textContent = avg;
+                if (reviewCountTextEl) reviewCountTextEl.textContent = `จากลูกค้าทั้งหมด ${total} รีวิว`;
+                if (starsVisualEl) starsVisualEl.innerHTML = renderStars(parseFloat(avg));
+
+                const starCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+                allReviews.forEach(r => {
+                    const rStar = Math.min(5, Math.max(1, Math.round(parseFloat(r.rating) || 5)));
+                    starCounts[rStar] = (starCounts[rStar] || 0) + 1;
+                });
+
+                [1, 2, 3, 4, 5].forEach(star => {
+                    const c = starCounts[star] || 0;
+                    const pct = Math.round((c / total) * 100);
+                    const bar = document.getElementById(`bar-${star}`);
+                    const countEl = document.getElementById(`count-${star}`);
+                    if (bar) bar.style.width = `${pct}%`;
+                    if (countEl) countEl.textContent = `${c} (${pct}%)`;
+                });
+
+                updateFilterCounts();
+
+                // Render review list
+                reviewsContainer.innerHTML = allReviews.map(r => renderReviewCard(r)).join('');
+
+            } catch (err) {
+                console.error('Reviews load error:', err);
+                showEmptyState('เกิดข้อผิดพลาดในการโหลดข้อมูลรีวิว');
+            }
+        }
+
+        function showEmptyState(msg, isAuthError = false) {
+            if (overallRatingEl) overallRatingEl.textContent = '0.0';
+            if (reviewCountTextEl) reviewCountTextEl.textContent = 'จากลูกค้าทั้งหมด 0 รีวิว';
+            if (starsVisualEl) starsVisualEl.innerHTML = renderStars(0);
+            updateFilterCounts();
+            if (reviewsContainer) {
+                reviewsContainer.innerHTML = `
+                    <div class="glass-card rounded-2xl p-10 text-center text-outline flex flex-col items-center justify-center">
+                        <span class="material-symbols-outlined text-[40px] ${isAuthError ? 'text-rose-400' : 'text-amber-400'} mb-2">${isAuthError ? 'lock_person' : 'storefront'}</span>
+                        <p class="font-bold text-on-surface text-base mb-1">${escapeHtml(msg)}</p>
+                        ${isAuthError ? `
+                            <p class="text-xs text-outline mb-4">เซสชันหมดอายุหรือยังไม่ได้เข้าสู่ระบบ กรุณาเข้าสู่ระบบเพื่อจัดการข้อมูลร้าน</p>
+                            <a href="../auth/login.html" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-secondary text-[#0b1326] font-bold text-sm hover:brightness-110 active:scale-95 transition-all shadow-md">
+                                <span class="material-symbols-outlined text-[18px]">login</span> เข้าสู่ระบบใหม่
+                            </a>
+                        ` : ''}
+                    </div>
+                `;
+            }
+        }
+
+        // Global Helpers
+        window.fillReply = function(reviewId, text) {
+            const input = document.getElementById(`reply-input-${reviewId}`);
+            if (input) {
+                input.value = text;
+                input.focus();
+            }
+        };
+
+        window.submitReply = async function(reviewId) {
+            const input = document.getElementById(`reply-input-${reviewId}`);
+            const text = input ? input.value.trim() : '';
+
+            if (!text) {
+                alert('กรุณาพิมพ์ข้อความตอบกลับ');
+                return;
+            }
+
+            // Save to localStorage for instant persistence
+            try {
+                let replies = getStoredReplies();
+                replies[reviewId] = {
+                    reply: text,
+                    repliedAt: new Date().toISOString()
+                };
+                localStorage.setItem('ownerReviewsReplies', JSON.stringify(replies));
+            } catch(e) {}
+
+            // Try updating Supabase reviews table
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (client) {
+                    await client.from('reviews').update({ reply: text, replied_at: new Date().toISOString() }).eq('id', reviewId);
+                }
+            } catch(err) {
+                console.warn('Update review reply in Supabase notice:', err);
+            }
+
+            // Update in-memory review object
+            const targetRev = allReviews.find(r => String(r.id) === String(reviewId));
+            if (targetRev) {
+                targetRev.reply = text;
+                targetRev.replied_at = new Date().toISOString();
+            }
+
+            // Update UI card
+            const container = document.getElementById(`reply-container-${reviewId}`);
+            const card = container ? container.closest('.review-card') : null;
+            if (card) card.setAttribute('data-reply', 'true');
+
+            const shopName = currentShop?.name || localStorage.getItem('ownerShopName') || 'ทางร้าน';
+            if (container) {
+                container.innerHTML = `
+                    <div class="bg-surface-container-low rounded-xl p-4 border-l-4 border-secondary border border-outline-variant/30 ml-2 sm:ml-6 space-y-1 animate-fade-in">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-secondary flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-[16px]">reply</span>
+                                การตอบกลับจากทางร้าน (${escapeHtml(shopName)})
+                            </span>
+                            <span class="text-[10px] text-outline">เมื่อสักครู่</span>
+                        </div>
+                        <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
+                            ${escapeHtml(text)}
+                        </p>
+                    </div>
+                `;
+            }
+
+            // Refresh filter count
+            updateFilterCounts();
+        };
+
+        // Filter Logic
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => {
+                    b.classList.remove('bg-secondary', 'text-on-secondary-container', 'shadow-sm');
+                    b.classList.add('bg-surface-container', 'text-on-surface');
+                });
+                btn.classList.add('bg-secondary', 'text-on-secondary-container', 'shadow-sm');
+                btn.classList.remove('bg-surface-container', 'text-on-surface');
+
+                const filterType = btn.getAttribute('data-filter');
+                applyFilter(filterType, searchInput ? searchInput.value.toLowerCase() : '');
+            });
+        });
+
+        // Search Filter
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const activeFilter = document.querySelector('.filter-btn.bg-secondary')?.getAttribute('data-filter') || 'all';
+                applyFilter(activeFilter, e.target.value.toLowerCase());
+            });
+        }
+
+        function applyFilter(filterType, query) {
+            const cards = document.querySelectorAll('.review-card');
+            cards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                const matchesSearch = !query || text.includes(query);
+
+                let matchesCategory = false;
+                if (filterType === 'all') matchesCategory = true;
+                else if (filterType === 'rating-5') matchesCategory = card.getAttribute('data-rating') === '5';
+                else if (filterType === 'rating-4') matchesCategory = card.getAttribute('data-rating') === '4';
+                else if (filterType === 'rating-3') matchesCategory = card.getAttribute('data-rating') === '3';
+                else if (filterType === 'no-reply') matchesCategory = card.getAttribute('data-reply') === 'false';
+
+                if (matchesCategory && matchesSearch) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // Initial Load
+        loadReviews();
+
+        // Cross-tab Synchronization
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'ownerReviewsReplies' || e.key === 'appBookingsList') {
+                loadReviews();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

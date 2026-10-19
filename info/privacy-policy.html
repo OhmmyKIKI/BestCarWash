@@ -1,0 +1,226 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="th"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BestCarWash - นโยบายความเป็นส่วนตัว</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
+                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                  "primary": "#0284c7",              // Ocean Blue / Sky 600
+                  "secondary": "#059669",            // Emerald 600
+                  "surface": "#ffffff",              // Pure White
+                  "on-surface": "#0f172a",           // Slate 900
+                  "surface-container": "#ffffff",    // Card Pure White
+                  "surface-container-low": "#f8fafc",// Slate 50
+                  "surface-container-highest": "#f1f5f9", // Slate 100
+                  "surface-bright": "#ffffff",
+                  "surface-variant": "#f1f5f9",
+                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                  "outline": "#94a3b8",              // Slate 400
+                  "outline-variant": "#e2e8f0",      // Slate 200 border
+                  "primary-container": "#0284c7",    // Ocean Blue
+                  "on-primary-container": "#ffffff", // Pure White
+                  "secondary-container": "#ecfdf5",  // Mint 50
+                  "on-secondary-container": "#065f46", // Mint 900
+                  "error": "#e11d48",                // Rose 600
+                  "error-container": "#ffe4e6",
+                  "secondary-fixed": "#10b981",
+              },
+              "spacing": {
+                      "margin-mobile": "1rem",
+                      "gutter": "1rem",
+                      "touch-target-min": "3rem",
+                      "stack-sm": "0.5rem",
+                      "stack-md": "1rem",
+                      "stack-lg": "1.5rem"
+              },
+              "fontFamily": {
+                      "sans": ["Prompt", "Inter", "sans-serif"]
+              },
+            }
+          }
+        }
+      </script>
+<style>
+        /* Custom scrollbar for legal content */
+        .legal-content-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .legal-content-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .legal-content-scroll::-webkit-scrollbar-thumb {
+            background: theme('colors.outline-variant');
+            border-radius: 9999px;
+        }
+        .legal-content-scroll::-webkit-scrollbar-thumb:hover {
+            background: theme('colors.outline');
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased flex flex-col items-center min-h-screen">
+
+<!-- Desktop Header (App Bar) -->
+<header class="hidden md:flex justify-between items-center px-6 lg:px-10 h-20 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md z-50 fixed top-0 w-full">
+    <div class="flex items-center gap-3.5">
+        <a href="../customer/Customer%20Profile.html" title="ย้อนกลับ" class="w-11 h-11 rounded-full flex items-center justify-center bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-primary transition-all border border-outline-variant/40 active:scale-95 group">
+            <span class="material-symbols-outlined text-[22px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+        </a>
+        <a href="../customer/discovery.html" class="flex items-center gap-2.5 group">
+            <span class="material-symbols-outlined text-primary text-[32px] group-hover:rotate-12 transition-transform duration-300">local_car_wash</span>
+            <span class="text-2xl lg:text-3xl font-bold text-primary tracking-tighter">BestCarWash</span>
+        </a>
+    </div>
+    <div class="flex items-center gap-7">
+        <nav class="flex gap-7">
+            <a class="text-sm font-medium text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5" href="../customer/discovery.html">
+                <span class="material-symbols-outlined text-[20px]">explore</span> ค้นหาร้าน
+            </a>
+            <a class="text-sm font-medium text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5" href="../customer/booking-history-Customer.html">
+                <span class="material-symbols-outlined text-[20px]">receipt_long</span> ประวัติการจอง
+            </a>
+            <a class="text-sm font-medium text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5" href="../customer/favorite-shops.html">
+                <span class="material-symbols-outlined text-[20px]">favorite</span> ร้านโปรด
+            </a>
+        </nav>
+        <div class="flex items-center gap-4 border-l border-outline-variant/30 pl-7">
+            <a href="../customer/customer-notifications-list.html" class="w-11 h-11 rounded-full flex items-center justify-center bg-surface-container text-on-surface hover:text-primary hover:bg-surface-variant transition-colors relative border border-outline-variant/50">
+                <span class="material-symbols-outlined text-[24px]">notifications</span>
+                <span class="absolute top-2.5 right-2.5 w-2 h-2 bg-error rounded-full shadow-[0_0_5px_rgba(255,180,171,0.8)]"></span>
+            </a>
+            <a href="../customer/Customer%20Profile.html" class="flex items-center gap-3 pl-3 pr-4 py-1.5 rounded-full bg-surface-container hover:bg-surface-variant border border-outline-variant/40 transition-all group" title="โปรไฟล์ของฉัน">
+                <div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden border-2 border-primary/40 group-hover:border-primary transition-colors flex-shrink-0">
+                    <img id="desktop-header-avatar" alt="User profile" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
+                </div>
+                <div class="flex flex-col text-left">
+                    <span id="desktop-header-name" class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors leading-tight">ผู้ใช้งาน</span>
+                </div>
+            </a>
+        </div>
+    </div>
+</header>
+
+<!-- Mobile Top App Bar -->
+<header class="md:hidden fixed top-0 w-full z-50 bg-background/90 backdrop-blur-md flex justify-between items-center px-4 h-16 border-b border-outline-variant/30 shadow-sm shadow-primary/10">
+    <a href="../customer/Customer%20Profile.html" class="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-variant transition-colors active:scale-95 group">
+        <span class="material-symbols-outlined text-[24px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+    </a>
+    <h1 class="text-lg font-bold text-on-surface tracking-tight">นโยบายความเป็นส่วนตัว</h1>
+    <div class="w-10"></div> <!-- Spacer for centering -->
+</header>
+
+<main class="w-full max-w-3xl px-4 pt-20 md:pt-28 pb-12 mx-auto flex-grow flex flex-col h-[100dvh]">
+    
+    <!-- Legal Content Container -->
+    <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-3xl p-6 md:p-8 flex-grow flex flex-col shadow-xl border-t border-primary/20 overflow-hidden relative">
+        
+        <!-- Decorative background glow -->
+        <div class="absolute -top-10 -right-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-secondary/5 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- Header -->
+        <div class="mb-6 border-b border-outline-variant/50 pb-4 z-10">
+            <h2 class="text-2xl font-bold text-primary mb-1">นโยบายความเป็นส่วนตัว</h2>
+            <p class="text-xs font-medium text-on-surface-variant flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">update</span> อัปเดตล่าสุด: สิงหาคม 2026
+            </p>
+        </div>
+
+        <!-- Scrollable Content -->
+        <div class="legal-content-scroll overflow-y-auto pr-2 z-10 h-full text-sm text-on-surface-variant leading-relaxed space-y-6">
+            
+            <section class="space-y-2">
+                <h3 class="text-base font-semibold text-on-surface flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-xs font-bold">1</span>
+                    ข้อมูลที่เรารวบรวม
+                </h3>
+                <p>
+                    ในการให้บริการแอปพลิเคชัน BestCarWash เราจำเป็นต้องรวบรวมข้อมูลบางอย่างจากคุณ เพื่อให้การจองและการใช้บริการเป็นไปอย่างราบรื่น:
+                </p>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li><strong>ข้อมูลส่วนบุคคล:</strong> ชื่อ-นามสกุล, อีเมล, และเบอร์โทรศัพท์ เพื่อใช้ในการติดต่อและระบุตัวตน</li>
+                    <li><strong>ข้อมูลยานพาหนะ:</strong> ยี่ห้อรถ รุ่นรถ และป้ายทะเบียน เพื่อให้ร้านล้างรถสามารถให้บริการรถของคุณได้อย่างถูกต้อง</li>
+                    <li><strong>ข้อมูลตำแหน่งที่ตั้ง:</strong> เราอาจขอเข้าถึงตำแหน่งที่ตั้งของคุณ (Location data) เพื่อแสดงร้านล้างรถที่อยู่ใกล้คุณที่สุด</li>
+                </ul>
+            </section>
+
+            <section class="space-y-2">
+                <h3 class="text-base font-semibold text-on-surface flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-xs font-bold">2</span>
+                    วิธีที่เรานำข้อมูลของคุณไปใช้
+                </h3>
+                <p>เราใช้ข้อมูลที่รวบรวมมาเพื่อวัตถุประสงค์ดังต่อไปนี้:</p>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li>เพื่อดำเนินการและยืนยันการจองคิวล้างรถของคุณ รวมถึงการประมวลผลการชำระเงิน</li>
+                    <li>เพื่อติดต่อ แจ้งเตือนสถานะการจอง หรือส่งข้อความอัปเดตที่สำคัญเกี่ยวกับบริการ</li>
+                    <li>เพื่อวิเคราะห์และปรับปรุงประสบการณ์การใช้งานแอปพลิเคชันให้ดียิ่งขึ้น</li>
+                </ul>
+            </section>
+
+            <section class="space-y-2">
+                <h3 class="text-base font-semibold text-on-surface flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-xs font-bold">3</span>
+                    การแชร์ข้อมูลและความปลอดภัย
+                </h3>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li><strong>การแชร์กับผู้ให้บริการ:</strong> เราจะแชร์ข้อมูลที่จำเป็นเท่านั้น (เช่น ชื่อของคุณ, ยี่ห้อรถ และป้ายทะเบียน) ให้กับเจ้าของร้านล้างรถที่คุณเลือกจอง เพื่อให้พวกเขาสามารถเตรียมพร้อมให้บริการได้อย่างปลอดภัย</li>
+                    <li><strong>ความปลอดภัยของการชำระเงิน:</strong> ข้อมูลบัตรเครดิตหรือการชำระเงินของคุณจะถูกเข้ารหัสและประมวลผลผ่านพันธมิตรผู้ให้บริการชำระเงินที่มีมาตรฐานความปลอดภัยระดับสากล (PCI-DSS) เราจะไม่เก็บข้อมูลบัตรเครดิตของคุณไว้ในเซิร์ฟเวอร์ของเรา</li>
+                    <li>เรายืนยันว่า <strong>จะไม่มีการขายข้อมูลส่วนบุคคลของคุณ</strong> ให้กับบุคคลที่สามเพื่อการโฆษณาอย่างเด็ดขาด</li>
+                </ul>
+            </section>
+
+            <section class="space-y-2">
+                <h3 class="text-base font-semibold text-on-surface flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-xs font-bold">4</span>
+                    สิทธิ์และทางเลือกของคุณ
+                </h3>
+                <p>
+                    คุณมีสิทธิ์ในการจัดการข้อมูลส่วนบุคคลของคุณอย่างเต็มที่:
+                </p>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li>คุณสามารถเข้าถึง ตรวจสอบ แก้ไข หรือลบข้อมูลส่วนบุคคลและข้อมูลรถยนต์ของคุณได้ตลอดเวลาผ่านเมนู 'โปรไฟล์' ภายในแอปพลิเคชัน</li>
+                    <li>หากคุณต้องการลบบัญชีผู้ใช้งาน BestCarWash อย่างถาวร รวมถึงข้อมูลทั้งหมดที่เกี่ยวข้อง สามารถทำได้โดยติดต่อฝ่ายสนับสนุนของเราผ่านศูนย์ช่วยเหลือ</li>
+                    <li>คุณสามารถเลือกที่จะไม่ให้เข้าถึงข้อมูลตำแหน่งที่ตั้งได้ผ่านการตั้งค่าในอุปกรณ์ของคุณ แต่นั่นอาจส่งผลให้บางฟีเจอร์ของแอปทำงานได้ไม่สมบูรณ์</li>
+                </ul>
+            </section>
+
+            <div class="h-4"></div>
+        </div>
+    </div>
+    
+</main>
+
+<script>
+    // Avatar & Name Synchronization
+    document.addEventListener('DOMContentLoaded', () => {
+        const saved = localStorage.getItem('customerProfile');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                if (data.avatar && !data.avatar.includes('googleusercontent')) {
+                    const avatar = document.getElementById('desktop-header-avatar');
+                    if (avatar) avatar.src = data.avatar;
+                }
+                if (data.name) {
+                    const nameEl = document.getElementById('desktop-header-name');
+                    if (nameEl) nameEl.textContent = data.name;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    });
+</script>
+</body>
+</html>
+
+
+
