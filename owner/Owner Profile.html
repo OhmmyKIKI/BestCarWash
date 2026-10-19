@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th">
 <head>
     <meta charset="utf-8"/>
@@ -10,15 +10,6 @@
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-client.js"></script>
-    <script src="../supabase-client.js"></script>
-    <script>
-        if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
-            var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
-            var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
-            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        }
-        var supabaseClient = window.supabaseClient;
-    </script>
     <script id="tailwind-config">
         tailwind.config = {
           darkMode: "class",
@@ -517,8 +508,14 @@
             } catch(e) {}
         }
 
-        // Layer 2: Fast-Track Background Sync from Supabase
+        // Layer 2: Fast-Track Background Sync from Supabase (Robust & Cascade-Protected)
         (async () => {
+            const isNetErr = (err) => {
+                if (!err) return false;
+                const msg = (err.message || String(err)).toLowerCase();
+                return msg.includes('fetch') || msg.includes('network') || msg.includes('abort') || msg.includes('connection');
+            };
+
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
                 if (!client) return;
@@ -527,34 +524,26 @@
                 const fallbackUserId = localStorage.getItem('lastLoggedInUserId');
                 const cachedShopName = localStorage.getItem('ownerShopName');
 
-                // FAST-TRACK: Query shop details and bookings immediately in parallel with session
-                let fastShopPromise = null;
-                let fastBookingsPromise = null;
-                if (savedShopId && savedShopId.length > 20) {
-                    fastShopPromise = client.from('shops').select('*').eq('id', savedShopId).maybeSingle();
-                    fastBookingsPromise = client.from('bookings').select('id, status').eq('shop_id', savedShopId);
+                // 1. Session check
+                let currentUser = null;
+                try {
+                    const sessRes = await (client.auth ? client.auth.getSession() : Promise.resolve({ data: null }));
+                    currentUser = sessRes?.data?.session?.user || null;
+                } catch (sessErr) {
+                    if (isNetErr(sessErr)) return;
                 }
 
-                const sessionPromise = client.auth ? client.auth.getSession() : Promise.resolve({ data: null });
-
-                const [shopRes, bookingsRes, sessRes] = await Promise.all([
-                    fastShopPromise || Promise.resolve(null),
-                    fastBookingsPromise || Promise.resolve(null),
-                    sessionPromise
-                ]);
-
-                const user = sessRes?.data?.session?.user || null;
-                const effectiveUserId = user?.id || fallbackUserId;
-
+                const effectiveUserId = currentUser?.id || fallbackUserId;
                 if (!effectiveUserId && !cachedShopName && !savedShopId) {
                     return;
                 }
 
-                // Non-blocking Profile & Role Guard in background
+                // 2. Fetch Profile & Role Guard (Single clean call)
                 if (effectiveUserId) {
-                    client.from('profiles').select('avatar_url, full_name, role').eq('id', effectiveUserId).maybeSingle().then(({ data: profile }) => {
+                    client.from('profiles').select('avatar_url, full_name, role').eq('id', effectiveUserId).maybeSingle().then(({ data: profile, error: pErr }) => {
+                        if (pErr && isNetErr(pErr)) return;
                         if (profile) {
-                            if (profile.role === 'CUSTOMER' || user?.user_metadata?.role === 'CUSTOMER') {
+                            if (profile.role === 'CUSTOMER' || currentUser?.user_metadata?.role === 'CUSTOMER') {
                                 const mainContainer = document.querySelector('main');
                                 if (mainContainer) {
                                     mainContainer.innerHTML = `
@@ -597,24 +586,47 @@
                     }).catch(() => {});
                 }
 
-                // Resolve shop (fast-track or fallback)
-                let shop = shopRes?.data || null;
+                // 3. Resolve Shop cleanly without cascading fallback loops
+                let shop = null;
+                if (savedShopId && savedShopId.length > 20) {
+                    const { data: s, error: sErr } = await client.from('shops').select('*').eq('id', savedShopId).maybeSingle();
+                    if (sErr && isNetErr(sErr)) {
+                        console.warn('Network sync notice (shop): Offline, using cached display.');
+                        return;
+                    }
+                    if (s) shop = s;
+                }
+
                 if (!shop && effectiveUserId) {
-                    const { data: s } = await client.from('shops').select('*').eq('owner_id', effectiveUserId).maybeSingle();
-                    if (s) shop = s;
-                }
-                if (!shop && cachedShopName) {
-                    const { data: s } = await client.from('shops').select('*').eq('name', cachedShopName).maybeSingle();
+                    const { data: s, error: sErr } = await client.from('shops').select('*').eq('owner_id', effectiveUserId).maybeSingle();
+                    if (sErr && isNetErr(sErr)) {
+                        console.warn('Network sync notice (shop by owner): Offline, using cached display.');
+                        return;
+                    }
                     if (s) shop = s;
                 }
 
-                if (shop) {
-                    localStorage.setItem('currentShopId', shop.id);
+                // Fallback to cached shop info if DB query did not find row
+                if (!shop && savedShopId) {
+                    shop = { id: savedShopId, name: cachedShopName || 'ohm Car Wash' };
+                }
+
+                const meta = currentUser?.user_metadata || {};
+                const finalShopName = shop?.name || meta.shop_name || cachedShopName;
+                if (finalShopName) {
                     const shopNameDisplay = document.getElementById('owner-shop-name-display');
-                    if (shopNameDisplay && shop.name) shopNameDisplay.innerText = shop.name;
-                    localStorage.setItem('ownerShopName', shop.name);
+                    if (shopNameDisplay) shopNameDisplay.innerText = finalShopName;
+                    localStorage.setItem('ownerShopName', finalShopName);
+                }
 
-                    // Hydrate Avatar from Shop Logo if avatar is currently not set or default
+                if (shop?.id) {
+                    localStorage.setItem('currentShopId', shop.id);
+                    if (shop.address) localStorage.setItem('ownerShopAddress', shop.address);
+                    if (shop.latitude) localStorage.setItem('ownerShopLat', shop.latitude);
+                    if (shop.longitude) localStorage.setItem('ownerShopLng', shop.longitude);
+                    if (meta.map_link) localStorage.setItem('ownerShopMapLink', meta.map_link);
+                    else if (shop.latitude && shop.longitude) localStorage.setItem('ownerShopMapLink', `https://maps.google.com/?q=${shop.latitude},${shop.longitude}`);
+
                     if (shop.logo_url) {
                         const curAv = localStorage.getItem('ownerProfileAvatar');
                         if (!curAv || curAv === DEFAULT_OWNER_AVATAR || curAv.includes('googleusercontent')) {
@@ -626,33 +638,33 @@
                         }
                     }
 
-                    // Query bookings for this shop to populate stats (or use fast-track)
-                    let bookings = bookingsRes?.data;
-                    if (!bookings) {
-                        const { data } = await client.from('bookings').select('id, status').eq('shop_id', shop.id);
-                        bookings = data;
-                    }
-                    if (bookings && bookings.length > 0) {
-                        const completedCount = bookings.filter(b => b.status === 'completed').length;
-                        const todayCount = bookings.filter(b => ['confirmed', 'arrived', 'washing', 'ready'].includes(b.status)).length;
-                        const statCompleted = document.getElementById('owner-stat-completed');
-                        if (statCompleted) statCompleted.textContent = `${completedCount} คัน`;
-                        const statToday = document.getElementById('owner-stat-today');
-                        if (statToday) statToday.textContent = `${todayCount} คิว`;
-                        localStorage.setItem('ownerProfileStats', JSON.stringify({ completed: completedCount, today: todayCount }));
-                    }
-
-                    // Query operating hours to display live summary on profile
+                    // 4. Fetch Bookings stats cleanly
                     try {
-                        const { data: dbHours } = await client.from('shop_operating_hours').select('*').eq('shop_id', shop.id).order('day_of_week', { ascending: true });
-                        if (dbHours && dbHours.length > 0) {
+                        const { data: bookings, error: bErr } = await client.from('bookings').select('id, status').eq('shop_id', shop.id);
+                        if (!bErr && bookings && bookings.length > 0) {
+                            const completedCount = bookings.filter(b => b.status === 'completed').length;
+                            const todayCount = bookings.filter(b => ['confirmed', 'arrived', 'washing', 'ready'].includes(b.status)).length;
+                            const statCompleted = document.getElementById('owner-stat-completed');
+                            if (statCompleted) statCompleted.textContent = `${completedCount} คัน`;
+                            const statToday = document.getElementById('owner-stat-today');
+                            if (statToday) statToday.textContent = `${todayCount} คิว`;
+                            localStorage.setItem('ownerProfileStats', JSON.stringify({ completed: completedCount, today: todayCount }));
+                        }
+                    } catch (_) {}
+
+                    // 5. Fetch Operating Hours summary cleanly
+                    try {
+                        const { data: dbHours, error: hErr } = await client.from('shop_operating_hours').select('*').eq('shop_id', shop.id).order('day_of_week', { ascending: true });
+                        if (!hErr && dbHours && dbHours.length > 0) {
                             localStorage.setItem('ownerOperatingHours', JSON.stringify(dbHours));
                             updateHoursSummaryOnProfile();
                         }
-                    } catch(_) {}
+                    } catch (_) {}
                 }
-            } catch(e) {
-                console.warn('Owner profile fetch notice:', e);
+            } catch (err) {
+                if (!isNetErr(err)) {
+                    console.warn('Owner profile background sync notice:', err);
+                }
             }
         })();
 
@@ -799,6 +811,8 @@
                             const cTime = (sample.close_time || '18:00').slice(0, 5);
                             const closedStr = closedDays.map(c => dayLabels[c.day_of_week]).join(', ');
                             summaryEl.innerHTML = `<span class="text-secondary font-medium">เปิด ${oTime} - ${cTime} น.</span>${closedStr ? ` (หยุด ${closedStr})` : ''}${holidaysCount > 0 ? ` • <span class="text-amber-400 font-medium">วันหยุดพิเศษ: ${holidaysCount} วัน</span>` : ''}`;
+                        } else {
+                            summaryEl.innerHTML = `<span class="text-rose-500 font-medium">ปิดทำการชั่วคราว (ปิดทุกวัน)</span>${holidaysCount > 0 ? ` • <span class="text-amber-400 font-medium">วันหยุดพิเศษ: ${holidaysCount} วัน</span>` : ''}`;
                         }
                         return;
                     }

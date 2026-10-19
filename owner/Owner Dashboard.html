@@ -156,9 +156,9 @@
                 <span id="owner-dashboard-shop-name"></span>
             </p>
         </div>
-        <div id="cloud-sync-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-primary/10 border border-primary/20 text-primary transition-all duration-500 w-fit">
-            <span class="material-symbols-outlined text-[14px] animate-spin">sync</span>
-            <span id="cloud-sync-text">กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...</span>
+        <div id="cloud-sync-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-secondary/10 border border-secondary/20 text-secondary opacity-0 transition-opacity duration-500 w-fit">
+            <span class="material-symbols-outlined text-[14px]">cloud_done</span>
+            <span id="cloud-sync-text">ข้อมูลเป็นปัจจุบันแล้ว</span>
         </div>
     </section>
 
@@ -694,7 +694,6 @@
 
     // Dual-Layer Loading: Cache-First (0ms Instant Display) + Fast-Track Background Sync
     async function loadOwnerDashboardData() {
-        setCloudSyncStatus('syncing', 'กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...');
         try {
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
             if (!client) {

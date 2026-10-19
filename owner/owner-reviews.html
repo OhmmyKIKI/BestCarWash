@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th">
 <head>
     <meta charset="utf-8"/>
@@ -227,7 +227,7 @@
 </main>
 
 <script>
-    document.addEventListener('DOMContentLoaded', async () => {
+    document.addEventListener('DOMContentLoaded', () => {
         const filterBtns = document.querySelectorAll('.filter-btn');
         const searchInput = document.getElementById('searchInput');
         const reviewsContainer = document.getElementById('reviews-list');
@@ -395,11 +395,85 @@
             `;
         }
 
+        function applyReviewsData(reviewsList) {
+            allReviews = Array.isArray(reviewsList) ? reviewsList : [];
+
+            if (allReviews.length === 0) {
+                if (overallRatingEl) overallRatingEl.textContent = '0.0';
+                if (reviewCountTextEl) reviewCountTextEl.textContent = 'จากลูกค้าทั้งหมด 0 การจอง';
+                if (starsVisualEl) starsVisualEl.innerHTML = renderStars(0);
+
+                [1, 2, 3, 4, 5].forEach(star => {
+                    const bar = document.getElementById(`bar-${star}`);
+                    const count = document.getElementById(`count-${star}`);
+                    if (bar) bar.style.width = '0%';
+                    if (count) count.textContent = '0 (0%)';
+                });
+
+                updateFilterCounts();
+
+                reviewsContainer.innerHTML = `
+                    <div class="glass-card rounded-2xl p-12 text-center flex flex-col items-center justify-center">
+                        <div class="w-16 h-16 rounded-full bg-surface-container-highest flex items-center justify-center text-yellow-400/60 mb-4">
+                            <span class="material-symbols-outlined text-[36px]">rate_review</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-on-surface mb-1">ยังไม่มีรีวิวสำหรับร้านนี้</h3>
+                        <p class="text-sm text-outline max-w-md">เมื่อลูกค้าเข้ามาใช้บริการล้างรถและเขียนรีวิว ความคิดเห็นจะปรากฏที่นี่โดยอัตโนมัติ</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Calculate statistics
+            const total = allReviews.length;
+            const sum = allReviews.reduce((acc, r) => acc + (parseFloat(r.rating) || 5), 0);
+            const avg = (sum / total).toFixed(1);
+
+            if (overallRatingEl) overallRatingEl.textContent = avg;
+            if (reviewCountTextEl) reviewCountTextEl.textContent = `จากลูกค้าทั้งหมด ${total} รีวิว`;
+            if (starsVisualEl) starsVisualEl.innerHTML = renderStars(parseFloat(avg));
+
+            const starCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+            allReviews.forEach(r => {
+                const rStar = Math.min(5, Math.max(1, Math.round(parseFloat(r.rating) || 5)));
+                starCounts[rStar] = (starCounts[rStar] || 0) + 1;
+            });
+
+            [1, 2, 3, 4, 5].forEach(star => {
+                const c = starCounts[star] || 0;
+                const pct = Math.round((c / total) * 100);
+                const bar = document.getElementById(`bar-${star}`);
+                const countEl = document.getElementById(`count-${star}`);
+                if (bar) bar.style.width = `${pct}%`;
+                if (countEl) countEl.textContent = `${c} (${pct}%)`;
+            });
+
+            updateFilterCounts();
+
+            // Render review list
+            reviewsContainer.innerHTML = allReviews.map(r => renderReviewCard(r)).join('');
+        }
+
+        // ==========================================
+        // LAYER 1: INSTANT 0.00ms RENDER FROM CACHE
+        // ==========================================
+        try {
+            const cachedRev = localStorage.getItem('cachedOwnerReviews');
+            if (cachedRev) {
+                const parsed = JSON.parse(cachedRev);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    applyReviewsData(parsed);
+                }
+            }
+        } catch(_) {}
+
         async function loadReviews() {
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
                 if (!client) {
-                    showEmptyState('ไม่สามารถเชื่อมต่อระบบได้ กรุณารีเฟรชหน้านี้', true);
+                    if (!allReviews || allReviews.length === 0) {
+                        showEmptyState('ไม่สามารถเชื่อมต่อระบบได้ กรุณารีเฟรชหน้านี้', true);
+                    }
                     return;
                 }
 
@@ -431,7 +505,9 @@
                 const effectiveUserId = user?.id || fallbackUserId;
 
                 if (!effectiveUserId && !cachedShopName && !savedShopId) {
-                    showEmptyState('ไม่พบเซสชันการเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่', true);
+                    if (!allReviews || allReviews.length === 0) {
+                        showEmptyState('ไม่พบเซสชันการเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่', true);
+                    }
                     return;
                 }
 
@@ -475,7 +551,9 @@
                 }
 
                 if (!shop) {
-                    showEmptyState('ยังไม่พบข้อมูลร้านค้าของคุณ กรุณาตั้งค่าร้านค้าก่อนใช้งาน', false);
+                    if (!allReviews || allReviews.length === 0) {
+                        showEmptyState('ยังไม่พบข้อมูลร้านค้าของคุณ กรุณาตั้งค่าร้านค้าก่อนใช้งาน', false);
+                    }
                     return;
                 }
                 currentShop = shop;
@@ -499,67 +577,15 @@
                     reviews = data;
                 }
 
-                allReviews = Array.isArray(reviews) ? reviews : [];
-
-                // Reset summary and counts
-                if (allReviews.length === 0) {
-                    if (overallRatingEl) overallRatingEl.textContent = '0.0';
-                    if (reviewCountTextEl) reviewCountTextEl.textContent = 'จากลูกค้าทั้งหมด 0 การจอง';
-                    if (starsVisualEl) starsVisualEl.innerHTML = renderStars(0);
-
-                    [1, 2, 3, 4, 5].forEach(star => {
-                        const bar = document.getElementById(`bar-${star}`);
-                        const count = document.getElementById(`count-${star}`);
-                        if (bar) bar.style.width = '0%';
-                        if (count) count.textContent = '0 (0%)';
-                    });
-
-                    updateFilterCounts();
-
-                    reviewsContainer.innerHTML = `
-                        <div class="glass-card rounded-2xl p-12 text-center flex flex-col items-center justify-center">
-                            <div class="w-16 h-16 rounded-full bg-surface-container-highest flex items-center justify-center text-yellow-400/60 mb-4">
-                                <span class="material-symbols-outlined text-[36px]">rate_review</span>
-                            </div>
-                            <h3 class="text-lg font-bold text-on-surface mb-1">ยังไม่มีรีวิวสำหรับร้านนี้</h3>
-                            <p class="text-sm text-outline max-w-md">เมื่อลูกค้าเข้ามาใช้บริการล้างรถและเขียนรีวิว ความคิดเห็นจะปรากฏที่นี่โดยอัตโนมัติ</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                // Calculate statistics
-                const total = allReviews.length;
-                const sum = allReviews.reduce((acc, r) => acc + (parseFloat(r.rating) || 5), 0);
-                const avg = (sum / total).toFixed(1);
-
-                if (overallRatingEl) overallRatingEl.textContent = avg;
-                if (reviewCountTextEl) reviewCountTextEl.textContent = `จากลูกค้าทั้งหมด ${total} รีวิว`;
-                if (starsVisualEl) starsVisualEl.innerHTML = renderStars(parseFloat(avg));
-
-                const starCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-                allReviews.forEach(r => {
-                    const rStar = Math.min(5, Math.max(1, Math.round(parseFloat(r.rating) || 5)));
-                    starCounts[rStar] = (starCounts[rStar] || 0) + 1;
-                });
-
-                [1, 2, 3, 4, 5].forEach(star => {
-                    const c = starCounts[star] || 0;
-                    const pct = Math.round((c / total) * 100);
-                    const bar = document.getElementById(`bar-${star}`);
-                    const countEl = document.getElementById(`count-${star}`);
-                    if (bar) bar.style.width = `${pct}%`;
-                    if (countEl) countEl.textContent = `${c} (${pct}%)`;
-                });
-
-                updateFilterCounts();
-
-                // Render review list
-                reviewsContainer.innerHTML = allReviews.map(r => renderReviewCard(r)).join('');
+                const freshReviews = Array.isArray(reviews) ? reviews : [];
+                localStorage.setItem('cachedOwnerReviews', JSON.stringify(freshReviews));
+                applyReviewsData(freshReviews);
 
             } catch (err) {
                 console.error('Reviews load error:', err);
-                showEmptyState('เกิดข้อผิดพลาดในการโหลดข้อมูลรีวิว');
+                if (!allReviews || allReviews.length === 0) {
+                    showEmptyState('เกิดข้อผิดพลาดในการโหลดข้อมูลรีวิว');
+                }
             }
         }
 

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th">
 <head>
     <meta charset="utf-8"/>
@@ -545,43 +545,31 @@
                 if (error) throw error;
                 if (!data?.user) throw new Error('ไม่สามารถสร้างบัญชีผู้ใช้ได้ กรุณาลองใหม่อีกครั้ง');
 
-                // 1.5 Update profile avatar in public.profiles directly if provided
+                // 1.5 Update profile avatar & insert initial vehicle in parallel
+                const postTasks = [];
                 if (uploadedCustomerAvatarBase64) {
-                    try {
-                        await client.from('profiles').update({ avatar_url: uploadedCustomerAvatarBase64 }).eq('id', data.user.id);
-                    } catch (profErr) {
-                        console.warn('Customer profile avatar update notice:', profErr);
-                    }
+                    postTasks.push(client.from('profiles').update({ avatar_url: uploadedCustomerAvatarBase64 }).eq('id', data.user.id).catch(e => console.warn(e)));
                 }
-
-                // Ensure vehicle is recorded even if trigger was skipped
                 if (carModel) {
-                    try {
-                        const { data: existingVehicles } = await client
-                            .from('vehicles')
-                            .select('id')
-                            .eq('customer_id', data.user.id);
-
-                        if (!existingVehicles || existingVehicles.length === 0) {
-                            await client.from('vehicles').insert({
-                                customer_id: data.user.id,
-                                brand_model: carModel,
-                                plate_number: licensePlate || '-',
-                                is_default: true
-                            });
-                        }
-                    } catch (vErr) {
-                        console.warn('Vehicle check warning:', vErr);
-                    }
+                    postTasks.push(client.from('vehicles').insert({
+                        customer_id: data.user.id,
+                        brand_model: carModel,
+                        plate_number: licensePlate || '-',
+                        is_default: true
+                    }).catch(e => console.warn(e)));
+                }
+                if (postTasks.length > 0) {
+                    await Promise.all(postTasks);
                 }
 
-                // Store in customerProfile cache
+                // Store in customerProfile cache & remember email for 0ms login prefill
                 localStorage.setItem('customerProfile', JSON.stringify({
                     fullName,
                     phone,
                     email,
                     avatar: uploadedCustomerAvatarBase64 || null
                 }));
+                localStorage.setItem('rememberedEmail', email);
 
                 // Sign out and clear any old session cache
                 try {
@@ -592,13 +580,14 @@
                 ['customerProfile', 'customerCars', 'ownerProfileAvatar', 'ownerShopName',
                  'ownerProfileName', 'appBookingsList', 'activeCustomerBooking', 'favoriteShopIds'].forEach(k => localStorage.removeItem(k));
 
+                sessionStorage.removeItem('customerSignupDraft');
                 showToast('สร้างบัญชีสำเร็จ! กำลังเปลี่ยนหน้าไปเข้าสู่ระบบ...', true);
                 submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">check</span> สำเร็จ';
                 submitBtn.classList.replace('bg-primary-container', 'bg-emerald-600');
 
                 setTimeout(() => {
                     window.location.href = 'login.html';
-                }, 1500);
+                }, 1200);
 
             } catch (err) {
                 console.error('Customer signup error:', err);
@@ -608,8 +597,63 @@
             }
         });
 
-        // Initialize UI
+        // ==========================================
+        // LAYER 1: INSTANT 0.00ms DRAFT RESTORE
+        // ==========================================
+        function saveDraft() {
+            try {
+                const draft = {
+                    fullName: document.getElementById('fullName')?.value || '',
+                    email: document.getElementById('email')?.value || '',
+                    phone: document.getElementById('phone')?.value || '',
+                    carModel: document.getElementById('carModel')?.value || '',
+                    licensePlate: document.getElementById('licensePlate')?.value || ''
+                };
+                sessionStorage.setItem('customerSignupDraft', JSON.stringify(draft));
+            } catch(_) {}
+        }
+
+        function restoreDraft() {
+            try {
+                const draftStr = sessionStorage.getItem('customerSignupDraft');
+                if (draftStr) {
+                    const draft = JSON.parse(draftStr);
+                    if (draft.fullName) document.getElementById('fullName').value = draft.fullName;
+                    if (draft.email) document.getElementById('email').value = draft.email;
+                    if (draft.phone) document.getElementById('phone').value = draft.phone;
+                    if (draft.carModel) document.getElementById('carModel').value = draft.carModel;
+                    if (draft.licensePlate) document.getElementById('licensePlate').value = draft.licensePlate;
+                }
+            } catch(_) {}
+        }
+
+        // Attach auto-save draft listeners
+        ['fullName', 'email', 'phone', 'carModel', 'licensePlate'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', saveDraft);
+        });
+
+        // Restore draft at 0ms and initialize UI
+        restoreDraft();
         updateUI();
+
+        // LAYER 2: SILENT FAST-TRACK BACKGROUND SESSION CHECK
+        (async () => {
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (client?.auth) {
+                    const { data: { session } } = await client.auth.getSession();
+                    if (session?.user) {
+                        const role = session.user.user_metadata?.role;
+                        if (role === 'CUSTOMER') {
+                            window.location.href = '../customer/discovery.html';
+                        } else if (role === 'OWNER') {
+                            window.location.href = '../owner/Owner%20Dashboard.html';
+                        }
+                    }
+                }
+            } catch(_) {}
+        })();
     </script>
 </body>
 </html>

@@ -240,6 +240,11 @@
                 localStorage.removeItem('customerCars');
                 localStorage.removeItem('ownerProfileAvatar');
                 localStorage.removeItem('ownerShopName');
+                localStorage.removeItem('currentShopId');
+                localStorage.removeItem('ownerOperatingHours');
+                localStorage.removeItem('ownerServices');
+                localStorage.removeItem('ownerSpecialHolidays');
+                localStorage.removeItem('ownerDashboardKPI');
                 localStorage.removeItem('ownerProfileName');
                 localStorage.removeItem('appBookingsList');
                 localStorage.removeItem('activeCustomerBooking');
@@ -268,7 +273,10 @@
                 }
             }
 
-            if (role === 'OWNER') {
+            // Detect OWNER via profile, user_metadata role, or presence of shop_name in metadata
+            const isOwner = (role && String(role).toUpperCase() === 'OWNER') || !!user.user_metadata?.shop_name;
+            if (isOwner) {
+                role = 'OWNER';
                 const avatar = profile?.avatar_url || user.user_metadata?.avatar_url || null;
                 const name = profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'เจ้าของร้าน';
                 if (avatar) localStorage.setItem('ownerProfileAvatar', avatar);
@@ -285,19 +293,26 @@
                         const fallbackLng = meta.longitude || parseFloat(localStorage.getItem('ownerShopLng')) || null;
 
                         let { data: shop } = await client.from('shops').select('*').eq('owner_id', user.id).maybeSingle();
+                        if (!shop && meta.shop_name) {
+                            const { data: byName } = await client.from('shops').select('*').eq('name', meta.shop_name).maybeSingle();
+                            if (byName) shop = byName;
+                        }
+
                         if (!shop) {
                             const sName = meta.shop_name || `${name}'s Car Wash`;
-                            const { data: newShop } = await client.from('shops').insert({
+                            const { data: newShop, error: newShopErr } = await client.from('shops').insert({
                                 owner_id: user.id,
                                 name: sName,
                                 phone_number: fallbackPhone,
                                 description: fallbackDesc,
                                 address: fallbackAddr,
                                 latitude: fallbackLat,
-                                longitude: fallbackLng
+                                longitude: fallbackLng,
+                                is_open: true
                             }).select('*').maybeSingle();
 
                             if (newShop) shop = newShop;
+                            else if (newShopErr) console.warn('New shop insert error in login:', newShopErr);
                         } else {
                             // Self-healing: if shops table has missing description or address, sync from user_metadata or localStorage
                             const updateData = {};
@@ -325,12 +340,35 @@
                                 localStorage.setItem('ownerShopPhone', shop.phone_number || fallbackPhone);
                             }
                             
-                            const streetVal = shop.address || fallbackAddr;
-                            const cityVal = meta.city || localStorage.getItem('ownerShopCity') || '';
-                            const zipVal = meta.zip || localStorage.getItem('ownerShopZip') || '';
+                            const fullAddrVal = shop.address || fallbackAddr;
+                            let streetVal = meta.street || '';
+                            let subDistVal = meta.sub_district || '';
+                            let cityVal = meta.city || localStorage.getItem('ownerShopCity') || '';
+                            let zipVal = meta.zip || localStorage.getItem('ownerShopZip') || '';
+
+                            if (fullAddrVal && (!streetVal || !cityVal || !zipVal)) {
+                                const text = fullAddrVal.trim();
+                                const zipMatch = text.match(/\b\d{5}\b/);
+                                if (zipMatch && !zipVal) zipVal = zipMatch[0];
+                                const provMatch = text.match(/(?:จ\.|จังหวัด)?\s*(กรุงเทพ(?:มหานคร)?|เชียงใหม่|นนทบุรี|ปทุมธานี|สมุทรปราการ|ชลบุรี|ขอนแก่น|ภูเก็ต|สงขลา|นครราชสีมา|ระยอง|เชียงราย|อุบลราชธานี|พิษณุโลก|สุราษฎร์ธานี|นครปฐม|สมุทรสาคร|นครศรีธรรมราช|ลำปาง|อุดรธานี|สระบุรี|อยุธยา|พระนครศรีอยุธยา)/);
+                                if (provMatch && !cityVal) cityVal = provMatch[1];
+                                const subDistMatch = text.match(/(?:ต\.|ตำบล|แขวง)\s*([^\s,]+)/);
+                                if (subDistMatch && !subDistVal) subDistVal = subDistMatch[0].trim();
+
+                                if (!streetVal) {
+                                    let rem = text;
+                                    if (zipMatch) rem = rem.replace(zipMatch[0], '');
+                                    if (provMatch) rem = rem.replace(provMatch[0], '');
+                                    if (subDistMatch) rem = rem.replace(subDistMatch[0], '');
+                                    streetVal = rem.replace(/^[,\s]+|[,\s]+$/g, '').trim() || text;
+                                }
+                            }
+
                             const mapLinkVal = meta.map_link || localStorage.getItem('ownerShopMapLink') || (shop.latitude && shop.longitude ? `https://maps.google.com/?q=${shop.latitude},${shop.longitude}` : '');
 
+                            if (fullAddrVal) localStorage.setItem('ownerShopAddress', fullAddrVal);
                             if (streetVal) localStorage.setItem('ownerShopStreet', streetVal);
+                            if (subDistVal) localStorage.setItem('ownerShopSubDistrict', subDistVal);
                             if (cityVal) localStorage.setItem('ownerShopCity', cityVal);
                             if (zipVal) localStorage.setItem('ownerShopZip', zipVal);
                             if (mapLinkVal) localStorage.setItem('ownerShopMapLink', mapLinkVal);
@@ -353,8 +391,16 @@
                                 localStorage.setItem('ownerShopGallery', JSON.stringify(meta.shop_images));
                             }
 
-                            // 1. Services Self-Healing & Hydration
-                            let { data: srvs } = await client.from('services').select('*').eq('shop_id', shop.id).order('created_at', { ascending: true });
+                            // 1. Parallel fetch Services, Hours, and Bookings for ultra-fast login
+                            const [srvsRes, hoursRes, bListRes] = await Promise.all([
+                                client.from('services').select('*').eq('shop_id', shop.id).order('created_at', { ascending: true }),
+                                client.from('shop_operating_hours').select('*').eq('shop_id', shop.id).order('day_of_week', { ascending: true }),
+                                client.from('bookings').select('status').eq('shop_id', shop.id)
+                            ]);
+                            let srvs = srvsRes?.data;
+                            let hours = hoursRes?.data;
+                            const bList = bListRes?.data;
+
                             let savedServices = user.user_metadata?.initial_services;
                             if (!savedServices || !savedServices.length) {
                                 try {
@@ -369,35 +415,52 @@
                                     { name: 'ดูดฝุ่น & สปาภายในห้องโดยสาร', price: 250, duration_minutes: 45, description: 'ดูดฝุ่น ฟอกเบาะผ้า เช็ดคอนโซล ฆ่าเชื้อแบคทีเรีย' },
                                     { name: 'เคลือบแว็กซ์สีรถ & กระจก', price: 350, duration_minutes: 45, description: 'ลงน้ำยาเคลือบสีพรีเมียม เพิ่มความเงา ป้องกันคราบน้ำ' }
                                 ];
-                                const { data: seeded } = await client.from('services').insert(toSeed.map(s => ({
+                                client.from('services').insert(toSeed.map(s => ({
                                     shop_id: shop.id,
                                     name: s.name,
                                     price: parseFloat(s.price) || 150,
                                     duration_minutes: parseInt(s.duration_minutes) || 30,
                                     description: s.description || 'บริการมาตรฐาน'
-                                }))).select();
-                                srvs = seeded || toSeed;
+                                }))).select().then(({ data: seeded }) => {
+                                    if (seeded) localStorage.setItem('ownerServices', JSON.stringify(seeded));
+                                }).catch(() => {});
+                                srvs = toSeed;
                             }
                             if (srvs && srvs.length > 0) {
                                 localStorage.setItem('ownerServices', JSON.stringify(srvs));
                             }
 
                             // 2. Operating Hours Self-Healing & Hydration
-                            let { data: hours } = await client.from('shop_operating_hours').select('*').eq('shop_id', shop.id);
                             if (!hours || hours.length === 0) {
                                 let hoursToSeed = null;
-                                try {
-                                    const local = JSON.parse(localStorage.getItem('ownerOperatingHours') || 'null');
-                                    if (Array.isArray(local) && local.length > 0) {
-                                        hoursToSeed = local.map(h => ({
-                                            shop_id: shop.id,
-                                            day_of_week: h.day_of_week,
-                                            open_time: h.open_time || '08:00:00',
-                                            close_time: h.close_time || '18:00:00',
-                                            is_closed: !!h.is_closed
-                                        }));
-                                    }
-                                } catch(_) {}
+
+                                // Priority 1: user_metadata configured during registration or previous settings
+                                const metaHours = meta.initial_operating_hours || user.user_metadata?.initial_operating_hours;
+                                if (Array.isArray(metaHours) && metaHours.length > 0) {
+                                    hoursToSeed = metaHours.map(h => ({
+                                        shop_id: shop.id,
+                                        day_of_week: h.day_of_week,
+                                        open_time: h.open_time || '08:00:00',
+                                        close_time: h.close_time || '18:00:00',
+                                        is_closed: !!h.is_closed
+                                    }));
+                                }
+
+                                // Priority 2: Local storage cache
+                                if (!hoursToSeed) {
+                                    try {
+                                        const local = JSON.parse(localStorage.getItem('ownerOperatingHours') || 'null');
+                                        if (Array.isArray(local) && local.length > 0) {
+                                            hoursToSeed = local.map(h => ({
+                                                shop_id: shop.id,
+                                                day_of_week: h.day_of_week,
+                                                open_time: h.open_time || '08:00:00',
+                                                close_time: h.close_time || '18:00:00',
+                                                is_closed: !!h.is_closed
+                                            }));
+                                        }
+                                    } catch(_) {}
+                                }
 
                                 const defaultHours = hoursToSeed || [
                                     { shop_id: shop.id, day_of_week: 1, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
@@ -408,8 +471,11 @@
                                     { shop_id: shop.id, day_of_week: 6, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
                                     { shop_id: shop.id, day_of_week: 0, open_time: '08:00:00', close_time: '18:00:00', is_closed: true }
                                 ];
-                                const { data: seededHours } = await client.from('shop_operating_hours').upsert(defaultHours, { onConflict: 'shop_id,day_of_week' }).select();
-                                hours = seededHours || defaultHours;
+
+                                client.from('shop_operating_hours')
+                                    .upsert(defaultHours, { onConflict: 'shop_id,day_of_week' })
+                                    .select().then().catch(() => {});
+                                hours = defaultHours;
                             }
                             if (hours && hours.length > 0) {
                                 localStorage.setItem('ownerOperatingHours', JSON.stringify(hours));
@@ -420,16 +486,13 @@
                             }
 
                             // 3. Pre-fetch and cache Dashboard KPI for 0ms initial dashboard display
-                            try {
-                                const { data: bList } = await client.from('bookings').select('status').eq('shop_id', shop.id);
-                                if (bList) {
-                                    const delivered = bList.filter(b => String(b.status).toLowerCase() === 'completed').length;
-                                    const inService = bList.filter(b => ['washing', 'arrived', 'ready'].includes(String(b.status).toLowerCase())).length;
-                                    const cancelled = bList.filter(b => ['refunded', 'declined', 'no_show', 'refund_requested', 'cancelled'].includes(String(b.status).toLowerCase())).length;
-                                    const total = bList.length;
-                                    localStorage.setItem('ownerDashboardKPI', JSON.stringify({ delivered, total, inService, cancelled }));
-                                }
-                            } catch(_) {}
+                            if (bList) {
+                                const delivered = bList.filter(b => String(b.status).toLowerCase() === 'completed').length;
+                                const inService = bList.filter(b => ['washing', 'arrived', 'ready'].includes(String(b.status).toLowerCase())).length;
+                                const cancelled = bList.filter(b => ['refunded', 'declined', 'no_show', 'refund_requested', 'cancelled'].includes(String(b.status).toLowerCase())).length;
+                                const total = bList.length;
+                                localStorage.setItem('ownerDashboardKPI', JSON.stringify({ delivered, total, inService, cancelled }));
+                            }
                         }
                     } catch(e) {
                         console.warn('Owner shop login sync notice:', e);
@@ -444,6 +507,17 @@
                     avatar: profile?.avatar_url || user.user_metadata?.avatar_url || null
                 };
                 localStorage.setItem('customerProfile', JSON.stringify(customerData));
+
+                // Pre-cache customer vehicles in parallel for 0ms discovery & booking flow
+                if (client) {
+                    try {
+                        const { data: vList } = await client.from('vehicles').select('*').eq('customer_id', user.id).order('is_default', { ascending: false });
+                        if (vList && vList.length > 0) {
+                            localStorage.setItem('customerCars', JSON.stringify(vList));
+                        }
+                    } catch(_) {}
+                }
+
                 window.location.href = '../customer/discovery.html';
             } else {
                 // New user without role assigned
@@ -451,14 +525,22 @@
             }
         };
 
-        // Check existing session on page load
+        // Check existing session and restore remembered email on page load (0ms)
+        const emailInput = document.getElementById('email');
+        if (emailInput) {
+            const remembered = localStorage.getItem('rememberedEmail');
+            if (remembered) {
+                emailInput.value = remembered;
+            }
+        }
+
         const initClient = getClient();
         if (initClient?.auth) {
             initClient.auth.getSession().then(({ data: { session } }) => {
                 if (session?.user) {
                     handleRedirect(session.user);
                 }
-            });
+            }).catch(() => {});
 
             // Listen for OAuth callbacks
             initClient.auth.onAuthStateChange((event, session) => {
@@ -474,6 +556,7 @@
             
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
+            if (email) localStorage.setItem('rememberedEmail', email);
             const btn = document.getElementById('loginBtn');
             const originalHTML = btn.innerHTML;
 

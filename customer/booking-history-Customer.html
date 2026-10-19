@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th">
 <head>
     <meta charset="utf-8"/>
@@ -1333,28 +1333,41 @@
 
         let historyItems = customItems;
         if (!historyItems) {
-            let list = [];
+            // Check direct completed history cache (0ms)
             try {
-                const stored = localStorage.getItem('appBookingsList');
-                if (stored) list = JSON.parse(stored);
-            } catch(e) {}
-            if (!Array.isArray(list)) list = [];
-
-            // Filter for finished/cancelled bookings
-            historyItems = list.filter(item => ['completed', 'refunded', 'declined', 'no_show', 'refund_requested'].includes(item.status));
-
-            // Also check activeCustomerBooking
-            const activeCustStr = localStorage.getItem('activeCustomerBooking');
-            if (activeCustStr) {
-                try {
-                    const activeCust = JSON.parse(activeCustStr);
-                    if (activeCust && ['completed', 'refunded', 'declined', 'no_show', 'refund_requested'].includes(activeCust.status)) {
-                        const exists = historyItems.some(item => normBookingId(item.bookingId) === normBookingId(activeCust.bookingId));
-                        if (!exists) {
-                            historyItems.unshift(activeCust);
-                        }
+                const directCached = localStorage.getItem('cachedCustomerCompletedHistory');
+                if (directCached) {
+                    const parsed = JSON.parse(directCached);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        historyItems = parsed;
                     }
+                }
+            } catch(e) {}
+
+            if (!historyItems) {
+                let list = [];
+                try {
+                    const stored = localStorage.getItem('appBookingsList');
+                    if (stored) list = JSON.parse(stored);
                 } catch(e) {}
+                if (!Array.isArray(list)) list = [];
+
+                // Filter for finished/cancelled bookings
+                historyItems = list.filter(item => ['completed', 'refunded', 'declined', 'no_show', 'refund_requested'].includes(item.status));
+
+                // Also check activeCustomerBooking
+                const activeCustStr = localStorage.getItem('activeCustomerBooking');
+                if (activeCustStr) {
+                    try {
+                        const activeCust = JSON.parse(activeCustStr);
+                        if (activeCust && ['completed', 'refunded', 'declined', 'no_show', 'refund_requested'].includes(activeCust.status)) {
+                            const exists = historyItems.some(item => normBookingId(item.bookingId) === normBookingId(activeCust.bookingId));
+                            if (!exists) {
+                                historyItems.unshift(activeCust);
+                            }
+                        }
+                    } catch(e) {}
+                }
             }
         }
 
@@ -1976,11 +1989,13 @@
                         depositAmount: '฿ 50.00',
                         status: item.status.toLowerCase()
                     }));
+                    localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(mappedList));
                     renderCompletedHistory(mappedList);
                     loadActiveBooking();
                 } else {
                     // Real user has no bookings at all in DB
                     localStorage.removeItem('activeCustomerBooking');
+                    localStorage.removeItem('cachedCustomerCompletedHistory');
                     renderCompletedHistory([]);
                     loadActiveBooking();
                 }

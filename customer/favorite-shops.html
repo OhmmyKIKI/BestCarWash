@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th">
 <head>
     <meta charset="utf-8"/>
@@ -460,7 +460,10 @@
     }
 
     // Avatar, Profile and Favorites Live Synchronization
-    document.addEventListener('DOMContentLoaded', async () => {
+    document.addEventListener('DOMContentLoaded', () => {
+        // ==========================================
+        // LAYER 1: INSTANT 0.00ms RENDER FROM CACHE
+        // ==========================================
         const saved = localStorage.getItem('customerProfile');
         if (saved) {
             try {
@@ -478,65 +481,121 @@
             }
         }
 
-        // Live Supabase Sync
+        // Restore cached favorite shops data at 0ms
+        let hasCachedData = false;
         try {
-            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            if (client?.auth) {
+            const cachedFavs = localStorage.getItem('cachedFavoriteShopsData');
+            if (cachedFavs) {
+                const parsed = JSON.parse(cachedFavs);
+                if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+                    SHOPS_DATA = parsed;
+                    hasCachedData = true;
+                }
+            }
+            if (!hasCachedData) {
+                const favIds = getFavoriteShopIds();
+                const discShops = JSON.parse(localStorage.getItem('cachedDiscoveryShops') || '[]');
+                if (favIds.length > 0 && discShops.length > 0) {
+                    discShops.forEach(s => {
+                        if (favIds.includes(s.id)) {
+                            SHOPS_DATA[s.id] = {
+                                id: s.id,
+                                name: s.name || 'ร้านคาร์แคร์',
+                                distance: s.address || 'เชียงใหม่',
+                                rating: s.rating ? Number(s.rating).toFixed(1) : 5.0,
+                                reviews: s.reviews ? `${s.reviews}` : '10',
+                                tags: (s.tags && s.tags.length > 0) ? s.tags : ['คาร์แคร์', 'ล้างสีดูดฝุ่น'],
+                                price: s.price || '฿150',
+                                image: s.image || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80',
+                                status: s.status || 'เปิดให้บริการ • เปิดอยู่',
+                                isOpen: s.isOpen !== false,
+                                nextQueue: s.nextQueue || 'วันนี้ 14:00',
+                                phone: s.phone || '080-000-0000'
+                            };
+                        }
+                    });
+                }
+            }
+        } catch(e) {}
+
+        // 0ms instant render of favorites
+        renderShops();
+
+        // ========================================================
+        // LAYER 2: SILENT FAST-TRACK BACKGROUND SYNC WITH SUPABASE
+        // ========================================================
+        (async () => {
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (!client?.auth) return;
+
                 const { data: { user } } = await client.auth.getUser();
-                if (user) {
-                    // Profile avatar live sync
-                    const { data: prof } = await client.from('profiles').select('avatar_url, full_name').eq('id', user.id).maybeSingle();
+                if (!user) return;
+
+                // Profile avatar live sync
+                client.from('profiles').select('avatar_url, full_name').eq('id', user.id).maybeSingle().then(({ data: prof }) => {
                     if (prof?.avatar_url) {
                         const avatar = document.getElementById('desktop-header-avatar');
                         if (avatar) avatar.src = prof.avatar_url;
                     }
+                    if (prof?.full_name) {
+                        const nameEl = document.getElementById('desktop-header-name');
+                        if (nameEl) nameEl.innerText = prof.full_name;
+                    }
+                }).catch(() => {});
 
-                    // Favorites list sync from Supabase favorite_shops
-                    const { data: favs } = await client.from('favorite_shops').select('shop_id').eq('customer_id', user.id);
-                    const favIds = (favs || []).map(f => f.shop_id);
-                    saveFavoriteShopIds(favIds);
+                // Favorites list sync from Supabase favorite_shops
+                const { data: favs } = await client.from('favorite_shops').select('shop_id').eq('customer_id', user.id);
+                const favIds = (favs || []).map(f => f.shop_id);
+                saveFavoriteShopIds(favIds);
 
-                    if (favIds.length > 0) {
-                        const { data: shops } = await client.from('shops').select('*').in('id', favIds);
-                        if (shops && shops.length > 0) {
-                            const { data: services } = await client.from('services').select('*').in('shop_id', favIds);
-                            const { data: profiles } = await client.from('profiles').select('id, avatar_url');
+                if (favIds.length > 0) {
+                    const { data: shops } = await client.from('shops').select('*').in('id', favIds);
+                    if (shops && shops.length > 0) {
+                        const [servicesRes, profilesRes] = await Promise.all([
+                            client.from('services').select('*').in('shop_id', favIds),
+                            client.from('profiles').select('id, avatar_url')
+                        ]);
+                        const services = servicesRes?.data || [];
+                        const profiles = profilesRes?.data || [];
 
-                            SHOPS_DATA = {};
-                            shops.forEach(s => {
-                                const srvs = (services || []).filter(srv => srv.shop_id === s.id);
-                                const minPrice = srvs.length > 0 ? Math.min(...srvs.map(srv => parseFloat(srv.price) || 200)) : 150;
-                                const ownerProf = (profiles || []).find(p => p.id === s.owner_id);
-                                const img = s.logo_url || ownerProf?.avatar_url || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80';
+                        const newShopsData = {};
+                        shops.forEach(s => {
+                            const srvs = services.filter(srv => srv.shop_id === s.id);
+                            const minPrice = srvs.length > 0 ? Math.min(...srvs.map(srv => parseFloat(srv.price) || 200)) : 150;
+                            const ownerProf = profiles.find(p => p.id === s.owner_id);
+                            const img = s.logo_url || ownerProf?.avatar_url || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80';
 
-                                SHOPS_DATA[s.id] = {
-                                    id: s.id,
-                                    name: s.name || 'ร้านคาร์แคร์',
-                                    distance: s.address || 'เชียงใหม่',
-                                    rating: s.rating ? Number(s.rating).toFixed(1) : 5.0,
-                                    reviews: s.review_count ? `${s.review_count}` : '10',
-                                    tags: (s.facilities && s.facilities.length > 0) ? s.facilities : ['คาร์แคร์', 'ล้างสีดูดฝุ่น'],
-                                    price: '฿' + minPrice,
-                                    image: img,
-                                    status: s.is_open ? 'เปิดให้บริการ • เปิดอยู่' : 'ปิดชั่วคราว',
-                                    isOpen: !!s.is_open,
-                                    nextQueue: 'วันนี้ 14:00',
-                                    phone: s.phone_number || '080-000-0000'
-                                };
-                            });
-                        } else {
-                            SHOPS_DATA = {};
-                        }
+                            newShopsData[s.id] = {
+                                id: s.id,
+                                name: s.name || 'ร้านคาร์แคร์',
+                                distance: s.address || 'เชียงใหม่',
+                                rating: s.rating ? Number(s.rating).toFixed(1) : 5.0,
+                                reviews: s.review_count ? `${s.review_count}` : '10',
+                                tags: (s.facilities && s.facilities.length > 0) ? s.facilities : ['คาร์แคร์', 'ล้างสีดูดฝุ่น'],
+                                price: '฿' + minPrice,
+                                image: img,
+                                status: s.is_open ? 'เปิดให้บริการ • เปิดอยู่' : 'ปิดชั่วคราว',
+                                isOpen: !!s.is_open,
+                                nextQueue: 'วันนี้ 14:00',
+                                phone: s.phone_number || '080-000-0000'
+                            };
+                        });
+                        SHOPS_DATA = newShopsData;
+                        localStorage.setItem('cachedFavoriteShopsData', JSON.stringify(newShopsData));
                     } else {
                         SHOPS_DATA = {};
+                        localStorage.removeItem('cachedFavoriteShopsData');
                     }
+                } else {
+                    SHOPS_DATA = {};
+                    localStorage.removeItem('cachedFavoriteShopsData');
                 }
+                renderShops();
+            } catch (syncErr) {
+                console.warn('Favorite shops live sync notice:', syncErr);
             }
-        } catch (syncErr) {
-            console.warn('Favorite shops live sync error:', syncErr);
-        }
-
-        renderShops();
+        })();
     });
 </script>
 

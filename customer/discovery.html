@@ -905,13 +905,28 @@ tailwind.config = {
         return (R * c).toFixed(1); // คืนค่าระยะทาง ทศนิยม 1 ตำแหน่ง
     }
 
-    // --- Boot ---
+    // --- Boot (Dual-Layer: 0ms Instant Cache Display + Silent Background Sync) ---
     window.addEventListener('DOMContentLoaded', () => {
         initMap();
         fetchRealTimeWeather(userLocation[0], userLocation[1]);
         getUserLiveLocation(false);
 
-        // Fetch Live Shops from Supabase
+        // Layer 1: Instant 0ms Render from LocalStorage Cache
+        let hasCachedShops = false;
+        try {
+            const cached = JSON.parse(localStorage.getItem('cachedDiscoveryShops') || 'null');
+            if (Array.isArray(cached) && cached.length > 0) {
+                shops = [...cached];
+                renderDesktopCards(shops);
+                renderMobileCards(shops);
+                if (map) {
+                    renderMarkers(shops);
+                }
+                hasCachedShops = true;
+            }
+        } catch (_) {}
+
+        // Layer 2: Fast-Track Background Sync from Supabase
         (async () => {
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
@@ -947,14 +962,16 @@ tailwind.config = {
                                 badgeColor: db.is_open ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
                             };
                         });
-                    } else {
-                        // ฐานข้อมูลไม่มีร้านค้า (เช่น ถูกลบออกไปทั้งหมด)
+
+                        // Cache fresh shops for next instant 0ms load
+                        localStorage.setItem('cachedDiscoveryShops', JSON.stringify(shops));
+                    } else if (!hasCachedShops) {
                         shops = [];
                     }
                 }
             } catch(e) {
-                console.warn('Live shops fetch error:', e);
-                shops = [];
+                console.warn('Live shops fetch notice:', e);
+                if (!hasCachedShops) shops = [];
             }
 
             renderDesktopCards(shops);

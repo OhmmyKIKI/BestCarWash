@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th">
 <head>
     <meta charset="utf-8"/>
@@ -152,13 +152,13 @@
         try {
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
             if (!client?.auth) {
-                showEmptyState(true);
+                if (!localStorage.getItem('cachedOwnerNotifications')) showEmptyState(true);
                 return;
             }
 
             const { data: { user } } = await client.auth.getUser();
             if (!user) {
-                showEmptyState(true);
+                if (!localStorage.getItem('cachedOwnerNotifications')) showEmptyState(true);
                 return;
             }
 
@@ -170,14 +170,16 @@
 
             if (error) {
                 console.warn('Owner notifications fetch error:', error);
-                showEmptyState(true);
+                if (!localStorage.getItem('cachedOwnerNotifications')) showEmptyState(true);
                 return;
             }
 
-            renderOwnerNotifications(notifs || []);
+            const freshNotifs = notifs || [];
+            localStorage.setItem('cachedOwnerNotifications', JSON.stringify(freshNotifs));
+            renderOwnerNotifications(freshNotifs);
         } catch(e) {
             console.warn('Owner notifications exception:', e);
-            showEmptyState(true);
+            if (!localStorage.getItem('cachedOwnerNotifications')) showEmptyState(true);
         }
     }
 
@@ -197,6 +199,22 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        // ==========================================
+        // LAYER 1: INSTANT 0.00ms RENDER FROM CACHE
+        // ==========================================
+        try {
+            const cached = localStorage.getItem('cachedOwnerNotifications');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    renderOwnerNotifications(parsed);
+                }
+            }
+        } catch(_) {}
+
+        // ========================================================
+        // LAYER 2: SILENT FAST-TRACK BACKGROUND SYNC WITH SUPABASE
+        // ========================================================
         loadOwnerNotifications();
     });
 </script>

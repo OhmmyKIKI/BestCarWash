@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th">
 <head>
 <meta charset="utf-8"/>
@@ -124,10 +124,10 @@
             <div class="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors"></div>
         </div>
         <div onclick="openGallery(1)" class="col-span-1 row-span-1 rounded-2xl overflow-hidden group relative cursor-pointer shadow-md">
-            <img src="https://images.unsplash.com/photo-1520340356584-f9917d1e5113?q=80&w=1920&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+            <img src="https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?q=80&w=1920&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
         </div>
         <div onclick="openGallery(2)" class="col-span-1 row-span-1 rounded-2xl overflow-hidden group relative cursor-pointer shadow-md">
-            <img src="https://images.unsplash.com/photo-1620803444007-681125f16e45?q=80&w=1920&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+            <img src="https://images.unsplash.com/photo-1607860108855-64acf2078ed9?q=80&w=1920&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
         </div>
         <div onclick="openGallery(3)" class="col-span-2 row-span-1 rounded-2xl overflow-hidden group relative cursor-pointer flex items-center justify-center shadow-md">
             <img src="https://images.unsplash.com/photo-1580274455191-1c62238fa333?q=80&w=1920&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
@@ -682,128 +682,13 @@
         container.innerHTML = html;
     }
 
-    document.addEventListener('DOMContentLoaded', async () => {
-        // 0ms Cache-first render of operating hours
-        renderCustomerOperatingHours(null, null);
+    let miniMapInstance = null;
+    let miniMapMarker = null;
 
-        // 1. Read URL param ?shopId=...
-        const urlParams = new URLSearchParams(window.location.search);
-        let paramId = urlParams.get('shopId');
-        if (!paramId) {
-            paramId = localStorage.getItem('selectedShopId');
-        }
-
-        // Fetch Live Shop from Supabase
-        const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-        let liveReviews = [];
-        if (client) {
-            try {
-                let dbShop = null;
-                if (paramId) {
-                    const { data } = await client.from('shops').select('*').eq('id', paramId).maybeSingle();
-                    dbShop = data;
-                }
-                if (!dbShop && client.auth) {
-                    const { data: userData } = await client.auth.getUser();
-                    if (userData?.user) {
-                        const { data } = await client.from('shops').select('*').eq('owner_id', userData.user.id).maybeSingle();
-                        dbShop = data;
-                    }
-                }
-                if (!dbShop) {
-                    const localName = localStorage.getItem('ownerShopName');
-                    if (localName) {
-                        const { data } = await client.from('shops').select('*').eq('name', localName).maybeSingle();
-                        dbShop = data;
-                    }
-                }
-                if (!dbShop) {
-                    const { data } = await client.from('shops').select('*').limit(1).maybeSingle();
-                    dbShop = data;
-                }
-
-                if (dbShop) {
-                    const { data: ownerProf } = await client.from('profiles').select('avatar_url').eq('id', dbShop.owner_id).maybeSingle();
-                    const { data: dbServices } = await client.from('services').select('*').eq('shop_id', dbShop.id);
-                    const { data: dbReviews } = await client.from('reviews').select('*, customer:customer_id(full_name, avatar_url)').eq('shop_id', dbShop.id).order('created_at', { ascending: false });
-                    liveReviews = dbReviews || [];
-
-                    const shopLogo = dbShop.logo_url || ownerProf?.avatar_url || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80';
-                    const coverImg = dbShop.cover_image_url || 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80';
-                    const avgRating = (liveReviews && liveReviews.length > 0)
-                        ? (liveReviews.reduce((sum, r) => sum + (parseFloat(r.rating) || 5), 0) / liveReviews.length).toFixed(1)
-                        : 'ใหม่';
-
-                    SHOPS_DATA[dbShop.id] = {
-                        id: dbShop.id,
-                        name: dbShop.name || 'ร้านคาร์แคร์',
-                        address: dbShop.address || 'ที่อยู่ร้านค้า',
-                        distance: 'ห่าง 1.2 กม.',
-                        rating: avgRating,
-                        reviews: `${liveReviews ? liveReviews.length : 0} รีวิว`,
-                        phone: dbShop.phone_number || '080-000-0000',
-                        promptpay: dbShop.phone_number || '080-000-0000',
-                        about: dbShop.description || 'บริการคาร์แคร์ระดับพรีเมียม ล้างสี ดูดฝุ่น และเคลือบเงาสีรถด้วยมาตรฐานระดับมืออาชีพ',
-                        lat: dbShop.latitude || 18.7938,
-                        lng: dbShop.longitude || 98.9898,
-                        images: (() => {
-                            let gallery = null;
-                            try {
-                                gallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null');
-                            } catch(_) {}
-                            if (gallery && Array.isArray(gallery) && gallery.length > 0) return gallery;
-                            return [
-                                coverImg,
-                                shopLogo,
-                                "https://images.unsplash.com/photo-1620803444007-681125f16e45?w=1200&q=80"
-                            ];
-                        })(),
-                        services: (dbServices && dbServices.length > 0) ? dbServices.map((s, idx) => ({
-                            id: s.id,
-                            name: s.name,
-                            price: parseFloat(s.price) || 200,
-                            duration: s.duration_minutes ? `${s.duration_minutes} นาที` : '45 นาที',
-                            popular: idx === 0,
-                            items: [s.description || 'บริการล้างทำความสะอาดรถยนต์']
-                        })) : [
-                            { id: 'srv1', name: 'บริการล้างรถมาตรฐาน', price: 200, duration: '45 นาที', popular: true, items: ['ล้างสี ดูดฝุ่น เช็ดแห้ง'] }
-                        ]
-                    };
-                    paramId = dbShop.id;
-                }
-            } catch(dbErr) {
-                console.warn('Supabase shop details live query notice:', dbErr);
-            }
-        }
-
-        if (paramId && SHOPS_DATA[paramId]) {
-            currentShopId = paramId;
-        } else {
-            const firstAvailable = Object.keys(SHOPS_DATA)[0];
-            if (firstAvailable) {
-                currentShopId = firstAvailable;
-            } else {
-                // ไม่พบร้านค้าในระบบเลย (เช่น ถูกลบออกไปหมดแล้ว)
-                const mainEl = document.querySelector('main');
-                if (mainEl) {
-                    mainEl.innerHTML = `
-                        <div class="w-full max-w-xl mx-auto py-24 px-4 text-center flex flex-col items-center">
-                            <div class="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center text-outline mb-4 border border-outline-variant/30 shadow-inner">
-                                <span class="material-symbols-outlined text-4xl text-outline-variant">storefront</span>
-                            </div>
-                            <h2 class="text-2xl font-bold text-on-surface mb-2">ไม่พบข้อมูลร้านค้านี้</h2>
-                            <p class="text-sm text-on-surface-variant mb-6">ร้านค้านี้อาจถูกลบออกจากระบบแล้ว หรือไม่มีร้านค้าเปิดให้บริการ</p>
-                            <a href="discovery.html" class="inline-flex items-center gap-2 px-6 py-3 bg-primary-container text-on-primary-container font-bold rounded-xl shadow-md hover:bg-primary transition-all active:scale-95 text-sm">
-                                <span class="material-symbols-outlined text-[20px]">explore</span>
-                                <span>กลับไปหน้าค้นหาร้านค้า</span>
-                            </a>
-                        </div>
-                    `;
-                }
-                return;
-            }
-        }
-        currentShop = SHOPS_DATA[currentShopId];
+    function applyShopDataToUI(shop, reviews = [], client = null) {
+        if (!shop) return;
+        currentShop = shop;
+        currentShopId = shop.id;
         localStorage.setItem('selectedShopId', currentShopId);
 
         // Sync dynamic mock coordinates if updated from discovery.html
@@ -835,13 +720,13 @@
         if (rateEl) rateEl.textContent = `${currentShop.rating} (${currentShop.reviews})`;
         const phoneLink = document.getElementById('shop-phone-link');
         const phoneText = document.getElementById('shop-phone-text');
-        if (phoneLink) phoneLink.href = `tel:${currentShop.phone.replace(/-/g, '')}`;
-        if (phoneText) phoneText.textContent = currentShop.phone;
+        if (phoneLink) phoneLink.href = `tel:${(currentShop.phone || '').replace(/-/g, '')}`;
+        if (phoneText) phoneText.textContent = currentShop.phone || '080-000-0000';
         const aboutEl = document.getElementById('shop-about');
         if (aboutEl && currentShop.about) aboutEl.textContent = currentShop.about;
 
         // Update Gallery images
-        galleryImages = currentShop.images;
+        galleryImages = currentShop.images || [];
         const heroImg = document.querySelector('.md\\:hidden img[alt="Shop"]');
         if (heroImg && galleryImages[0]) heroImg.src = galleryImages[0];
         
@@ -867,13 +752,161 @@
         updateFavoriteUI();
 
         // Render Live Customer Reviews
-        renderCustomerShopReviews(liveReviews);
+        if (reviews && reviews.length > 0) {
+            renderCustomerShopReviews(reviews);
+        }
 
         // Render Live Operating Hours & Holidays
         renderCustomerOperatingHours(currentShopId, client);
 
-        // 2. Dynamic Mobile Header scroll effect
+        // Update direction link
+        const dirLink = document.querySelector('a[href*="google.com/maps/dir"]');
+        if (dirLink) dirLink.href = `https://www.google.com/maps/dir/?api=1&destination=${currentShop.lat},${currentShop.lng}`;
+        const searchLink = document.querySelector('a[href*="google.com/maps/search"]');
+        if (searchLink) searchLink.href = `https://www.google.com/maps/search/?api=1&query=${currentShop.lat},${currentShop.lng}`;
+
+        // Map setup or update
+        const mapEl = document.getElementById('mini-map');
+        if (mapEl && typeof L !== 'undefined') {
+            const lat = Number(currentShop.lat) || 18.7938;
+            const lng = Number(currentShop.lng) || 98.9898;
+            if (!miniMapInstance) {
+                try {
+                    miniMapInstance = L.map('mini-map', {
+                        zoomControl: false, 
+                        dragging: false, 
+                        scrollWheelZoom: false, 
+                        doubleClickZoom: false,
+                        touchZoom: false
+                    }).setView([lat, lng], 15);
+
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 16
+                    }).addTo(miniMapInstance);
+
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 16
+                    }).addTo(miniMapInstance);
+
+                    const markerIcon = L.divIcon({
+                        html: '<div class="w-10 h-10 bg-primary-container rounded-full flex items-center justify-center border-4 border-background shadow-lg"><span class="material-symbols-outlined text-on-primary-container text-[20px]">local_car_wash</span></div>',
+                        className: '',
+                        iconSize: [40, 40],
+                        iconAnchor: [20, 20]
+                    });
+                    miniMapMarker = L.marker([lat, lng], {icon: markerIcon}).addTo(miniMapInstance);
+                } catch(mErr) {
+                    console.warn('Leaflet map init notice:', mErr);
+                }
+            } else {
+                try {
+                    miniMapInstance.setView([lat, lng]);
+                    if (miniMapMarker) miniMapMarker.setLatLng([lat, lng]);
+                } catch(_) {}
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // 0ms Cache-first render of operating hours
+        renderCustomerOperatingHours(null, null);
+
+        // 1. Read URL param ?shopId=...
+        const urlParams = new URLSearchParams(window.location.search);
+        let paramId = urlParams.get('shopId');
+        if (!paramId) {
+            paramId = localStorage.getItem('selectedShopId');
+        }
+
+        // ==========================================
+        // LAYER 1: INSTANT 0.00ms RENDER FROM CACHE
+        // ==========================================
+        let initialShopData = null;
+        let initialReviews = [];
+
+        if (paramId) {
+            // Check direct shop details cache
+            const directCached = localStorage.getItem('cachedShopDetails_' + paramId);
+            if (directCached) {
+                try { initialShopData = JSON.parse(directCached); } catch(_) {}
+            }
+            // Fallback: check cachedDiscoveryShops
+            if (!initialShopData) {
+                try {
+                    const disc = JSON.parse(localStorage.getItem('cachedDiscoveryShops') || '[]');
+                    const found = disc.find(s => s.id === paramId);
+                    if (found) {
+                        initialShopData = {
+                            id: found.id,
+                            name: found.name || 'ร้านคาร์แคร์',
+                            address: found.address || 'ที่อยู่ร้านค้า',
+                            distance: found.distance || 'ห่าง 1.2 กม.',
+                            rating: found.rating || '5.0',
+                            reviews: found.reviews ? `${found.reviews} รีวิว` : '0 รีวิว',
+                            phone: found.phone || '080-000-0000',
+                            promptpay: found.promptpay || found.phone || '080-000-0000',
+                            about: found.about || 'บริการคาร์แคร์ระดับพรีเมียม ล้างสี ดูดฝุ่น และเคลือบเงาสีรถด้วยมาตรฐานระดับมืออาชีพ',
+                            lat: found.lat || 18.7938,
+                            lng: found.lng || 98.9898,
+                            images: found.image ? [found.image] : [
+                                'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80',
+                                'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80'
+                            ],
+                            services: (found.services && found.services.length > 0) ? found.services : [
+                                { id: 'srv1', name: 'บริการล้างรถมาตรฐาน', price: 200, duration: '45 นาที', popular: true, items: ['ล้างสี ดูดฝุ่น เช็ดแห้ง'] }
+                            ]
+                        };
+                    }
+                } catch(_) {}
+            }
+            // Check cached reviews
+            try {
+                const cRev = localStorage.getItem('cachedShopReviews_' + paramId);
+                if (cRev) initialReviews = JSON.parse(cRev);
+            } catch(_) {}
+        }
+
+        // If no cache for this ID yet, check if active owner shop details exist in storage
+        if (!initialShopData && localStorage.getItem('ownerShopName')) {
+            const localName = localStorage.getItem('ownerShopName');
+            const localAddress = localStorage.getItem('ownerShopAddress') || '';
+            const localPhone = localStorage.getItem('ownerShopPhone') || '080-000-0000';
+            const localAbout = localStorage.getItem('ownerShopAbout') || '';
+            let localGallery = [];
+            try { localGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || '[]'); } catch(_) {}
+            if (!Array.isArray(localGallery) || localGallery.length === 0) {
+                localGallery = [
+                    'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80',
+                    'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80'
+                ];
+            }
+            initialShopData = {
+                id: paramId || 'cached-shop',
+                name: localName,
+                address: localAddress,
+                distance: 'ห่าง 1.2 กม.',
+                rating: '5.0',
+                reviews: '0 รีวิว',
+                phone: localPhone,
+                promptpay: localPhone,
+                about: localAbout,
+                lat: parseFloat(localStorage.getItem('ownerShopLat')) || 18.7938,
+                lng: parseFloat(localStorage.getItem('ownerShopLng')) || 98.9898,
+                images: localGallery,
+                services: [
+                    { id: 'srv1', name: 'บริการล้างรถมาตรฐาน', price: 200, duration: '45 นาที', popular: true, items: ['ล้างสี ดูดฝุ่น เช็ดแห้ง'] }
+                ]
+            };
+        }
+
+        if (initialShopData) {
+            SHOPS_DATA[initialShopData.id] = initialShopData;
+            applyShopDataToUI(initialShopData, initialReviews, null);
+        }
+
+        // Dynamic Mobile Header scroll effect
         const mobileHeader = document.getElementById('mobile-header');
+        const mobTitle = document.getElementById('mobile-header-title');
         window.addEventListener('scroll', () => {
             if (window.scrollY > 150) {
                 mobileHeader.classList.remove('bg-transparent');
@@ -885,37 +918,6 @@
                 if (mobTitle) mobTitle.classList.add('opacity-0');
             }
         });
-
-        // 3. Init Leaflet Mini Map with dynamic shop lat/lng
-        const map = L.map('mini-map', {
-            zoomControl: false, 
-            dragging: false, 
-            scrollWheelZoom: false, 
-            doubleClickZoom: false,
-            touchZoom: false
-        }).setView([currentShop.lat, currentShop.lng], 15);
-
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 16
-        }).addTo(map);
-
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 16
-        }).addTo(map);
-
-        const markerIcon = L.divIcon({
-            html: '<div class="w-10 h-10 bg-primary-container rounded-full flex items-center justify-center border-4 border-background shadow-lg"><span class="material-symbols-outlined text-on-primary-container text-[20px]">local_car_wash</span></div>',
-            className: '',
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
-        });
-        L.marker([currentShop.lat, currentShop.lng], {icon: markerIcon}).addTo(map);
-
-        // Update direction link
-        const dirLink = document.querySelector('a[href*="google.com/maps/dir"]');
-        if (dirLink) dirLink.href = `https://www.google.com/maps/dir/?api=1&destination=${currentShop.lat},${currentShop.lng}`;
-        const searchLink = document.querySelector('a[href*="google.com/maps/search"]');
-        if (searchLink) searchLink.href = `https://www.google.com/maps/search/?api=1&query=${currentShop.lat},${currentShop.lng}`;
 
         // Sync Customer Avatar
         const saved = localStorage.getItem('customerProfile');
@@ -936,6 +938,119 @@
                 renderCustomerOperatingHours(currentShopId, client);
             }
         });
+
+        // ========================================================
+        // LAYER 2: SILENT FAST-TRACK BACKGROUND SYNC WITH SUPABASE
+        // ========================================================
+        (async () => {
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (!client) return;
+
+            try {
+                let dbShop = null;
+                if (paramId) {
+                    const { data } = await client.from('shops').select('*').eq('id', paramId).maybeSingle();
+                    dbShop = data;
+                }
+                if (!dbShop && client.auth) {
+                    const { data: userData } = await client.auth.getUser();
+                    if (userData?.user) {
+                        const { data } = await client.from('shops').select('*').eq('owner_id', userData.user.id).maybeSingle();
+                        dbShop = data;
+                    }
+                }
+                if (!dbShop) {
+                    const localName = localStorage.getItem('ownerShopName');
+                    if (localName) {
+                        const { data } = await client.from('shops').select('*').eq('name', localName).maybeSingle();
+                        dbShop = data;
+                    }
+                }
+                if (!dbShop) {
+                    const { data } = await client.from('shops').select('*').limit(1).maybeSingle();
+                    dbShop = data;
+                }
+
+                if (dbShop) {
+                    // Parallel fetch of owner avatar, services and reviews
+                    const [profRes, servRes, revRes] = await Promise.all([
+                        client.from('profiles').select('avatar_url').eq('id', dbShop.owner_id).maybeSingle(),
+                        client.from('services').select('*').eq('shop_id', dbShop.id),
+                        client.from('reviews').select('*, customer:customer_id(full_name, avatar_url)').eq('shop_id', dbShop.id).order('created_at', { ascending: false })
+                    ]);
+
+                    const ownerProf = profRes?.data;
+                    const dbServices = servRes?.data || [];
+                    const liveReviews = revRes?.data || [];
+
+                    const shopLogo = dbShop.logo_url || ownerProf?.avatar_url || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80';
+                    const coverImg = dbShop.cover_image_url || 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80';
+                    const avgRating = (liveReviews && liveReviews.length > 0)
+                        ? (liveReviews.reduce((sum, r) => sum + (parseFloat(r.rating) || 5), 0) / liveReviews.length).toFixed(1)
+                        : 'ใหม่';
+
+                    const liveShopObj = {
+                        id: dbShop.id,
+                        name: dbShop.name || 'ร้านคาร์แคร์',
+                        address: dbShop.address || 'ที่อยู่ร้านค้า',
+                        distance: 'ห่าง 1.2 กม.',
+                        rating: avgRating,
+                        reviews: `${liveReviews.length} รีวิว`,
+                        phone: dbShop.phone_number || '080-000-0000',
+                        promptpay: dbShop.phone_number || '080-000-0000',
+                        about: dbShop.description || 'บริการคาร์แคร์ระดับพรีเมียม ล้างสี ดูดฝุ่น และเคลือบเงาสีรถด้วยมาตรฐานระดับมืออาชีพ',
+                        lat: dbShop.latitude || 18.7938,
+                        lng: dbShop.longitude || 98.9898,
+                        images: (() => {
+                            let gallery = null;
+                            try { gallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null'); } catch(_) {}
+                            if (gallery && Array.isArray(gallery) && gallery.length > 0) return gallery;
+                            return [
+                                coverImg,
+                                shopLogo,
+                                "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=1200&q=80"
+                            ];
+                        })(),
+                        services: (dbServices && dbServices.length > 0) ? dbServices.map((s, idx) => ({
+                            id: s.id,
+                            name: s.name,
+                            price: parseFloat(s.price) || 200,
+                            duration: s.duration_minutes ? `${s.duration_minutes} นาที` : '45 นาที',
+                            popular: idx === 0,
+                            items: [s.description || 'บริการล้างทำความสะอาดรถยนต์']
+                        })) : [
+                            { id: 'srv1', name: 'บริการล้างรถมาตรฐาน', price: 200, duration: '45 นาที', popular: true, items: ['ล้างสี ดูดฝุ่น เช็ดแห้ง'] }
+                        ]
+                    };
+
+                    SHOPS_DATA[dbShop.id] = liveShopObj;
+                    localStorage.setItem('cachedShopDetails_' + dbShop.id, JSON.stringify(liveShopObj));
+                    localStorage.setItem('cachedShopReviews_' + dbShop.id, JSON.stringify(liveReviews));
+
+                    applyShopDataToUI(liveShopObj, liveReviews, client);
+                } else if (!initialShopData) {
+                    // Not found in DB and not found in Cache
+                    const mainEl = document.querySelector('main');
+                    if (mainEl) {
+                        mainEl.innerHTML = `
+                            <div class="w-full max-w-xl mx-auto py-24 px-4 text-center flex flex-col items-center">
+                                <div class="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center text-outline mb-4 border border-outline-variant/30 shadow-inner">
+                                    <span class="material-symbols-outlined text-4xl text-outline-variant">storefront</span>
+                                </div>
+                                <h2 class="text-2xl font-bold text-on-surface mb-2">ไม่พบข้อมูลร้านค้านี้</h2>
+                                <p class="text-sm text-on-surface-variant mb-6">ร้านค้านี้อาจถูกลบออกจากระบบแล้ว หรือไม่มีร้านค้าเปิดให้บริการ</p>
+                                <a href="discovery.html" class="inline-flex items-center gap-2 px-6 py-3 bg-primary-container text-on-primary-container font-bold rounded-xl shadow-md hover:bg-primary transition-all active:scale-95 text-sm">
+                                    <span class="material-symbols-outlined text-[20px]">explore</span>
+                                    <span>กลับไปหน้าค้นหาร้านค้า</span>
+                                </a>
+                            </div>
+                        `;
+                    }
+                }
+            } catch (dbErr) {
+                console.warn('Supabase shop details live query notice:', dbErr);
+            }
+        })();
     });
 
     // --- Render Live Customer Reviews ---

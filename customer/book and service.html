@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th">
 <head>
 <meta charset="utf-8"/>
@@ -1538,7 +1538,7 @@
     });
 
     // Initialize Page Data, Shop Details, Customer Cars, and Avatar
-    document.addEventListener('DOMContentLoaded', async () => {
+    document.addEventListener('DOMContentLoaded', () => {
         // 1. Read URL Parameters for Shop & Service (Point 1 Continuity)
         const urlParams = new URLSearchParams(window.location.search);
         let paramShopId = urlParams.get('shopId');
@@ -1546,9 +1546,157 @@
             paramShopId = localStorage.getItem('selectedShopId');
         }
 
-        // Fetch Live Shop from Supabase
-        const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-        if (client) {
+        // ==========================================
+        // LAYER 1: INSTANT 0.00ms RENDER FROM CACHE
+        // ==========================================
+        let cachedShop = null;
+        if (paramShopId) {
+            const direct = localStorage.getItem('cachedShopDetails_' + paramShopId);
+            if (direct) {
+                try { cachedShop = JSON.parse(direct); } catch(_) {}
+            }
+            if (!cachedShop) {
+                try {
+                    const disc = JSON.parse(localStorage.getItem('cachedDiscoveryShops') || '[]');
+                    const found = disc.find(s => s.id === paramShopId);
+                    if (found) {
+                        cachedShop = {
+                            id: found.id,
+                            name: found.name || 'ร้านคาร์แคร์',
+                            address: found.address || '',
+                            phone: found.phone || '',
+                            promptpay: found.promptpay || found.phone || '080-000-0000',
+                            services: (found.services && found.services.length > 0) ? found.services : [
+                                { id: 'srv1', name: 'บริการล้างรถมาตรฐาน', price: 200, popular: true }
+                            ]
+                        };
+                    }
+                } catch(_) {}
+            }
+        }
+
+        if (!cachedShop && localStorage.getItem('ownerShopName')) {
+            const localName = localStorage.getItem('ownerShopName');
+            const localPhone = localStorage.getItem('ownerShopPhone') || '080-000-0000';
+            cachedShop = {
+                id: paramShopId || 'cached-shop',
+                name: localName,
+                address: localStorage.getItem('ownerShopAddress') || '',
+                phone: localPhone,
+                promptpay: localPhone,
+                services: [
+                    { id: 'srv1', name: 'บริการล้างรถมาตรฐาน', price: 200, popular: true }
+                ]
+            };
+        }
+
+        function updateBookingShopUI(shop) {
+            if (!shop) return;
+            currentShop = shop;
+            currentShopId = shop.id;
+            localStorage.setItem('selectedShopId', currentShopId);
+
+            const paramService = urlParams.get('service');
+            const paramPrice = urlParams.get('price');
+            if (paramService) {
+                selectedServiceName = paramService;
+                selectedServicePrice = paramPrice || (currentShop.services[0]?.price || '450');
+            } else if (currentShop.services && currentShop.services.length > 0) {
+                const pop = currentShop.services.find(s => s.popular) || currentShop.services[0];
+                selectedServiceName = pop.name;
+                selectedServicePrice = pop.price.toString();
+            }
+
+            // Update UI Elements for Selected Shop & Service
+            document.title = `จองคิวและเวลา - ${currentShop.name}`;
+            const mobTitle = document.getElementById('mobile-page-title');
+            if (mobTitle) mobTitle.innerText = `จองคิว: ${currentShop.name}`;
+
+            const deskBack = document.getElementById('desktop-back-btn');
+            const mobBack = document.getElementById('mobile-back-btn');
+            if (deskBack) deskBack.href = `shop-details.html?shopId=${encodeURIComponent(currentShopId)}`;
+            if (mobBack) mobBack.href = `shop-details.html?shopId=${encodeURIComponent(currentShopId)}`;
+
+            const shopNameEl = document.getElementById('summary-shop-name');
+            if (shopNameEl) shopNameEl.innerText = currentShop.name;
+
+            const srvNameEl = document.getElementById('summary-service-name');
+            if (srvNameEl) srvNameEl.innerText = selectedServiceName;
+
+            const srvPriceEl = document.getElementById('summary-service-price');
+            if (srvPriceEl) srvPriceEl.innerText = `฿${selectedServicePrice}`;
+
+            const origPriceEl = document.getElementById('summary-total-original-price');
+            if (origPriceEl) origPriceEl.innerText = `(จากราคาเริ่มต้น ฿${selectedServicePrice})`;
+
+            const mobSrvNameEl = document.getElementById('mobile-summary-service-name');
+            if (mobSrvNameEl) mobSrvNameEl.innerText = `${selectedServiceName} (มัดจำ)`;
+
+            const promptPayEl = document.getElementById('promptpay-number');
+            if (promptPayEl) promptPayEl.innerText = currentShop.promptpay || currentShop.phone || '080-000-0000';
+        }
+
+        if (cachedShop) {
+            SHOPS_DATA[cachedShop.id] = cachedShop;
+            updateBookingShopUI(cachedShop);
+        } else if (paramShopId && SHOPS_DATA[paramShopId]) {
+            updateBookingShopUI(SHOPS_DATA[paramShopId]);
+        }
+
+        // 3. Render Vehicles from customerCars (Point 3 Vehicle Sync - 0ms)
+        renderCarsList();
+
+        // 4. Sync Customer Avatar & Name from Cache (0ms)
+        const saved = localStorage.getItem('customerProfile');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                if (data.avatar && !data.avatar.includes('googleusercontent')) {
+                    const avatar = document.getElementById('customer-header-avatar');
+                    if (avatar) avatar.src = data.avatar;
+                }
+                if (data.name) {
+                    const nameEl = document.getElementById('desktop-header-name');
+                    if (nameEl) nameEl.textContent = data.name;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // ========================================================
+        // LAYER 2: SILENT FAST-TRACK BACKGROUND SYNC WITH SUPABASE
+        // ========================================================
+        (async () => {
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (!client) return;
+
+            // Sync vehicles
+            if (client.auth) {
+                client.auth.getUser().then(({ data: userData }) => {
+                    const user = userData?.user;
+                    if (!user) return;
+                    client.from('vehicles')
+                        .select('*')
+                        .eq('customer_id', user.id)
+                        .order('is_default', { ascending: false })
+                        .then(({ data: dbVehicles }) => {
+                            if (dbVehicles) {
+                                const mapped = dbVehicles.map(v => ({
+                                    id: v.id,
+                                    brand: v.brand_model,
+                                    plate: v.plate_number,
+                                    size: v.car_size || 'M',
+                                    isPrimary: v.is_default || false
+                                }));
+                                saveCarsToStorage(mapped);
+                                renderCarsList();
+                            }
+                        }).catch(e => console.warn('Book page vehicles fetch notice:', e));
+                }).catch(() => {});
+            }
+
+            // Sync live shop
             try {
                 let dbShop = null;
                 if (paramShopId) {
@@ -1575,7 +1723,7 @@
                 }
                 if (dbShop) {
                     const { data: dbServices } = await client.from('services').select('*').eq('shop_id', dbShop.id);
-                    SHOPS_DATA[dbShop.id] = {
+                    const liveShopObj = {
                         id: dbShop.id,
                         name: dbShop.name || 'ร้านคาร์แคร์',
                         address: dbShop.address || '',
@@ -1590,133 +1738,32 @@
                             { id: 'srv1', name: 'บริการล้างรถมาตรฐาน', price: 200, popular: true }
                         ]
                     };
-                    paramShopId = dbShop.id;
-                    localStorage.setItem('selectedShopId', dbShop.id);
+                    SHOPS_DATA[dbShop.id] = liveShopObj;
+                    localStorage.setItem('cachedShopDetails_' + dbShop.id, JSON.stringify(liveShopObj));
+                    updateBookingShopUI(liveShopObj);
+                } else if (!cachedShop && !paramShopId) {
+                    // ไม่พบร้านค้าในระบบ
+                    const mainEl = document.querySelector('main');
+                    if (mainEl) {
+                        mainEl.innerHTML = `
+                            <div class="w-full max-w-xl mx-auto py-24 px-4 text-center flex flex-col items-center">
+                                <div class="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center text-outline mb-4 border border-outline-variant/30 shadow-inner">
+                                    <span class="material-symbols-outlined text-4xl text-outline-variant">storefront</span>
+                                </div>
+                                <h2 class="text-2xl font-bold text-on-surface mb-2">ไม่พบข้อมูลร้านค้านี้</h2>
+                                <p class="text-sm text-on-surface-variant mb-6">ร้านค้านี้อาจถูกลบออกจากระบบแล้ว หรือไม่มีร้านค้าเปิดให้บริการ</p>
+                                <a href="discovery.html" class="inline-flex items-center gap-2 px-6 py-3 bg-primary-container text-on-primary-container font-bold rounded-xl shadow-md hover:bg-primary transition-all active:scale-95 text-sm">
+                                    <span class="material-symbols-outlined text-[20px]">explore</span>
+                                    <span>กลับไปหน้าค้นหาร้านค้า</span>
+                                </a>
+                            </div>
+                        `;
+                    }
                 }
             } catch(e) {
                 console.warn('Supabase shop query in booking notice:', e);
             }
-        }
-
-        if (paramShopId && SHOPS_DATA[paramShopId]) {
-            currentShopId = paramShopId;
-        } else {
-            const firstAvailable = Object.keys(SHOPS_DATA)[0];
-            if (firstAvailable) {
-                currentShopId = firstAvailable;
-            } else {
-                // ไม่พบร้านค้าในระบบ (เช่น ถูกลบออกไปทั้งหมด)
-                const mainEl = document.querySelector('main');
-                if (mainEl) {
-                    mainEl.innerHTML = `
-                        <div class="w-full max-w-xl mx-auto py-24 px-4 text-center flex flex-col items-center">
-                            <div class="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center text-outline mb-4 border border-outline-variant/30 shadow-inner">
-                                <span class="material-symbols-outlined text-4xl text-outline-variant">storefront</span>
-                            </div>
-                            <h2 class="text-2xl font-bold text-on-surface mb-2">ไม่พบข้อมูลร้านค้านี้</h2>
-                            <p class="text-sm text-on-surface-variant mb-6">ร้านค้านี้อาจถูกลบออกจากระบบแล้ว หรือไม่มีร้านค้าเปิดให้บริการ</p>
-                            <a href="discovery.html" class="inline-flex items-center gap-2 px-6 py-3 bg-primary-container text-on-primary-container font-bold rounded-xl shadow-md hover:bg-primary transition-all active:scale-95 text-sm">
-                                <span class="material-symbols-outlined text-[20px]">explore</span>
-                                <span>กลับไปหน้าค้นหาร้านค้า</span>
-                            </a>
-                        </div>
-                    `;
-                }
-                return;
-            }
-        }
-        currentShop = SHOPS_DATA[currentShopId];
-        localStorage.setItem('selectedShopId', currentShopId);
-
-        const paramService = urlParams.get('service');
-        const paramPrice = urlParams.get('price');
-        if (paramService) {
-            selectedServiceName = paramService;
-            selectedServicePrice = paramPrice || (currentShop.services[0]?.price || '450');
-        } else if (currentShop.services && currentShop.services.length > 0) {
-            const pop = currentShop.services.find(s => s.popular) || currentShop.services[0];
-            selectedServiceName = pop.name;
-            selectedServicePrice = pop.price.toString();
-        }
-
-        // 2. Update UI Elements for Selected Shop & Service
-        document.title = `จองคิวและเวลา - ${currentShop.name}`;
-        const mobTitle = document.getElementById('mobile-page-title');
-        if (mobTitle) mobTitle.innerText = `จองคิว: ${currentShop.name}`;
-
-        const deskBack = document.getElementById('desktop-back-btn');
-        const mobBack = document.getElementById('mobile-back-btn');
-        if (deskBack) deskBack.href = `shop-details.html?shopId=${encodeURIComponent(currentShopId)}`;
-        if (mobBack) mobBack.href = `shop-details.html?shopId=${encodeURIComponent(currentShopId)}`;
-
-        const shopNameEl = document.getElementById('summary-shop-name');
-        if (shopNameEl) shopNameEl.innerText = currentShop.name;
-
-        const srvNameEl = document.getElementById('summary-service-name');
-        if (srvNameEl) srvNameEl.innerText = selectedServiceName;
-
-        const srvPriceEl = document.getElementById('summary-service-price');
-        if (srvPriceEl) srvPriceEl.innerText = `฿${selectedServicePrice}`;
-
-        const origPriceEl = document.getElementById('summary-total-original-price');
-        if (origPriceEl) origPriceEl.innerText = `(จากราคาเริ่มต้น ฿${selectedServicePrice})`;
-
-        const mobSrvNameEl = document.getElementById('mobile-summary-service-name');
-        if (mobSrvNameEl) mobSrvNameEl.innerText = `${selectedServiceName} (มัดจำ)`;
-
-        const promptPayEl = document.getElementById('promptpay-number');
-        if (promptPayEl) promptPayEl.innerText = currentShop.promptpay;
-
-        // 3. Render Vehicles from customerCars (Point 3 Vehicle Sync)
-        renderCarsList();
-
-        // 3.1 Fetch live vehicles from Supabase database
-        (async () => {
-            try {
-                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                if (!client?.auth) return;
-                const { data: { user } } = await client.auth.getUser();
-                if (!user) return;
-
-                const { data: dbVehicles } = await client
-                    .from('vehicles')
-                    .select('*')
-                    .eq('customer_id', user.id)
-                    .order('is_default', { ascending: false });
-
-                if (dbVehicles) {
-                    const mapped = dbVehicles.map(v => ({
-                        id: v.id,
-                        brand: v.brand_model,
-                        plate: v.plate_number,
-                        size: v.car_size || 'M',
-                        isPrimary: v.is_default || false
-                    }));
-                    saveCarsToStorage(mapped);
-                    renderCarsList();
-                }
-            } catch(e) {
-                console.warn('Book page vehicles fetch notice:', e);
-            }
         })();
-
-        // 4. Sync Customer Avatar & Name
-        const saved = localStorage.getItem('customerProfile');
-        if (saved) {
-            try {
-                const data = JSON.parse(saved);
-                if (data.avatar && !data.avatar.includes('googleusercontent')) {
-                    const avatar = document.getElementById('customer-header-avatar');
-                    if (avatar) avatar.src = data.avatar;
-                }
-                if (data.name) {
-                    const nameEl = document.getElementById('desktop-header-name');
-                    if (nameEl) nameEl.textContent = data.name;
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
     });
 </script>
 </body>

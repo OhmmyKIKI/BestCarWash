@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th">
 <head>
     <meta charset="utf-8"/>
@@ -1278,6 +1278,28 @@
                     }
                 }
 
+                // Extract operating hours from form (Step 4)
+                const dayMap = { 'sun': 0, 'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6 };
+                const initialOperatingHours = [];
+                document.querySelectorAll('.day-row').forEach(row => {
+                    const dayKey = row.dataset.day;
+                    if (dayKey in dayMap) {
+                        const dayNum = dayMap[dayKey];
+                        const isActive = row.querySelector(`input[type="checkbox"]`)?.checked ?? true;
+                        const openInput = row.querySelector(`input[name="${dayKey}Open"]`);
+                        const closeInput = row.querySelector(`input[name="${dayKey}Close"]`);
+                        const openVal = openInput?.value ? `${openInput.value.slice(0, 5)}:00` : '09:00:00';
+                        const closeVal = closeInput?.value ? `${closeInput.value.slice(0, 5)}:00` : '18:00:00';
+
+                        initialOperatingHours.push({
+                            day_of_week: dayNum,
+                            open_time: openVal,
+                            close_time: closeVal,
+                            is_closed: !isActive
+                        });
+                    }
+                });
+
                 // 1. Sign up user via Supabase Auth
                 const { data, error } = await client.auth.signUp({
                     email: email,
@@ -1302,7 +1324,8 @@
                             logo_url: uploadedLogoBase64 || null,
                             cover_image_url: uploadedCoverBase64 || null,
                             shop_images: uploadedCoverBase64 ? [uploadedCoverBase64] : [],
-                            initial_services: initialServices
+                            initial_services: initialServices,
+                            initial_operating_hours: initialOperatingHours
                         }
                     }
                 });
@@ -1330,6 +1353,7 @@
                 }
                 if (uploadedLogoBase64) localStorage.setItem('ownerProfileAvatar', uploadedLogoBase64);
                 if (initialServices.length > 0) localStorage.setItem('ownerServices', JSON.stringify(initialServices));
+                if (initialOperatingHours.length > 0) localStorage.setItem('ownerOperatingHours', JSON.stringify(initialOperatingHours));
 
                 // 1.5 Update profile avatar in public.profiles
                 if (uploadedLogoBase64) {
@@ -1381,9 +1405,16 @@
                     shopId = newShop?.id;
                 }
 
-                // 3. Insert Services into public.services
                 if (shopId) {
-                    submitBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> กำลังบันทึกรายการบริการ...';
+                    localStorage.setItem('currentShopId', shopId);
+                }
+                if (shopName) {
+                    localStorage.setItem('ownerShopName', shopName);
+                }
+
+                // 3. Insert Services and Operating Hours into Supabase in parallel
+                if (shopId) {
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> กำลังบันทึกข้อมูลบริการและเวลาทำการ...';
                     
                     const serviceRows = document.querySelectorAll('#servicesList .service-row, #servicesContainer .service-row');
                     const servicesToInsert = [];
@@ -1403,45 +1434,31 @@
                         }
                     });
 
+                    const hoursToInsert = initialOperatingHours.map(h => ({
+                        shop_id: shopId,
+                        day_of_week: h.day_of_week,
+                        open_time: h.open_time,
+                        close_time: h.close_time,
+                        is_closed: !!h.is_closed
+                    }));
+
+                    // Parallel execution for maximum speed
+                    const promises = [];
                     if (servicesToInsert.length > 0) {
-                        const { error: srvErr } = await client.from('services').insert(servicesToInsert);
-                        if (srvErr) console.warn('Services insert notice:', srvErr);
+                        promises.push(client.from('services').insert(servicesToInsert).catch(e => console.warn('Services insert notice:', e)));
                     }
-
-                    // 4. Insert Operating Hours into public.shop_operating_hours
-                    submitBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> กำลังบันทึกเวลาเปิดทำการ...';
-                    
-                    const dayMap = { 'sun': 0, 'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6 };
-                    const hoursToInsert = [];
-                    document.querySelectorAll('.day-row').forEach(row => {
-                        const dayKey = row.dataset.day;
-                        if (dayKey in dayMap) {
-                            const dayNum = dayMap[dayKey];
-                            const isActive = row.querySelector(`input[type="checkbox"]`)?.checked ?? true;
-                            const openInput = row.querySelector(`input[name="${dayKey}Open"]`);
-                            const closeInput = row.querySelector(`input[name="${dayKey}Close"]`);
-                            const openVal = openInput?.value ? `${openInput.value}:00` : '09:00:00';
-                            const closeVal = closeInput?.value ? `${closeInput.value}:00` : '18:00:00';
-
-                            hoursToInsert.push({
-                                shop_id: shopId,
-                                day_of_week: dayNum,
-                                open_time: openVal,
-                                close_time: closeVal,
-                                is_closed: !isActive
-                            });
-                        }
-                    });
-
                     if (hoursToInsert.length > 0) {
-                        const { error: hrsErr } = await client.from('shop_operating_hours').insert(hoursToInsert);
-                        if (hrsErr) console.warn('Operating hours insert notice:', hrsErr);
+                        promises.push(client.from('shop_operating_hours').insert(hoursToInsert).catch(e => console.warn('Hours insert notice:', e)));
                     }
+                    await Promise.all(promises);
+                    localStorage.setItem('ownerOperatingHours', JSON.stringify(hoursToInsert));
                 }
 
-                // Clear any customer session remnants
+                // Clear any customer session remnants and draft
                 ['customerProfile', 'customerCars', 'appBookingsList', 'activeCustomerBooking', 'favoriteShopIds'].forEach(k => localStorage.removeItem(k));
                 localStorage.setItem('lastLoggedInUserId', userId);
+                if (email) localStorage.setItem('rememberedEmail', email);
+                sessionStorage.removeItem('ownerSignupDraft');
 
                 // 5. Success
                 showToast('ลงทะเบียนร้านค้าและบันทึกข้อมูลเรียบร้อย! กำลังนำคุณเข้าสู่แดชบอร์ด...', true);
@@ -1454,7 +1471,7 @@
                     } else {
                         window.location.href = 'login.html';
                     }
-                }, 1500);
+                }, 1200);
 
             } catch (err) {
                 console.error('Registration error:', err);
@@ -1464,8 +1481,70 @@
             }
         });
 
+        // ==========================================
+        // LAYER 1: INSTANT 0.00ms DRAFT RESTORE
+        // ==========================================
+        function saveOwnerDraft() {
+            try {
+                const draft = {
+                    fullName: document.getElementById('fullName')?.value || '',
+                    email: document.getElementById('email')?.value || '',
+                    shopName: document.getElementById('shopName')?.value || '',
+                    phone: document.getElementById('phone')?.value || '',
+                    shopDesc: document.getElementById('shopDesc')?.value || '',
+                    address: document.getElementById('address')?.value || '',
+                    city: document.getElementById('city')?.value || '',
+                    zip: document.getElementById('zip')?.value || '',
+                    mapLink: document.getElementById('mapLink')?.value || ''
+                };
+                sessionStorage.setItem('ownerSignupDraft', JSON.stringify(draft));
+            } catch(_) {}
+        }
+
+        function restoreOwnerDraft() {
+            try {
+                const draftStr = sessionStorage.getItem('ownerSignupDraft');
+                if (draftStr) {
+                    const draft = JSON.parse(draftStr);
+                    if (draft.fullName) document.getElementById('fullName').value = draft.fullName;
+                    if (draft.email) document.getElementById('email').value = draft.email;
+                    if (draft.shopName) document.getElementById('shopName').value = draft.shopName;
+                    if (draft.phone) document.getElementById('phone').value = draft.phone;
+                    if (draft.shopDesc) document.getElementById('shopDesc').value = draft.shopDesc;
+                    if (draft.address) document.getElementById('address').value = draft.address;
+                    if (draft.city) document.getElementById('city').value = draft.city;
+                    if (draft.zip) document.getElementById('zip').value = draft.zip;
+                    if (draft.mapLink) document.getElementById('mapLink').value = draft.mapLink;
+                }
+            } catch(_) {}
+        }
+
+        ['fullName', 'email', 'shopName', 'phone', 'shopDesc', 'address', 'city', 'zip', 'mapLink'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', saveOwnerDraft);
+        });
+
+        // 0ms draft restoration
+        restoreOwnerDraft();
+
         // Initialize UI
         updateUI();
+
+        // LAYER 2: SILENT FAST-TRACK BACKGROUND SESSION CHECK
+        (async () => {
+            try {
+                const client = getClient();
+                if (client?.auth) {
+                    const { data: { session } } = await client.auth.getSession();
+                    if (session?.user) {
+                        const role = session.user.user_metadata?.role;
+                        if (role === 'OWNER' || session.user.user_metadata?.shop_name) {
+                            window.location.href = '../owner/Owner%20Dashboard.html';
+                        }
+                    }
+                }
+            } catch(_) {}
+        })();
     </script>
 </body>
 </html>

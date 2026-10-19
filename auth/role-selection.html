@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th">
 <head>
     <meta charset="utf-8"/>
@@ -7,6 +7,19 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <!-- Supabase JS & Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="../supabase-client.js"></script>
+    <script>
+        // Inline Fallback in case external script was blocked or path was mismatched
+        if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
+            var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+            var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+        var supabaseClient = window.supabaseClient;
+    </script>
     <script id="tailwind-config">
         tailwind.config = {
           darkMode: "class",
@@ -164,25 +177,32 @@
 
         function selectRole(role) {
             selectedRole = role;
+            try {
+                localStorage.setItem('preferredRole', role);
+            } catch(_) {}
             
             // Reset all cards
             document.querySelectorAll('.role-card').forEach(card => {
                 card.classList.remove('selected');
-                card.querySelector('.selection-indicator').classList.remove('opacity-100');
-                card.querySelector('.selection-indicator').classList.add('opacity-0');
+                card.querySelector('.selection-indicator')?.classList.remove('opacity-100');
+                card.querySelector('.selection-indicator')?.classList.add('opacity-0');
             });
 
             // Highlight selected card
             const activeCard = document.querySelector(`.role-card[data-role="${role}"]`);
-            activeCard.classList.add('selected');
-            activeCard.querySelector('.selection-indicator').classList.remove('opacity-0');
-            activeCard.querySelector('.selection-indicator').classList.add('opacity-100');
+            if (activeCard) {
+                activeCard.classList.add('selected');
+                activeCard.querySelector('.selection-indicator')?.classList.remove('opacity-0');
+                activeCard.querySelector('.selection-indicator')?.classList.add('opacity-100');
+            }
 
             // Enable Continue button
             const continueBtn = document.getElementById('continueBtn');
-            continueBtn.disabled = false;
-            continueBtn.classList.remove('bg-surface-container-high', 'opacity-50', 'cursor-not-allowed');
-            continueBtn.classList.add('bg-primary-container', 'text-on-primary-container', 'metallic-highlight', 'hover:opacity-90', 'active:scale-95', 'glow-effect');
+            if (continueBtn) {
+                continueBtn.disabled = false;
+                continueBtn.classList.remove('bg-surface-container-high', 'bg-surface-container-highest/60', 'opacity-50', 'cursor-not-allowed');
+                continueBtn.classList.add('bg-primary-container', 'text-on-primary-container', 'metallic-highlight', 'hover:opacity-90', 'active:scale-95', 'glow-effect');
+            }
         }
 
         function handleContinue() {
@@ -194,6 +214,39 @@
                 window.location.href = 'owner-signup.html';
             }
         }
+
+        // ==========================================
+        // LAYER 1: INSTANT 0.00ms PRE-SELECTION
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const paramRole = urlParams.get('role');
+            const savedRole = paramRole || localStorage.getItem('preferredRole');
+            if (savedRole && (savedRole === 'customer' || savedRole === 'owner')) {
+                selectRole(savedRole);
+            }
+
+            // ========================================================
+            // LAYER 2: SILENT FAST-TRACK BACKGROUND SESSION CHECK
+            // ========================================================
+            (async () => {
+                try {
+                    const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                    if (client?.auth) {
+                        const { data: { session } } = await client.auth.getSession();
+                        if (session?.user) {
+                            const user = session.user;
+                            const role = user.user_metadata?.role;
+                            if (role === 'OWNER' || user.user_metadata?.shop_name) {
+                                window.location.href = '../owner/Owner%20Dashboard.html';
+                            } else if (role === 'CUSTOMER') {
+                                window.location.href = '../customer/discovery.html';
+                            }
+                        }
+                    }
+                } catch(_) {}
+            })();
+        });
     </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
@@ -505,37 +505,63 @@
             });
         }
 
-        // Connect Supabase
-        const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-        if (!client?.auth) {
-            console.warn('Supabase client unavailable, running in local mode');
-            await loadShopAndDeposits(null, null);
-            return;
-        }
-
-        let user = null;
+        // ==========================================
+        // LAYER 1: INSTANT 0.00ms RENDER FROM CACHE
+        // ==========================================
         try {
-            const { data: sessData } = await client.auth.getSession();
-            user = sessData?.session?.user || null;
-            if (!user) {
-                const res = await client.auth.getUser();
-                user = res?.data?.user || null;
+            const cachedDep = localStorage.getItem('cachedPayoutDeposits');
+            if (cachedDep) {
+                const parsed = JSON.parse(cachedDep);
+                if (parsed && Array.isArray(parsed.validDeposits)) {
+                    renderDepositsUI(parsed.validDeposits, parsed.totalSum || 0);
+                }
+            } else {
+                // Calculate from locally stored bookings
+                const localB = JSON.parse(localStorage.getItem('ownerBookings') || localStorage.getItem('appBookingsList') || '[]');
+                if (Array.isArray(localB) && localB.length > 0) {
+                    const validDeposits = localB.filter(b => b.status !== 'declined' && b.status !== 'cancelled');
+                    const totalSum = validDeposits.reduce((sum, b) => {
+                        const dep = parseFloat(b.deposit_amount) || 50;
+                        return sum + (b.status === 'refunded' ? 0 : dep);
+                    }, 0);
+                    renderDepositsUI(validDeposits, totalSum);
+                }
             }
-        } catch(e) {
-            console.warn('Auth check notice:', e);
-        }
+        } catch(_) {}
 
-        const fallbackUserId = localStorage.getItem('lastLoggedInUserId');
-        const effectiveUserId = user?.id || fallbackUserId;
+        // ========================================================
+        // LAYER 2: SILENT FAST-TRACK BACKGROUND SYNC WITH SUPABASE
+        // ========================================================
+        (async () => {
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (!client?.auth) {
+                loadShopAndDeposits(null, null);
+                return;
+            }
 
-        if (effectiveUserId) {
-            currentUserId = effectiveUserId;
-            if (user) loadBankInformation(user);
-            await loadShopAndDeposits(client, effectiveUserId);
-        } else {
-            console.log('No active user session in payouts, loading cached data');
-            await loadShopAndDeposits(client, null);
-        }
+            let user = null;
+            try {
+                const { data: sessData } = await client.auth.getSession();
+                user = sessData?.session?.user || null;
+                if (!user) {
+                    const res = await client.auth.getUser();
+                    user = res?.data?.user || null;
+                }
+            } catch(e) {
+                console.warn('Auth check notice:', e);
+            }
+
+            const fallbackUserId = localStorage.getItem('lastLoggedInUserId');
+            const effectiveUserId = user?.id || fallbackUserId;
+
+            if (effectiveUserId) {
+                currentUserId = effectiveUserId;
+                if (user) loadBankInformation(user);
+                loadShopAndDeposits(client, effectiveUserId);
+            } else {
+                loadShopAndDeposits(client, null);
+            }
+        })();
 
         // Form submission logic (Save Bank)
         if (editBankForm) {
@@ -737,62 +763,76 @@
                 return sum + (b.status === 'refunded' ? 0 : dep);
             }, 0);
 
-            if (depositAmountEl) {
-                depositAmountEl.innerHTML = `${totalSum.toLocaleString('th-TH')}<span class="text-2xl text-on-surface-variant">.00</span>`;
-            }
-            if (depositCountEl) {
-                depositCountEl.textContent = `จากทั้งหมด ${validDeposits.length} รายการมัดจำที่สำเร็จ`;
-            }
+            try {
+                localStorage.setItem('cachedPayoutDeposits', JSON.stringify({ totalSum, validDeposits }));
+            } catch(_) {}
 
-            if (validDeposits.length === 0) {
-                if (container) {
-                    container.innerHTML = `
-                        <div class="bg-surface-container/60 border border-outline-variant/30 rounded-2xl p-8 text-center flex flex-col items-center justify-center">
-                            <div class="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mb-3">
-                                <span class="material-symbols-outlined text-3xl text-secondary">savings</span>
-                            </div>
-                            <p class="text-on-surface font-semibold text-sm">ยังไม่มีรายการเงินมัดจำใหม่</p>
-                            <p class="text-xs text-on-surface-variant mt-1 max-w-xs">เมื่อลูกค้าจองคิวและชำระค่ามัดจำบริการผ่านพร้อมเพย์ ยอดเงินและรายละเอียดจะถูกบันทึกที่นี่โดยอัตโนมัติ</p>
-                        </div>
-                    `;
-                }
-                return;
-            }
-
-            // Render live booking deposit transactions
-            if (container) {
-                container.innerHTML = validDeposits.map(b => {
-                    const isRefunded = b.status === 'refunded';
-                    const dateStr = b.booking_date || (b.created_at ? new Date(b.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : 'วันนี้');
-                    const timeStr = b.booking_time ? `${b.booking_time} น.` : '';
-                    const shortTxn = b.id ? String(b.id).slice(0, 8).toUpperCase() : Math.random().toString(36).slice(2, 10).toUpperCase();
-                    const depAmount = parseFloat(b.deposit_amount) || 50;
-
-                    return `
-                        <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 p-4 rounded-2xl shadow-sm flex flex-col gap-2 transition-all hover:bg-surface-container">
-                            <div class="flex justify-between items-start">
-                                <div class="flex flex-col">
-                                    <span class="text-sm font-bold text-on-surface">มัดจำ - ${escapeHtml(b.service_name || b.service || b.notes || 'บริการล้างรถ')} (${escapeHtml(b.customer_name || b.vehicle_info || b.plate_number || 'ลูกค้า')})</span>
-                                    <span class="text-xs text-on-surface-variant">${dateStr} ${timeStr}</span>
-                                </div>
-                                <span class="text-base font-bold ${isRefunded ? 'text-amber-400' : 'text-secondary'}">
-                                    ${isRefunded ? 'คืนมัดจำ -฿' + depAmount.toFixed(2) : '+฿' + depAmount.toFixed(2)}
-                                </span>
-                            </div>
-                            <div class="flex justify-between items-end mt-1 border-t border-outline-variant/20 pt-2">
-                                <span class="text-[10px] text-outline font-mono">TXN: #DEP-${shortTxn}</span>
-                                <span class="px-2 py-0.5 rounded ${isRefunded ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-secondary-container/30 text-[#4edea3] border border-secondary/30'} text-[10px] font-bold tracking-wide">
-                                    ${isRefunded ? 'คืนเงินแล้ว' : 'มัดจำสำเร็จ'}
-                                </span>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
+            renderDepositsUI(validDeposits, totalSum);
 
         } catch (e) {
             console.error('Load deposits error:', e);
-            renderFallbackUI();
+            if (!localStorage.getItem('cachedPayoutDeposits')) {
+                renderFallbackUI();
+            }
+        }
+    }
+
+    function renderDepositsUI(validDeposits = [], totalSum = 0) {
+        const depositAmountEl = document.getElementById('totalDepositAmount');
+        const depositCountEl = document.getElementById('totalDepositCountText');
+        const container = document.getElementById('payoutHistoryContainer');
+
+        if (depositAmountEl) {
+            depositAmountEl.innerHTML = `${Number(totalSum).toLocaleString('th-TH')}<span class="text-2xl text-on-surface-variant">.00</span>`;
+        }
+        if (depositCountEl) {
+            depositCountEl.textContent = `จากทั้งหมด ${validDeposits.length} รายการมัดจำที่สำเร็จ`;
+        }
+
+        if (validDeposits.length === 0) {
+            if (container) {
+                container.innerHTML = `
+                    <div class="bg-surface-container/60 border border-outline-variant/30 rounded-2xl p-8 text-center flex flex-col items-center justify-center">
+                        <div class="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mb-3">
+                            <span class="material-symbols-outlined text-3xl text-secondary">savings</span>
+                        </div>
+                        <p class="text-on-surface font-semibold text-sm">ยังไม่มีรายการเงินมัดจำใหม่</p>
+                        <p class="text-xs text-on-surface-variant mt-1 max-w-xs">เมื่อลูกค้าจองคิวและชำระค่ามัดจำบริการผ่านพร้อมเพย์ ยอดเงินและรายละเอียดจะถูกบันทึกที่นี่โดยอัตโนมัติ</p>
+                    </div>
+                `;
+            }
+            return;
+        }
+
+        // Render live booking deposit transactions
+        if (container) {
+            container.innerHTML = validDeposits.map(b => {
+                const isRefunded = b.status === 'refunded';
+                const dateStr = b.booking_date || (b.created_at ? new Date(b.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : 'วันนี้');
+                const timeStr = b.booking_time ? `${b.booking_time} น.` : '';
+                const shortTxn = b.id ? String(b.id).slice(0, 8).toUpperCase() : Math.random().toString(36).slice(2, 10).toUpperCase();
+                const depAmount = parseFloat(b.deposit_amount) || 50;
+
+                return `
+                    <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 p-4 rounded-2xl shadow-sm flex flex-col gap-2 transition-all hover:bg-surface-container">
+                        <div class="flex justify-between items-start">
+                            <div class="flex flex-col">
+                                <span class="text-sm font-bold text-on-surface">มัดจำ - ${escapeHtml(b.service_name || b.service || b.notes || 'บริการล้างรถ')} (${escapeHtml(b.customer_name || b.vehicle_info || b.plate_number || 'ลูกค้า')})</span>
+                                <span class="text-xs text-on-surface-variant">${dateStr} ${timeStr}</span>
+                            </div>
+                            <span class="text-base font-bold ${isRefunded ? 'text-amber-400' : 'text-secondary'}">
+                                ${isRefunded ? 'คืนมัดจำ -฿' + depAmount.toFixed(2) : '+฿' + depAmount.toFixed(2)}
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-end mt-1 border-t border-outline-variant/20 pt-2">
+                            <span class="text-[10px] text-outline font-mono">TXN: #DEP-${shortTxn}</span>
+                            <span class="px-2 py-0.5 rounded ${isRefunded ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-secondary-container/30 text-[#4edea3] border border-secondary/30'} text-[10px] font-bold tracking-wide">
+                                ${isRefunded ? 'คืนเงินแล้ว' : 'มัดจำสำเร็จ'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
     }
 

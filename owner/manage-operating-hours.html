@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th">
 <head>
     <meta charset="utf-8"/>
@@ -9,7 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-client.js"></script>
-    <script src="../supabase-client.js"></script>
     <script>
         if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
             var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
@@ -18,6 +17,7 @@
         }
     </script>
     <script id="tailwind-config">
+        window.tailwind = window.tailwind || {};
         tailwind.config = {
           darkMode: "class",
           theme: {
@@ -109,9 +109,9 @@
                     <span class="material-symbols-outlined text-secondary text-[26px]">schedule</span>
                     <span>เวลาเปิด-ปิดทำการ & วันหยุด</span>
                 </h1>
-                <div id="cloud-sync-badge" class="flex items-center gap-1.5 text-[11px] font-medium text-primary transition-all duration-500 mt-0.5">
-                    <span class="material-symbols-outlined text-[14px] animate-spin">sync</span>
-                    <span id="cloud-sync-text">กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...</span>
+                <div id="cloud-sync-badge" class="flex items-center gap-1.5 text-[11px] font-medium text-secondary opacity-0 transition-opacity duration-500 mt-0.5">
+                    <span class="material-symbols-outlined text-[14px]">cloud_done</span>
+                    <span id="cloud-sync-text">ข้อมูลเป็นปัจจุบันแล้ว</span>
                 </div>
             </div>
         </div>
@@ -163,7 +163,7 @@
             </div>
 
             <!-- Weekly Days List -->
-            <div class="glass-card rounded-2xl p-5 shadow-xl space-y-3 divide-y divide-outline-variant/20">
+            <div class="glass-card rounded-2xl p-3.5 sm:p-5 shadow-xl space-y-3 divide-y divide-outline-variant/20">
                 <div class="flex items-center justify-between pb-2">
                     <h2 class="text-sm font-bold text-on-surface flex items-center gap-2">
                         <span class="material-symbols-outlined text-secondary text-[20px]">calendar_view_week</span>
@@ -173,18 +173,18 @@
                 </div>
 
                 <!-- Monday -->
-                <div class="day-row flex items-center justify-between py-3.5 gap-2" data-day="mon">
-                    <div class="w-24 sm:w-28 flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
-                        <span class="text-sm font-bold text-on-surface">วันจันทร์</span>
+                <div class="day-row flex items-center justify-between py-3 sm:py-3.5 gap-1.5 sm:gap-2" data-day="mon">
+                    <div class="w-20 sm:w-28 flex items-center gap-1.5 sm:gap-2 shrink-0">
+                        <span class="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-secondary shrink-0"></span>
+                        <span class="text-xs sm:text-sm font-bold text-on-surface whitespace-nowrap">วันจันทร์</span>
                     </div>
-                    <div class="flex-1 flex items-center justify-center gap-2 time-inputs">
-                        <input type="time" name="monOpen" value="08:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                    <div class="flex-1 flex items-center justify-center gap-1 sm:gap-2 time-inputs min-w-0">
+                        <input type="time" name="monOpen" value="08:00" class="time-field w-[74px] sm:w-24 md:w-28 h-9 px-1 sm:px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
                         <span class="text-outline text-xs">-</span>
-                        <input type="time" name="monClose" value="18:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                        <input type="time" name="monClose" value="18:00" class="time-field w-[74px] sm:w-24 md:w-28 h-9 px-1 sm:px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
                     </div>
-                    <div class="w-12 flex justify-end">
-                        <div class="relative inline-block w-10 align-middle select-none">
+                    <div class="w-10 sm:w-12 flex justify-end shrink-0">
+                        <div class="relative inline-block w-9 sm:w-10 align-middle select-none">
                             <input type="checkbox" name="monActive" id="monActive" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200" checked/>
                             <label for="monActive" class="toggle-label block overflow-hidden h-5 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200"></label>
                         </div>
@@ -192,18 +192,18 @@
                 </div>
 
                 <!-- Tuesday -->
-                <div class="day-row flex items-center justify-between py-3.5 gap-2" data-day="tue">
-                    <div class="w-24 sm:w-28 flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
-                        <span class="text-sm font-bold text-on-surface">วันอังคาร</span>
+                <div class="day-row flex items-center justify-between py-3 sm:py-3.5 gap-1.5 sm:gap-2" data-day="tue">
+                    <div class="w-20 sm:w-28 flex items-center gap-1.5 sm:gap-2 shrink-0">
+                        <span class="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-secondary shrink-0"></span>
+                        <span class="text-xs sm:text-sm font-bold text-on-surface whitespace-nowrap">วันอังคาร</span>
                     </div>
-                    <div class="flex-1 flex items-center justify-center gap-2 time-inputs">
-                        <input type="time" name="tueOpen" value="08:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                    <div class="flex-1 flex items-center justify-center gap-1 sm:gap-2 time-inputs min-w-0">
+                        <input type="time" name="tueOpen" value="08:00" class="time-field w-[74px] sm:w-24 md:w-28 h-9 px-1 sm:px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
                         <span class="text-outline text-xs">-</span>
-                        <input type="time" name="tueClose" value="18:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                        <input type="time" name="tueClose" value="18:00" class="time-field w-[74px] sm:w-24 md:w-28 h-9 px-1 sm:px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
                     </div>
-                    <div class="w-12 flex justify-end">
-                        <div class="relative inline-block w-10 align-middle select-none">
+                    <div class="w-10 sm:w-12 flex justify-end shrink-0">
+                        <div class="relative inline-block w-9 sm:w-10 align-middle select-none">
                             <input type="checkbox" name="tueActive" id="tueActive" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200" checked/>
                             <label for="tueActive" class="toggle-label block overflow-hidden h-5 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200"></label>
                         </div>
@@ -211,18 +211,18 @@
                 </div>
 
                 <!-- Wednesday -->
-                <div class="day-row flex items-center justify-between py-3.5 gap-2" data-day="wed">
-                    <div class="w-24 sm:w-28 flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
-                        <span class="text-sm font-bold text-on-surface">วันพุธ</span>
+                <div class="day-row flex items-center justify-between py-3 sm:py-3.5 gap-1.5 sm:gap-2" data-day="wed">
+                    <div class="w-20 sm:w-28 flex items-center gap-1.5 sm:gap-2 shrink-0">
+                        <span class="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-secondary shrink-0"></span>
+                        <span class="text-xs sm:text-sm font-bold text-on-surface whitespace-nowrap">วันพุธ</span>
                     </div>
-                    <div class="flex-1 flex items-center justify-center gap-2 time-inputs">
-                        <input type="time" name="wedOpen" value="08:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                    <div class="flex-1 flex items-center justify-center gap-1 sm:gap-2 time-inputs min-w-0">
+                        <input type="time" name="wedOpen" value="08:00" class="time-field w-[74px] sm:w-24 md:w-28 h-9 px-1 sm:px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
                         <span class="text-outline text-xs">-</span>
-                        <input type="time" name="wedClose" value="18:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                        <input type="time" name="wedClose" value="18:00" class="time-field w-[74px] sm:w-24 md:w-28 h-9 px-1 sm:px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
                     </div>
-                    <div class="w-12 flex justify-end">
-                        <div class="relative inline-block w-10 align-middle select-none">
+                    <div class="w-10 sm:w-12 flex justify-end shrink-0">
+                        <div class="relative inline-block w-9 sm:w-10 align-middle select-none">
                             <input type="checkbox" name="wedActive" id="wedActive" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200" checked/>
                             <label for="wedActive" class="toggle-label block overflow-hidden h-5 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200"></label>
                         </div>
@@ -230,18 +230,18 @@
                 </div>
 
                 <!-- Thursday -->
-                <div class="day-row flex items-center justify-between py-3.5 gap-2" data-day="thu">
-                    <div class="w-24 sm:w-28 flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
-                        <span class="text-sm font-bold text-on-surface">วันพฤหัสบดี</span>
+                <div class="day-row flex items-center justify-between py-3 sm:py-3.5 gap-1.5 sm:gap-2" data-day="thu">
+                    <div class="w-20 sm:w-28 flex items-center gap-1.5 sm:gap-2 shrink-0">
+                        <span class="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-secondary shrink-0"></span>
+                        <span class="text-xs sm:text-sm font-bold text-on-surface whitespace-nowrap">วันพฤหัสบดี</span>
                     </div>
-                    <div class="flex-1 flex items-center justify-center gap-2 time-inputs">
-                        <input type="time" name="thuOpen" value="08:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                    <div class="flex-1 flex items-center justify-center gap-1 sm:gap-2 time-inputs min-w-0">
+                        <input type="time" name="thuOpen" value="08:00" class="time-field w-[74px] sm:w-24 md:w-28 h-9 px-1 sm:px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
                         <span class="text-outline text-xs">-</span>
-                        <input type="time" name="thuClose" value="18:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                        <input type="time" name="thuClose" value="18:00" class="time-field w-[74px] sm:w-24 md:w-28 h-9 px-1 sm:px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
                     </div>
-                    <div class="w-12 flex justify-end">
-                        <div class="relative inline-block w-10 align-middle select-none">
+                    <div class="w-10 sm:w-12 flex justify-end shrink-0">
+                        <div class="relative inline-block w-9 sm:w-10 align-middle select-none">
                             <input type="checkbox" name="thuActive" id="thuActive" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200" checked/>
                             <label for="thuActive" class="toggle-label block overflow-hidden h-5 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200"></label>
                         </div>
@@ -249,18 +249,18 @@
                 </div>
 
                 <!-- Friday -->
-                <div class="day-row flex items-center justify-between py-3.5 gap-2" data-day="fri">
-                    <div class="w-24 sm:w-28 flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
-                        <span class="text-sm font-bold text-on-surface">วันศุกร์</span>
+                <div class="day-row flex items-center justify-between py-3 sm:py-3.5 gap-1.5 sm:gap-2" data-day="fri">
+                    <div class="w-20 sm:w-28 flex items-center gap-1.5 sm:gap-2 shrink-0">
+                        <span class="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-secondary shrink-0"></span>
+                        <span class="text-xs sm:text-sm font-bold text-on-surface whitespace-nowrap">วันศุกร์</span>
                     </div>
-                    <div class="flex-1 flex items-center justify-center gap-2 time-inputs">
-                        <input type="time" name="friOpen" value="08:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                    <div class="flex-1 flex items-center justify-center gap-1 sm:gap-2 time-inputs min-w-0">
+                        <input type="time" name="friOpen" value="08:00" class="time-field w-[74px] sm:w-24 md:w-28 h-9 px-1 sm:px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
                         <span class="text-outline text-xs">-</span>
-                        <input type="time" name="friClose" value="18:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                        <input type="time" name="friClose" value="18:00" class="time-field w-[74px] sm:w-24 md:w-28 h-9 px-1 sm:px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
                     </div>
-                    <div class="w-12 flex justify-end">
-                        <div class="relative inline-block w-10 align-middle select-none">
+                    <div class="w-10 sm:w-12 flex justify-end shrink-0">
+                        <div class="relative inline-block w-9 sm:w-10 align-middle select-none">
                             <input type="checkbox" name="friActive" id="friActive" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200" checked/>
                             <label for="friActive" class="toggle-label block overflow-hidden h-5 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200"></label>
                         </div>
@@ -268,18 +268,18 @@
                 </div>
 
                 <!-- Saturday -->
-                <div class="day-row flex items-center justify-between py-3.5 gap-2" data-day="sat">
-                    <div class="w-24 sm:w-28 flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
-                        <span class="text-sm font-bold text-on-surface">วันเสาร์</span>
+                <div class="day-row flex items-center justify-between py-3 sm:py-3.5 gap-1.5 sm:gap-2" data-day="sat">
+                    <div class="w-20 sm:w-28 flex items-center gap-1.5 sm:gap-2 shrink-0">
+                        <span class="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-secondary shrink-0"></span>
+                        <span class="text-xs sm:text-sm font-bold text-on-surface whitespace-nowrap">วันเสาร์</span>
                     </div>
-                    <div class="flex-1 flex items-center justify-center gap-2 time-inputs">
-                        <input type="time" name="satOpen" value="09:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                    <div class="flex-1 flex items-center justify-center gap-1 sm:gap-2 time-inputs min-w-0">
+                        <input type="time" name="satOpen" value="09:00" class="time-field w-[74px] sm:w-24 md:w-28 h-9 px-1 sm:px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
                         <span class="text-outline text-xs">-</span>
-                        <input type="time" name="satClose" value="17:00" class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                        <input type="time" name="satClose" value="17:00" class="time-field w-[74px] sm:w-24 md:w-28 h-9 px-1 sm:px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
                     </div>
-                    <div class="w-12 flex justify-end">
-                        <div class="relative inline-block w-10 align-middle select-none">
+                    <div class="w-10 sm:w-12 flex justify-end shrink-0">
+                        <div class="relative inline-block w-9 sm:w-10 align-middle select-none">
                             <input type="checkbox" name="satActive" id="satActive" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200" checked/>
                             <label for="satActive" class="toggle-label block overflow-hidden h-5 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200"></label>
                         </div>
@@ -287,18 +287,18 @@
                 </div>
 
                 <!-- Sunday -->
-                <div class="day-row flex items-center justify-between py-3.5 gap-2 opacity-50" data-day="sun">
-                    <div class="w-24 sm:w-28 flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-error"></span>
-                        <span class="text-sm font-bold text-on-surface">วันอาทิตย์</span>
+                <div class="day-row flex items-center justify-between py-3 sm:py-3.5 gap-1.5 sm:gap-2 opacity-50" data-day="sun">
+                    <div class="w-20 sm:w-28 flex items-center gap-1.5 sm:gap-2 shrink-0">
+                        <span class="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-error shrink-0"></span>
+                        <span class="text-xs sm:text-sm font-bold text-on-surface whitespace-nowrap">วันอาทิตย์</span>
                     </div>
-                    <div class="flex-1 flex items-center justify-center gap-2 time-inputs pointer-events-none">
-                        <input type="time" name="sunOpen" value="09:00" disabled class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                    <div class="flex-1 flex items-center justify-center gap-1 sm:gap-2 time-inputs pointer-events-none min-w-0">
+                        <input type="time" name="sunOpen" value="09:00" disabled class="time-field w-[74px] sm:w-24 md:w-28 h-9 px-1 sm:px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
                         <span class="text-outline text-xs">-</span>
-                        <input type="time" name="sunClose" value="16:00" disabled class="time-field w-24 sm:w-28 h-9 px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
+                        <input type="time" name="sunClose" value="16:00" disabled class="time-field w-[74px] sm:w-24 md:w-28 h-9 px-1 sm:px-2 bg-surface-container-highest border border-outline-variant rounded-lg text-on-surface text-xs sm:text-sm text-center font-mono focus:border-secondary focus:outline-none">
                     </div>
-                    <div class="w-12 flex justify-end">
-                        <div class="relative inline-block w-10 align-middle select-none">
+                    <div class="w-10 sm:w-12 flex justify-end shrink-0">
+                        <div class="relative inline-block w-9 sm:w-10 align-middle select-none">
                             <input type="checkbox" name="sunActive" id="sunActive" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200"/>
                             <label for="sunActive" class="toggle-label block overflow-hidden h-5 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200"></label>
                         </div>
@@ -705,7 +705,9 @@
             loadSpecialHolidays();
             updateLiveStatus();
 
-            setCloudSyncStatus('syncing', hasCache ? 'กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...' : 'กำลังโหลดเวลาเปิด-ปิด...');
+            if (!hasCache) {
+                setCloudSyncStatus('syncing', 'กำลังโหลดเวลาเปิด-ปิด...');
+            }
 
             // Layer 2: Fast-Track Background Sync with Supabase (Parallel Execution)
             try {
@@ -735,6 +737,16 @@
                     fastHoursPromise || Promise.resolve(null),
                     sessionPromise
                 ]);
+
+                // CIRCUIT BREAKER: If fastHoursPromise failed due to network / connection drop, stop gracefully!
+                if (hoursRes?.error) {
+                    const errMsg = hoursRes.error.message || '';
+                    if (errMsg.includes('fetch') || errMsg.includes('network') || errMsg.includes('Failed') || errMsg.includes('Abort')) {
+                        console.warn('Network sync notice (operating hours): Offline or aborted stream, using cached data.');
+                        setCloudSyncStatus('offline', 'ใช้งานข้อมูลในเครื่อง (ออฟไลน์)');
+                        return;
+                    }
+                }
 
                 const user = sessRes?.data?.session?.user;
                 const effectiveUserId = user?.id || fallbackUserId;
@@ -788,9 +800,11 @@
                     return;
                 }
 
-                // Fallback: If no savedShopId yet, resolve shop by effectiveUserId or ownerShopName
+                // Fallback: If no savedShopId yet or no hours, resolve shop only if network is healthy
                 let shop = null;
-                if (effectiveUserId) {
+                if (savedShopId) {
+                    shop = { id: savedShopId, name: localStorage.getItem('ownerShopName') || 'ohm Car Wash' };
+                } else if (effectiveUserId) {
                     const { data } = await client.from('shops').select('id, name').eq('owner_id', effectiveUserId).maybeSingle();
                     shop = data;
                 }
@@ -798,6 +812,33 @@
                 if (!shop && localStorage.getItem('ownerShopName')) {
                     const { data } = await client.from('shops').select('id, name').eq('name', localStorage.getItem('ownerShopName')).maybeSingle();
                     shop = data;
+                }
+
+                const meta = user?.user_metadata || {};
+                if (!shop && meta.shop_name) {
+                    const { data } = await client.from('shops').select('id, name').eq('name', meta.shop_name).maybeSingle();
+                    shop = data;
+                }
+
+                // Auto-provision shop if missing (only when authenticated and online)
+                if (!shop && effectiveUserId) {
+                    const sName = meta.shop_name || localStorage.getItem('ownerShopName') || 'My Car Wash';
+                    const sPhone = meta.phone_number || localStorage.getItem('ownerShopPhone') || '';
+                    const sDesc = meta.shop_description || meta.description || localStorage.getItem('ownerShopDesc') || 'ศูนย์บริการคาร์แคร์';
+                    const sAddr = meta.full_address || meta.address || localStorage.getItem('ownerShopStreet') || '';
+                    try {
+                        const { data: newShop } = await client.from('shops').insert({
+                            owner_id: effectiveUserId,
+                            name: sName,
+                            phone_number: sPhone,
+                            description: sDesc,
+                            address: sAddr,
+                            is_open: true
+                        }).select('id, name').maybeSingle();
+                        if (newShop) shop = newShop;
+                    } catch(e) {
+                        console.warn('Auto-create shop notice in loadOperatingHours:', e);
+                    }
                 }
 
                 if (shop?.id) {
@@ -814,18 +855,34 @@
                     // Self-healing: If DB has shop record but no hours configured, seed custom or standard hours
                     if (!error && (!hours || hours.length === 0)) {
                         let hoursToSeed = null;
-                        try {
-                            const local = JSON.parse(localStorage.getItem('ownerOperatingHours') || 'null');
-                            if (Array.isArray(local) && local.length > 0) {
-                                hoursToSeed = local.map(h => ({
-                                    shop_id: shop.id,
-                                    day_of_week: h.day_of_week,
-                                    open_time: h.open_time || '08:00:00',
-                                    close_time: h.close_time || '18:00:00',
-                                    is_closed: !!h.is_closed
-                                }));
-                            }
-                        } catch(_) {}
+
+                        // Priority 1: user_metadata configured during registration
+                        const metaHours = user?.user_metadata?.initial_operating_hours;
+                        if (Array.isArray(metaHours) && metaHours.length > 0) {
+                            hoursToSeed = metaHours.map(h => ({
+                                shop_id: shop.id,
+                                day_of_week: h.day_of_week,
+                                open_time: h.open_time || '08:00:00',
+                                close_time: h.close_time || '18:00:00',
+                                is_closed: !!h.is_closed
+                            }));
+                        }
+
+                        // Priority 2: localStorage
+                        if (!hoursToSeed) {
+                            try {
+                                const local = JSON.parse(localStorage.getItem('ownerOperatingHours') || 'null');
+                                if (Array.isArray(local) && local.length > 0) {
+                                    hoursToSeed = local.map(h => ({
+                                        shop_id: shop.id,
+                                        day_of_week: h.day_of_week,
+                                        open_time: h.open_time || '08:00:00',
+                                        close_time: h.close_time || '18:00:00',
+                                        is_closed: !!h.is_closed
+                                    }));
+                                }
+                            } catch(_) {}
+                        }
 
                         const defaultHours = hoursToSeed || [
                             { shop_id: shop.id, day_of_week: 1, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
@@ -973,30 +1030,56 @@
 
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
 
-            // Dynamically ensure target shop id is resolved
-            let targetShopId = currentShopId || localStorage.getItem('currentShopId');
-            if ((!targetShopId || targetShopId === 'local-shop-default') && client) {
+            // 1. Verify active session & authenticated user
+            let session = null;
+            let currentUser = null;
+            if (client?.auth) {
                 try {
-                    const sessRes = client.auth ? await client.auth.getSession() : null;
-                    const uid = sessRes?.data?.session?.user?.id || localStorage.getItem('lastLoggedInUserId');
-                    if (uid) {
-                        const { data: s } = await client.from('shops').select('id').eq('owner_id', uid).maybeSingle();
-                        if (s?.id) {
-                            targetShopId = s.id;
-                            currentShopId = s.id;
-                            localStorage.setItem('currentShopId', s.id);
-                        }
+                    const sessRes = await client.auth.getSession();
+                    session = sessRes?.data?.session;
+                    currentUser = session?.user;
+                } catch(e) {
+                    console.warn('Session check notice:', e);
+                }
+            }
+
+            // 2. Resolve shop strictly belonging to the currently authenticated user
+            let targetShopId = localStorage.getItem('currentShopId') || currentShopId;
+            if ((!targetShopId || targetShopId.length < 20 || targetShopId === 'local-shop-default') && currentUser && client) {
+                try {
+                    let { data: s } = await client.from('shops').select('id, name').eq('owner_id', currentUser.id).maybeSingle();
+
+                    const meta = currentUser.user_metadata || {};
+                    if (!s && meta.shop_name) {
+                        const { data: byName } = await client.from('shops').select('id, name').eq('name', meta.shop_name).maybeSingle();
+                        if (byName) s = byName;
                     }
-                    if (!targetShopId && localStorage.getItem('ownerShopName')) {
-                        const { data: s } = await client.from('shops').select('id').eq('name', localStorage.getItem('ownerShopName')).maybeSingle();
-                        if (s?.id) {
-                            targetShopId = s.id;
-                            currentShopId = s.id;
-                            localStorage.setItem('currentShopId', s.id);
-                        }
+
+                    if (!s) {
+                        // AUTO-PROVISION SHOP IMMEDIATELY!
+                        const sName = meta.shop_name || localStorage.getItem('ownerShopName') || 'My Car Wash';
+                        const sPhone = meta.phone_number || localStorage.getItem('ownerShopPhone') || '';
+                        const sDesc = meta.shop_description || meta.description || localStorage.getItem('ownerShopDesc') || 'ศูนย์บริการคาร์แคร์';
+                        const sAddr = meta.full_address || meta.address || localStorage.getItem('ownerShopStreet') || '';
+                        const { data: newShop } = await client.from('shops').insert({
+                            owner_id: currentUser.id,
+                            name: sName,
+                            phone_number: sPhone,
+                            description: sDesc,
+                            address: sAddr,
+                            is_open: true
+                        }).select('id, name').maybeSingle();
+                        if (newShop) s = newShop;
                     }
-                } catch (e) {
-                    console.warn('Resolve shop error before save:', e);
+
+                    if (s?.id) {
+                        targetShopId = s.id;
+                        currentShopId = s.id;
+                        localStorage.setItem('currentShopId', s.id);
+                        if (s.name) localStorage.setItem('ownerShopName', s.name);
+                    }
+                } catch(e) {
+                    console.warn('Resolve user shop error:', e);
                 }
             }
 
@@ -1025,7 +1108,7 @@
                 }
             });
 
-            // 1. Persist to LocalStorage cache
+            // 3. Persist to LocalStorage cache immediately
             try {
                 localStorage.setItem('ownerOperatingHours', JSON.stringify(hoursToSave));
                 localStorage.setItem('ownerSpecialHolidays', JSON.stringify(specialHolidays));
@@ -1034,11 +1117,11 @@
                 console.warn('LocalStorage save error:', err);
             }
 
-            // 2. Persist to Supabase if available
+            // 4. Persist to Supabase if available
             let supabaseSuccess = false;
             let supabaseErrorMessage = null;
 
-            if (client && targetShopId && targetShopId !== 'local-shop-default') {
+            if (client && currentUser && targetShopId && targetShopId !== 'local-shop-default') {
                 try {
                     const toUpsert = hoursToSave.map(h => ({
                         shop_id: targetShopId,
@@ -1048,64 +1131,90 @@
                         is_closed: h.is_closed
                     }));
 
+                    // Primary strategy: Upsert with unique composite key
                     const { data: savedRows, error: upsertErr } = await client
                         .from('shop_operating_hours')
                         .upsert(toUpsert, { onConflict: 'shop_id,day_of_week' })
                         .select();
 
-                    if (upsertErr) {
-                        console.error('Supabase operating hours upsert error:', upsertErr);
-                        // Fallback: Delete then insert
+                    if (!upsertErr && savedRows && savedRows.length > 0) {
+                        supabaseSuccess = true;
+                        localStorage.setItem('ownerOperatingHours', JSON.stringify(savedRows));
+                    } else {
+                        console.warn('Supabase upsert note, using delete + insert fallback:', upsertErr);
+                        // Fallback strategy: Delete existing rows for this shop and re-insert
                         const { error: delErr } = await client.from('shop_operating_hours').delete().eq('shop_id', targetShopId);
-                        if (!delErr) {
-                            const { error: insErr } = await client.from('shop_operating_hours').insert(toUpsert);
+                        if (delErr) {
+                            console.error('Delete error:', delErr);
+                            supabaseErrorMessage = delErr.message;
+                        } else {
+                            const { data: insRows, error: insErr } = await client.from('shop_operating_hours').insert(toUpsert).select();
                             if (insErr) {
+                                console.error('Insert error:', insErr);
                                 supabaseErrorMessage = insErr.message;
                             } else {
                                 supabaseSuccess = true;
+                                if (insRows && insRows.length > 0) {
+                                    localStorage.setItem('ownerOperatingHours', JSON.stringify(insRows));
+                                }
                             }
-                        } else {
-                            supabaseErrorMessage = delErr.message;
-                        }
-                    } else {
-                        supabaseSuccess = true;
-                        if (savedRows && savedRows.length > 0) {
-                            localStorage.setItem('ownerOperatingHours', JSON.stringify(savedRows));
                         }
                     }
 
-                    // Also save special holidays to user metadata on Supabase
-                    if (client.auth) {
-                        try {
-                            await client.auth.updateUser({
-                                data: { special_holidays: specialHolidays }
-                            });
-                        } catch (_) {}
-                    }
+                    // Also save backup to user metadata on Supabase
+                    try {
+                        await client.auth.updateUser({
+                            data: {
+                                initial_operating_hours: hoursToSave,
+                                special_holidays: specialHolidays
+                            }
+                        });
+                    } catch (_) {}
                 } catch(err) {
                     console.error('Save operating hours error:', err);
                     supabaseErrorMessage = err.message;
                 }
+            } else if (!currentUser) {
+                supabaseErrorMessage = 'ไม่พบการเข้าสู่ระบบ กรุณาเข้าสู่ระบบก่อนบันทึกข้อมูล';
+            } else if (!targetShopId || targetShopId === 'local-shop-default') {
+                supabaseErrorMessage = 'ไม่พบข้อมูลร้านค้าของคุณในระบบฐานข้อมูล';
             }
 
             updateLiveStatus();
 
             const toastText = toast?.querySelector('.font-bold');
-            if (toastText) {
-                if (supabaseSuccess) {
-                    toastText.textContent = 'บันทึกเวลาเปิดทำการลงฐานข้อมูลสำเร็จแล้ว!';
-                } else if (supabaseErrorMessage) {
-                    toastText.textContent = 'บันทึกในเครื่องแล้ว (คลาวด์: ' + supabaseErrorMessage + ')';
-                } else {
-                    toastText.textContent = 'อัปเดตเวลาเปิดทำการสำเร็จแล้ว!';
-                }
-            }
+            const toastIcon = toast?.querySelector('.material-symbols-outlined');
 
-            toast?.classList.add('show');
-            setTimeout(() => {
-                toast?.classList.remove('show');
-                window.location.href = 'Owner%20Profile.html';
-            }, 1000);
+            if (supabaseSuccess) {
+                if (toastText) toastText.textContent = 'บันทึกเวลาเปิดทำการลงฐานข้อมูลสำเร็จแล้ว!';
+                if (toastIcon) toastIcon.textContent = 'check_circle';
+                toast?.classList.remove('bg-amber-950/90', 'border-amber-500/50', 'text-amber-200');
+                toast?.classList.add('bg-secondary-container', 'text-on-secondary-container');
+                toast?.classList.add('show');
+                setCloudSyncStatus('synced', 'บันทึกลงฐานข้อมูลสำเร็จแล้ว');
+
+                setTimeout(() => {
+                    toast?.classList.remove('show');
+                    window.location.href = 'Owner%20Profile.html';
+                }, 1200);
+            } else {
+                saveBtns.forEach(btn => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> บันทึกเวลา';
+                });
+
+                const displayMsg = supabaseErrorMessage ? `บันทึกในเครื่องแล้ว (คลาวด์: ${supabaseErrorMessage})` : 'บันทึกในเครื่องแล้ว แต่ไม่สามารถซิงค์ไปยังคลาวด์ได้';
+                if (toastText) toastText.textContent = displayMsg;
+                if (toastIcon) toastIcon.textContent = 'warning';
+                toast?.classList.remove('bg-secondary-container', 'text-on-secondary-container');
+                toast?.classList.add('bg-amber-950/90', 'border-amber-500/50', 'text-amber-200');
+                toast?.classList.add('show');
+                setCloudSyncStatus('offline', 'บันทึกเฉพาะในเครื่อง');
+
+                setTimeout(() => {
+                    toast?.classList.remove('show');
+                }, 5000);
+            }
         });
 
         // 9. Periodic refresh for Live Status every 30 seconds

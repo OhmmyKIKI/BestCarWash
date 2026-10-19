@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th">
 <head>
     <meta charset="utf-8"/>
@@ -248,11 +248,14 @@
             }
 
             userNotifications = notifs || [];
+            localStorage.setItem('cachedCustomerNotifications', JSON.stringify(userNotifications));
             renderNotificationsList(userNotifications);
 
         } catch (e) {
             console.warn('Notifications exception:', e);
-            showEmptyState(true);
+            if (!localStorage.getItem('cachedCustomerNotifications')) {
+                showEmptyState(true);
+            }
         }
     }
 
@@ -312,13 +315,17 @@
                 const { data: { user } } = await client.auth.getUser();
                 if (user) {
                     await client.from('notifications').update({ is_read: true }).eq('user_id', user.id);
+                    await loadLiveNotifications();
                 }
             }
         } catch(e) {}
     }
 
     // Avatar and Profile Synchronization
-    document.addEventListener('DOMContentLoaded', async () => {
+    document.addEventListener('DOMContentLoaded', () => {
+        // ==========================================
+        // LAYER 1: INSTANT 0.00ms RENDER FROM CACHE
+        // ==========================================
         const saved = localStorage.getItem('customerProfile');
         if (saved) {
             try {
@@ -337,22 +344,38 @@
             }
         }
 
-        // Live Supabase check
+        // Restore cached notifications at 0ms
         try {
-            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            if (client?.auth) {
-                const { data: { user } } = await client.auth.getUser();
-                if (user) {
-                    const { data: prof } = await client.from('profiles').select('avatar_url, full_name').eq('id', user.id).maybeSingle();
-                    if (prof?.avatar_url) {
-                        const avatar = document.getElementById('desktop-header-avatar');
-                        if (avatar) avatar.src = prof.avatar_url;
-                    }
+            const cached = localStorage.getItem('cachedCustomerNotifications');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    userNotifications = parsed;
+                    renderNotificationsList(userNotifications);
                 }
             }
         } catch(e) {}
 
-        await loadLiveNotifications();
+        // ========================================================
+        // LAYER 2: SILENT FAST-TRACK BACKGROUND SYNC WITH SUPABASE
+        // ========================================================
+        (async () => {
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (client?.auth) {
+                    const { data: { user } } = await client.auth.getUser();
+                    if (user) {
+                        const { data: prof } = await client.from('profiles').select('avatar_url, full_name').eq('id', user.id).maybeSingle();
+                        if (prof?.avatar_url) {
+                            const avatar = document.getElementById('desktop-header-avatar');
+                            if (avatar) avatar.src = prof.avatar_url;
+                        }
+                    }
+                }
+            } catch(e) {}
+
+            loadLiveNotifications();
+        })();
     });
 </script>
 

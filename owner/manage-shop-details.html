@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th">
 <head>
     <meta charset="utf-8"/>
@@ -9,14 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-client.js"></script>
-    <script src="../supabase-client.js"></script>
-    <script>
-        if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
-            var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
-            var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
-            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        }
-    </script>
     <script id="tailwind-config">
         tailwind.config = {
           darkMode: "class",
@@ -97,9 +89,9 @@
                     <span class="material-symbols-outlined text-secondary text-[26px]">store</span>
                     <span>จัดการข้อมูลร้านค้า</span>
                 </h1>
-                <div id="cloud-sync-badge" class="flex items-center gap-1.5 text-[11px] font-medium text-primary transition-all duration-500 mt-0.5">
-                    <span class="material-symbols-outlined text-[14px] animate-spin">sync</span>
-                    <span id="cloud-sync-text">กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...</span>
+                <div id="cloud-sync-badge" class="flex items-center gap-1.5 text-[11px] font-medium text-secondary opacity-0 transition-opacity duration-500 mt-0.5">
+                    <span class="material-symbols-outlined text-[14px]">cloud_done</span>
+                    <span id="cloud-sync-text">ข้อมูลเป็นปัจจุบันแล้ว</span>
                 </div>
             </div>
         </div>
@@ -137,7 +129,7 @@
 
                 <!-- Cover Photo -->
                 <div class="relative w-full h-44 rounded-xl overflow-hidden border border-outline-variant/50 group bg-surface-container-lowest">
-                    <img id="coverPhotoImg" src="https://images.unsplash.com/photo-1601362840469-51e4d8d58785?q=80&w=2070&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Shop Cover">
+                    <img id="coverPhotoImg" src="https://images.unsplash.com/photo-1601362840469-51e4d8d58785?q=80&w=2070&auto=format&fit=crop" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80';" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Shop Cover">
                     <div class="absolute inset-0 bg-gradient-to-t from-background/90 via-black/30 to-transparent"></div>
                     <label for="coverPhotoInput" class="absolute inset-0 flex flex-col items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white gap-1 backdrop-blur-xs">
                         <span class="material-symbols-outlined text-[28px] text-secondary">photo_camera</span>
@@ -423,7 +415,7 @@
                 const isCover = idx === 0;
                 html += `
                     <div class="relative aspect-[4/3] rounded-xl overflow-hidden border ${isCover ? 'border-secondary ring-2 ring-secondary/40' : 'border-outline-variant/40'} group bg-surface-container-low shadow-sm">
-                        <img src="${imgUrl}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" alt="Shop Photo ${idx+1}">
+                        <img src="${imgUrl}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80';" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" alt="Shop Photo ${idx+1}">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-1.5">
                             <div class="flex justify-end gap-1">
                                 <button type="button" onclick="deletePhoto(${idx})" class="w-6 h-6 rounded-md bg-black/70 hover:bg-error text-white flex items-center justify-center transition-colors shadow-sm" title="ลบรูป">
@@ -466,7 +458,9 @@
             if (shopPhotos.length > 0) {
                 coverImg.src = shopPhotos[0];
                 newCoverCompressed = shopPhotos[0];
+                localStorage.setItem('ownerCoverImage', shopPhotos[0]);
             }
+            localStorage.setItem('ownerShopGallery', JSON.stringify(shopPhotos));
             renderPhotoGallery();
         };
 
@@ -476,8 +470,109 @@
             shopPhotos.unshift(chosen);
             coverImg.src = chosen;
             newCoverCompressed = chosen;
+            localStorage.setItem('ownerCoverImage', chosen);
+            localStorage.setItem('ownerShopGallery', JSON.stringify(shopPhotos));
             renderPhotoGallery();
         };
+
+        // Sanitize & heal gallery image URLs (cleans 404 links)
+        function sanitizeGalleryUrls(arr) {
+            if (!arr || !Array.isArray(arr)) return [];
+            return arr
+                .map(url => {
+                    if (!url || typeof url !== 'string' || !url.trim()) return null;
+                    const u = url.trim();
+                    if (u.includes('1520340356584-f9917d1e5113')) {
+                        return 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80';
+                    }
+                    if (u.includes('1620803444007-681125f16e45')) {
+                        return 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=1200&q=80';
+                    }
+                    return u;
+                })
+                .filter(Boolean);
+        }
+
+        // Parse Thai address string into separate components
+        function parseAddress(raw) {
+            if (!raw || typeof raw !== 'string') return { street: '', subDistrict: '', city: '', zip: '' };
+            let text = raw.trim();
+            let zip = '';
+            let city = '';
+            let subDistrict = '';
+            let street = '';
+
+            // 1. Extract 5-digit zip code
+            const zipMatch = text.match(/\b\d{5}\b/);
+            if (zipMatch) {
+                zip = zipMatch[0];
+                text = text.replace(zipMatch[0], '').trim();
+            }
+
+            // 2. Extract Province (จ.เชียงใหม่, จังหวัด..., etc.)
+            const provRegex = /(?:จ\.|จังหวัด)?\s*(กรุงเทพ(?:มหานคร)?|เชียงใหม่|นนทบุรี|ปทุมธานี|สมุทรปราการ|ชลบุรี|ขอนแก่น|ภูเก็ต|สงขลา|นครราชสีมา|ระยอง|เชียงราย|อุบลราชธานี|พิษณุโลก|สุราษฎร์ธานี|นครปฐม|สมุทรสาคร|นครศรีธรรมราช|ลำปาง|อุดรธานี|สระบุรี|อยุธยา|พระนครศรีอยุธยา|กาญจนบุรี|ฉะเชิงเทรา|จันทบุรี|ตราด|ตาก|นครนายก|นครพนม|นครสวรรค์|น่าน|บึงกาฬ|บุรีรัมย์|ปราจีนบุรี|พะเยา|พัทลุง|พิจิตร|เพชรบุรี|เพชรบูรณ์|แพร่|มุกดาหาร|แม่ฮ่องสอน|ยโสธร|ร้อยเอ็ด|ระนอง|ลพบุรี|เลย|ศรีสะเกษ|สกลนคร|สตูล|สมุทรสงคราม|สระแก้ว|สิงห์บุรี|สุโขทัย|สุพรรณบุรี|หนองคาย|หนองบัวลำภู|อ่างทอง|อำนาจเจริญ|อุทัยธานี|อุตรดิตถ์)/;
+            const provMatch = text.match(provRegex);
+            if (provMatch) {
+                city = provMatch[1];
+                text = text.replace(provMatch[0], '').trim();
+            }
+
+            // 3. Extract District (อ.เมือง, อำเภอ..., เขต...)
+            const distRegex = /(?:อ\.|อำเภอ|เขต)\s*([^\s,]+)/;
+            const distMatch = text.match(distRegex);
+            if (distMatch) {
+                const districtName = distMatch[0].trim();
+                city = city ? `${districtName} ${city}` : districtName;
+                text = text.replace(distMatch[0], '').trim();
+            }
+
+            // 4. Extract SubDistrict (ต.สุเทพ, ตำบล..., แขวง...)
+            const subDistRegex = /(?:ต\.|ตำบล|แขวง)\s*([^\s,]+)/;
+            const subDistMatch = text.match(subDistRegex);
+            if (subDistMatch) {
+                subDistrict = subDistMatch[0].trim();
+                text = text.replace(subDistMatch[0], '').trim();
+            }
+
+            // 5. Remaining text is street / address
+            street = text.replace(/^[,\s]+|[,\s]+$/g, '').trim();
+
+            return { street, subDistrict, city, zip };
+        }
+
+        // Robust coordinate extraction from diverse Google Maps links & inputs
+        function extractCoordsFromMapLink(link) {
+            if (!link || typeof link !== 'string') return { lat: null, lng: null };
+            const str = link.trim();
+            const directMatch = str.match(/^(-?\d+\.\d{3,})\s*,\s*(-?\d+\.\d{3,})$/);
+            if (directMatch) {
+                return { lat: parseFloat(directMatch[1]), lng: parseFloat(directMatch[2]) };
+            }
+            const atMatch = str.match(/@(-?\d+\.\d{3,}),\s*(-?\d+\.\d{3,})/);
+            if (atMatch) {
+                return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
+            }
+            const queryMatch = str.match(/(?:q|ll|destination|center|point)=(-?\d+\.\d{3,}),\s*(-?\d+\.\d{3,})/);
+            if (queryMatch) {
+                return { lat: parseFloat(queryMatch[1]), lng: parseFloat(queryMatch[2]) };
+            }
+            const genericMatch = str.match(/(-?\d+\.\d{4,})\s*,\s*(-?\d+\.\d{4,})/);
+            if (genericMatch) {
+                return { lat: parseFloat(genericMatch[1]), lng: parseFloat(genericMatch[2]) };
+            }
+            return { lat: null, lng: null };
+        }
+
+        // Format valid URL for opening test map
+        function formatMapUrl(val) {
+            if (!val || typeof val !== 'string') return 'https://maps.google.com';
+            const v = val.trim();
+            if (v.startsWith('http://') || v.startsWith('https://')) return v;
+            if (/^-?\d+\.\d+\s*,\s*-?\d+\.\d+$/.test(v)) {
+                return `https://maps.google.com/?q=${v.replace(/\s+/g, '')}`;
+            }
+            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v)}`;
+        }
 
         // 1. Initial Populate from LocalStorage (Immediate UI response without waiting for network)
         const localLogo = localStorage.getItem('ownerProfileAvatar');
@@ -495,22 +590,31 @@
             charCount.textContent = `${localDesc.length}/500`;
         }
 
-        const localStreet = localStorage.getItem('ownerShopStreet');
-        if (localStreet) streetAddressInput.value = localStreet;
+        const localStreet = localStorage.getItem('ownerShopStreet') || localStorage.getItem('ownerShopAddress') || '';
+        const localSubDist = localStorage.getItem('ownerShopSubDistrict') || '';
+        const localCity = localStorage.getItem('ownerShopCity') || '';
+        const localZip = localStorage.getItem('ownerShopZip') || '';
+        let localMap = localStorage.getItem('ownerShopMapLink') || '';
+        const localLat = localStorage.getItem('ownerShopLat');
+        const localLng = localStorage.getItem('ownerShopLng');
 
-        const localSubDist = localStorage.getItem('ownerShopSubDistrict');
-        if (localSubDist) subDistrictInput.value = localSubDist;
+        if (localStreet || localSubDist || localCity || localZip) {
+            const parsedLocal = parseAddress(localStreet);
+            const initStreet = parsedLocal.street || localStreet;
+            streetAddressInput.value = initStreet || '';
+            subDistrictInput.value = localSubDist || parsedLocal.subDistrict || '';
+            cityInput.value = localCity || parsedLocal.city || '';
+            zipCodeInput.value = localZip || parsedLocal.zip || '';
+        }
 
-        const localCity = localStorage.getItem('ownerShopCity');
-        if (localCity) cityInput.value = localCity;
-
-        const localZip = localStorage.getItem('ownerShopZip');
-        if (localZip) zipCodeInput.value = localZip;
-
-        const localMap = localStorage.getItem('ownerShopMapLink');
+        if (!localMap && localLat && localLng) {
+            localMap = `https://maps.google.com/?q=${localLat},${localLng}`;
+        }
         if (localMap) {
             googleMapLinkInput.value = localMap;
-            testMapBtn.href = localMap;
+            testMapBtn.href = formatMapUrl(localMap);
+        } else {
+            testMapBtn.href = 'https://maps.google.com';
         }
 
         let localGallery = null;
@@ -519,13 +623,13 @@
         } catch(_) {}
         const localCover = localStorage.getItem('ownerCoverImage');
         if (localGallery && Array.isArray(localGallery) && localGallery.length > 0) {
-            shopPhotos = [...localGallery];
+            shopPhotos = sanitizeGalleryUrls(localGallery);
         } else if (localCover) {
             shopPhotos = [
                 localCover,
                 "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80",
-                "https://images.unsplash.com/photo-1520340356584-f9917d1e5113?w=1200&q=80",
-                "https://images.unsplash.com/photo-1620803444007-681125f16e45?w=1200&q=80"
+                "https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80",
+                "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=1200&q=80"
             ];
         }
         if (shopPhotos.length > 0 && coverImg) {
@@ -566,77 +670,100 @@
             }
         }
 
-        // 2. Fetch live shop data, metadata, and profile avatar from Supabase (Fast-Track Sync)
+        // 2. Fetch live shop data from Supabase (Silent Background Sync - 0ms instant display)
         async function loadShopData() {
-            setCloudSyncStatus('syncing', 'กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...');
+            const isNetErr = (err) => {
+                if (!err) return false;
+                const msg = (err.message || String(err)).toLowerCase();
+                return msg.includes('fetch') || msg.includes('network') || msg.includes('abort') || msg.includes('connection');
+            };
+
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                if (!client) {
-                    setCloudSyncStatus('offline', 'ระบบออฟไลน์ (ใช้ข้อมูลในเครื่อง)');
-                    return;
-                }
+                if (!client) return;
 
                 const savedShopId = localStorage.getItem('currentShopId');
                 const fallbackUserId = localStorage.getItem('lastLoggedInUserId');
 
-                // FAST-TRACK: Query shop details immediately in parallel with auth session
-                let fastShopPromise = null;
-                if (savedShopId && savedShopId.length > 20) {
-                    fastShopPromise = client.from('shops').select('*').eq('id', savedShopId).maybeSingle();
-                }
-
-                const sessionPromise = client.auth ? client.auth.getSession() : Promise.resolve({ data: null });
-
-                const [shopRes, sessRes] = await Promise.all([
-                    fastShopPromise || Promise.resolve(null),
-                    sessionPromise
-                ]);
-
-                const user = sessRes?.data?.session?.user;
-                const effectiveUserId = user?.id || fallbackUserId;
-                currentUserId = effectiveUserId;
-
-                if (!effectiveUserId && !localStorage.getItem('ownerShopName')) return;
-
-                const meta = user?.user_metadata || {};
-
-                // Non-blocking Role Guard & Profile Avatar check in background
-                let profile = null;
+                // 1. FAST getSession to immediately obtain user & metadata (reads from local memory/cache in 0ms)
+                let currentUser = null;
+                try {
+                    const sessRes = await (client.auth ? client.auth.getSession() : Promise.resolve({ data: null }));
+                    currentUser = sessRes?.data?.session?.user || null;
+                } catch (_) {}
+                const effectiveUserId = currentUser?.id || fallbackUserId;
                 if (effectiveUserId) {
-                    client.from('profiles').select('*').eq('id', effectiveUserId).maybeSingle().then(({ data: p }) => {
-                        if (p) {
-                            profile = p;
-                            const userRole = p.role || meta.role;
-                            if (userRole === 'CUSTOMER') {
-                                showToast('คุณกำลังเข้าใช้งานในฐานะลูกค้า กรุณาเข้าสู่ระบบด้วยบัญชีเจ้าของร้าน', 'error');
-                                setTimeout(() => {
-                                    window.location.href = '../auth/login.html';
-                                }, 1800);
-                                return;
+                    currentUserId = effectiveUserId;
+                }
+                const meta = currentUser?.user_metadata || {};
+
+                // Non-blocking background sync for freshest metadata from Supabase Auth
+                if (client.auth) {
+                    client.auth.getUser().then(({ data: uData }) => {
+                        const cloudUser = uData?.user;
+                        if (cloudUser) {
+                            if (cloudUser.id) currentUserId = cloudUser.id;
+                            const freshMeta = cloudUser.user_metadata || {};
+                            if (freshMeta.map_link && !googleMapLinkInput.value) {
+                                googleMapLinkInput.value = freshMeta.map_link;
+                                testMapBtn.href = formatMapUrl(freshMeta.map_link);
+                                localStorage.setItem('ownerShopMapLink', freshMeta.map_link);
                             }
-                            if (p.avatar_url && logoImg && !logoImg.src.includes('http')) {
-                                logoImg.src = p.avatar_url;
-                                localStorage.setItem('ownerProfileAvatar', p.avatar_url);
+                            if (freshMeta.sub_district && !subDistrictInput.value) {
+                                subDistrictInput.value = freshMeta.sub_district;
+                                localStorage.setItem('ownerShopSubDistrict', freshMeta.sub_district);
+                            }
+                            if (freshMeta.street && (!streetAddressInput.value || streetAddressInput.value.includes(freshMeta.city || '___'))) {
+                                streetAddressInput.value = freshMeta.street;
+                                localStorage.setItem('ownerShopStreet', freshMeta.street);
+                            }
+                            if (freshMeta.city && !cityInput.value) {
+                                cityInput.value = freshMeta.city;
+                                localStorage.setItem('ownerShopCity', freshMeta.city);
+                            }
+                            if (freshMeta.zip && !zipCodeInput.value) {
+                                zipCodeInput.value = freshMeta.zip;
+                                localStorage.setItem('ownerShopZip', freshMeta.zip);
                             }
                         }
                     }).catch(() => {});
                 }
 
-                let shop = shopRes?.data || null;
-
-                // Fallback if not found via fast-track
-                if (!shop && effectiveUserId) {
-                    const { data: s } = await client.from('shops').select('*').eq('owner_id', effectiveUserId).maybeSingle();
-                    if (s) shop = s;
+                // 2. Fetch Shop row
+                let shop = null;
+                if (savedShopId && savedShopId.length > 20) {
+                    try {
+                        const { data: s, error: sErr } = await client.from('shops').select('*').eq('id', savedShopId).maybeSingle();
+                        if (sErr && isNetErr(sErr)) {
+                            console.warn('Network sync notice (shop): Offline, using cached display.');
+                            return;
+                        }
+                        if (s) shop = s;
+                    } catch (e) {
+                        if (isNetErr(e)) return;
+                    }
                 }
-                if (!shop && localStorage.getItem('ownerShopName')) {
-                    const { data: s } = await client.from('shops').select('*').eq('name', localStorage.getItem('ownerShopName')).maybeSingle();
-                    if (s) shop = s;
+
+                if (!shop && effectiveUserId) {
+                    try {
+                        const { data: s, error: sErr } = await client.from('shops').select('*').eq('owner_id', effectiveUserId).maybeSingle();
+                        if (sErr && isNetErr(sErr)) {
+                            console.warn('Network sync notice (shop by owner): Offline, using cached display.');
+                            return;
+                        }
+                        if (s) shop = s;
+                    } catch (e) {
+                        if (isNetErr(e)) return;
+                    }
                 }
 
                 if (shop) {
                     currentShopId = shop.id;
                     localStorage.setItem('currentShopId', shop.id);
+                    if (shop.name) localStorage.setItem('ownerShopName', shop.name);
+                    if (shop.latitude) localStorage.setItem('ownerShopLat', shop.latitude);
+                    if (shop.longitude) localStorage.setItem('ownerShopLng', shop.longitude);
+                    setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
                 }
 
                 const finalLogo = shop?.logo_url || meta.avatar_url || localStorage.getItem('ownerProfileAvatar');
@@ -645,24 +772,47 @@
                     localStorage.setItem('ownerProfileAvatar', finalLogo);
                 }
 
-                // Load Cover Photo and Multi-Photo Gallery
-                let savedGallery = meta.shop_images;
-                if (!savedGallery || !Array.isArray(savedGallery) || savedGallery.length === 0) {
+                // Load Cover Photo and Multi-Photo Gallery (Pull all photos saved in cloud or local)
+                let rawGallery = null;
+                if (meta.shop_images && Array.isArray(meta.shop_images) && meta.shop_images.length > 0) {
+                    rawGallery = meta.shop_images;
+                } else if (shop?.shop_images && Array.isArray(shop.shop_images) && shop.shop_images.length > 0) {
+                    rawGallery = shop.shop_images;
+                } else if (shop?.images && Array.isArray(shop.images) && shop.images.length > 0) {
+                    rawGallery = shop.images;
+                } else {
                     try {
-                        savedGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null');
+                        rawGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null');
                     } catch(_) {}
                 }
 
+                let savedGallery = sanitizeGalleryUrls(rawGallery);
                 const finalCover = shop?.cover_image_url || meta.cover_image_url || localStorage.getItem('ownerCoverImage') || (coverImg ? coverImg.src : '');
+
                 if (savedGallery && savedGallery.length > 0) {
                     shopPhotos = [...savedGallery];
                 } else if (finalCover) {
                     shopPhotos = [
                         finalCover,
                         "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80",
-                        "https://images.unsplash.com/photo-1520340356584-f9917d1e5113?w=1200&q=80",
-                        "https://images.unsplash.com/photo-1620803444007-681125f16e45?w=1200&q=80"
+                        "https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80",
+                        "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=1200&q=80"
                     ];
+                }
+
+                // Ensure finalCover is at index 0 as cover if present
+                if (finalCover && !finalCover.includes('photo-1601362840469-51e4d8d58785')) {
+                    const cIdx = shopPhotos.indexOf(finalCover);
+                    if (cIdx > 0) {
+                        shopPhotos.splice(cIdx, 1);
+                        shopPhotos.unshift(finalCover);
+                    } else if (cIdx === -1 && shopPhotos.length < 8) {
+                        shopPhotos.unshift(finalCover);
+                    }
+                }
+
+                if (shopPhotos.length > 0) {
+                    localStorage.setItem('ownerShopGallery', JSON.stringify(shopPhotos));
                 }
 
                 if (shopPhotos.length > 0 && coverImg) {
@@ -695,72 +845,52 @@
                 }
 
                 // Populate Location fields (Street, SubDistrict, City, Zip)
-                const rawAddress = meta.street || meta.address || meta.full_address || shop?.address || localStorage.getItem('ownerShopStreet') || '';
-                let finalStreet = meta.street || localStorage.getItem('ownerShopStreet') || '';
-                let finalSubDist = meta.sub_district || localStorage.getItem('ownerShopSubDistrict') || '';
-                let finalCity = meta.city || localStorage.getItem('ownerShopCity') || '';
-                let finalZip = meta.zip || localStorage.getItem('ownerShopZip') || '';
+                const rawAddress = shop?.address || meta.full_address || meta.address || meta.street || localStorage.getItem('ownerShopStreet') || '';
+                const parsedRaw = parseAddress(rawAddress);
 
-                if (!finalStreet && rawAddress) {
-                    finalStreet = rawAddress;
+                let finalStreet = meta.street || parsedRaw.street || localStorage.getItem('ownerShopStreet') || '';
+                let finalSubDist = meta.sub_district || parsedRaw.subDistrict || localStorage.getItem('ownerShopSubDistrict') || '';
+                let finalCity = meta.city || parsedRaw.city || localStorage.getItem('ownerShopCity') || '';
+                let finalZip = meta.zip || parsedRaw.zip || localStorage.getItem('ownerShopZip') || '';
+
+                // Clean up: if finalStreet contains finalCity or finalZip, re-parse
+                if (finalStreet && ((finalCity && finalStreet.includes(finalCity)) || (finalZip && finalStreet.includes(finalZip)))) {
+                    const p = parseAddress(finalStreet);
+                    if (p.street) finalStreet = p.street;
+                    if (!finalSubDist && p.subDistrict) finalSubDist = p.subDistrict;
+                    if (!finalCity && p.city) finalCity = p.city;
+                    if (!finalZip && p.zip) finalZip = p.zip;
                 }
 
-                if (!finalZip && rawAddress) {
-                    const zipMatch = rawAddress.match(/\b\d{5}\b/);
-                    if (zipMatch) {
-                        finalZip = zipMatch[0];
-                        if (finalStreet.endsWith(finalZip)) {
-                            finalStreet = finalStreet.replace(finalZip, '').trim();
-                        }
-                    }
+                if (finalStreet) {
+                    streetAddressInput.value = finalStreet;
+                    localStorage.setItem('ownerShopStreet', finalStreet);
                 }
-
-                if (!finalCity && rawAddress) {
-                    const provMatch = rawAddress.match(/(?:จ\.|จังหวัด)?\s*(กรุงเทพ(?:มหานคร)?|เชียงใหม่|นนทบุรี|ปทุมธานี|สมุทรปราการ|ชลบุรี|ขอนแก่น|ภูเก็ต|สงขลา|นครราชสีมา|ระยอง|เชียงราย|อุบลราชธานี|พิษณุโลก|สุราษฎร์ธานี|นครปฐม|สมุทรสาคร|นครศรีธรรมราช|ลำปาง|อุดรธานี|สระบุรี|อยุธยา|พระนครศรีอยุธยา)/);
-                    if (provMatch) {
-                        finalCity = provMatch[1];
-                        if (finalStreet.includes(provMatch[0])) {
-                            finalStreet = finalStreet.replace(provMatch[0], '').trim();
-                        }
-                    }
+                if (finalSubDist) {
+                    subDistrictInput.value = finalSubDist;
+                    localStorage.setItem('ownerShopSubDistrict', finalSubDist);
                 }
-
-                if (finalStreet) streetAddressInput.value = finalStreet;
-                if (finalSubDist) subDistrictInput.value = finalSubDist;
-                if (finalCity) cityInput.value = finalCity;
-                if (finalZip) zipCodeInput.value = finalZip;
+                if (finalCity) {
+                    cityInput.value = finalCity;
+                    localStorage.setItem('ownerShopCity', finalCity);
+                }
+                if (finalZip) {
+                    zipCodeInput.value = finalZip;
+                    localStorage.setItem('ownerShopZip', finalZip);
+                }
 
                 // Populate Google Maps link
                 let savedMapLink = meta.map_link || localStorage.getItem('ownerShopMapLink') || '';
                 if (!savedMapLink && shop?.latitude && shop?.longitude) {
                     savedMapLink = `https://maps.google.com/?q=${shop.latitude},${shop.longitude}`;
-                } else if (!savedMapLink && (finalName || finalStreet)) {
-                    const query = [finalName, finalStreet, finalCity].filter(Boolean).join(' ');
-                    savedMapLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
                 }
 
                 if (savedMapLink) {
                     googleMapLinkInput.value = savedMapLink;
-                    testMapBtn.href = savedMapLink;
+                    testMapBtn.href = formatMapUrl(savedMapLink);
                     localStorage.setItem('ownerShopMapLink', savedMapLink);
-                }
-
-                // Self-healing: If shops table had null description or address in DB, sync them now!
-                if (shop && (!shop.description || !shop.address || !shop.latitude || !shop.longitude)) {
-                    const updatePayload = {};
-                    if (!shop.description && fullDesc) updatePayload.description = fullDesc;
-                    if (!shop.address && (streetAddressInput.value || finalStreet)) {
-                        updatePayload.address = [streetAddressInput.value, subDistrictInput.value, cityInput.value, zipCodeInput.value].filter(Boolean).join(' ');
-                    }
-                    if (!shop.latitude && (meta.latitude || parseFloat(localStorage.getItem('ownerShopLat')))) {
-                        updatePayload.latitude = meta.latitude || parseFloat(localStorage.getItem('ownerShopLat'));
-                    }
-                    if (!shop.longitude && (meta.longitude || parseFloat(localStorage.getItem('ownerShopLng')))) {
-                        updatePayload.longitude = meta.longitude || parseFloat(localStorage.getItem('ownerShopLng'));
-                    }
-                    if (Object.keys(updatePayload).length > 0) {
-                        client.from('shops').update(updatePayload).eq('id', shop.id).then();
-                    }
+                } else {
+                    testMapBtn.href = 'https://maps.google.com';
                 }
 
                 setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
@@ -777,7 +907,7 @@
         });
 
         googleMapLinkInput.addEventListener('input', (e) => {
-            testMapBtn.href = e.target.value || '#';
+            testMapBtn.href = formatMapUrl(e.target.value);
         });
 
         // Image file previewers with auto compression
@@ -878,14 +1008,18 @@
             let lat = null;
             let lng = null;
             if (mapLink) {
-                const coordMatch = mapLink.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) || 
-                                   mapLink.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/) || 
-                                   mapLink.match(/ll=(-?\d+\.\d+),(-?\d+\.\d+)/) ||
-                                   mapLink.match(/destination=(-?\d+\.\d+),(-?\d+\.\d+)/) ||
-                                   mapLink.match(/(-?\d+\.\d{3,}),\s*(-?\d+\.\d{3,})/);
-                if (coordMatch) {
-                    lat = parseFloat(coordMatch[1]);
-                    lng = parseFloat(coordMatch[2]);
+                const coords = extractCoordsFromMapLink(mapLink);
+                if (coords.lat !== null && coords.lng !== null) {
+                    lat = coords.lat;
+                    lng = coords.lng;
+                }
+            }
+            if ((lat === null || lng === null) && mapLink) {
+                const prevLat = parseFloat(localStorage.getItem('ownerShopLat'));
+                const prevLng = parseFloat(localStorage.getItem('ownerShopLng'));
+                if (!isNaN(prevLat) && !isNaN(prevLng)) {
+                    lat = prevLat;
+                    lng = prevLng;
                 }
             }
 
@@ -900,8 +1034,9 @@
             localStorage.setItem('ownerShopSubDistrict', subDist);
             localStorage.setItem('ownerShopCity', cty);
             localStorage.setItem('ownerShopZip', zip);
+            localStorage.setItem('ownerShopAddress', fullAddr);
             localStorage.setItem('ownerShopMapLink', mapLink);
-            if (lat && lng) {
+            if (lat !== null && lng !== null) {
                 localStorage.setItem('ownerShopLat', lat);
                 localStorage.setItem('ownerShopLng', lng);
             }
@@ -919,13 +1054,21 @@
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
                 if (client?.auth) {
-                    let userId = currentUserId;
+                    let userId = currentUserId || localStorage.getItem('lastLoggedInUserId');
                     if (!userId) {
-                        const { data: { user } } = await client.auth.getUser();
-                        if (user) {
-                            userId = user.id;
-                            currentUserId = user.id;
-                        }
+                        try {
+                            const sess = await client.auth.getSession();
+                            userId = sess?.data?.session?.user?.id;
+                        } catch (_) {}
+                    }
+                    if (!userId) {
+                        try {
+                            const { data: { user } } = await client.auth.getUser();
+                            if (user) {
+                                userId = user.id;
+                                currentUserId = user.id;
+                            }
+                        } catch (_) {}
                     }
 
                     if (userId) {
@@ -946,7 +1089,7 @@
                             address: fullAddr,
                             updated_at: new Date().toISOString()
                         };
-                        if (lat && lng) {
+                        if (lat !== null && lng !== null) {
                             validShopData.latitude = lat;
                             validShopData.longitude = lng;
                         }
@@ -957,6 +1100,9 @@
                             validShopData.logo_url = newLogoCompressed;
                         }
 
+                        if (!currentShopId) {
+                            currentShopId = localStorage.getItem('currentShopId');
+                        }
                         if (!currentShopId) {
                             const { data: existingShop } = await client.from('shops').select('id').eq('owner_id', userId).maybeSingle();
                             if (existingShop) currentShopId = existingShop.id;
@@ -986,7 +1132,7 @@
                             zip: zip,
                             map_link: mapLink
                         };
-                        if (lat && lng) {
+                        if (lat !== null && lng !== null) {
                             userMetaUpdate.latitude = lat;
                             userMetaUpdate.longitude = lng;
                         }
@@ -1007,11 +1153,16 @@
                 console.warn('Shop update notice:', err);
             }
 
+            if (saveBtn) {
+                saveBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">check_circle</span> บันทึกสำเร็จ';
+                saveBtn.classList.remove('bg-secondary');
+                saveBtn.classList.add('bg-secondary-fixed');
+            }
             toast.classList.add('show');
             setTimeout(() => {
                 toast.classList.remove('show');
                 window.location.href = 'Owner%20Profile.html';
-            }, 1000);
+            }, 800);
         });
     });
 </script>
