@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th">
 <head>
     <meta charset="utf-8"/>
@@ -305,15 +305,9 @@
             }
         }
 
-        // 4. Form Submit with Loading State and Dual-Layer Save
-        form.addEventListener('submit', async (e) => {
+        // 4. Form Submit with Instant Optimistic UI (0ms Save)
+        form.addEventListener('submit', (e) => {
             e.preventDefault();
-
-            // Set loading state on save buttons
-            saveBtns.forEach(btn => {
-                btn.disabled = true;
-                btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> บันทึก...';
-            });
 
             const settings = {
                 notifyNewBooking: document.getElementById('notifyNewBooking')?.checked ?? true,
@@ -327,7 +321,7 @@
 
             const jsonStr = JSON.stringify(settings);
 
-            // Layer 1: Immediately persist to localStorage
+            // Layer 1: Immediately persist to localStorage (0ms)
             try {
                 if (currentUserId) {
                     localStorage.setItem('ownerNotificationSettings_' + currentUserId, jsonStr);
@@ -339,28 +333,33 @@
                 console.warn('LocalStorage save error:', err);
             }
 
-            // Layer 2: Persist to Supabase auth user metadata
-            if (client?.auth && currentUserId) {
-                try {
-                    await client.auth.updateUser({
-                        data: {
-                            notification_settings: settings
-                        }
-                    });
-                } catch (err) {
-                    console.warn('Supabase notification setting sync notice:', err);
-                }
-            }
+            // Provide Instant Visual Feedback (0ms)
+            saveBtns.forEach(btn => {
+                btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">check_circle</span> บันทึกแล้ว!';
+                btn.classList.add('bg-secondary-fixed');
+            });
 
-            // Show Toast feedback
+            // Show Toast feedback immediately
             toast.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
             toast.classList.add('opacity-100', 'translate-y-0');
 
+            // Layer 2: Fire Supabase background sync (Non-blocking)
+            if (client?.auth && currentUserId) {
+                client.auth.updateUser({
+                    data: {
+                        notification_settings: settings
+                    }
+                }).catch(err => {
+                    console.warn('Supabase notification setting sync notice:', err);
+                });
+            }
+
+            // Smooth redirect without stalling user
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none');
                 toast.classList.remove('opacity-100', 'translate-y-0');
                 window.location.href = 'Owner%20Profile.html';
-            }, 1000);
+            }, 600);
         });
     });
 </script>

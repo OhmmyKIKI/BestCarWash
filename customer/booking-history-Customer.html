@@ -1918,35 +1918,29 @@
         (async () => {
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                if (!client?.auth) return;
-                const { data: { user } } = await client.auth.getUser();
+                const sessRes = await client.auth.getSession();
+                const user = sessRes?.data?.session?.user;
                 if (!user) return;
 
-                // Sync profile
-                try {
-                    const { data: profile } = await client
-                        .from('profiles')
-                        .select('*')
-                        .eq('id', user.id)
-                        .maybeSingle();
-                    if (profile) {
-                        if (profile.avatar_url) {
-                            const avatar = document.getElementById('customer-header-avatar');
-                            if (avatar) avatar.src = profile.avatar_url;
-                        }
-                        if (profile.full_name) {
-                            const nameEl = document.getElementById('desktop-header-name');
-                            if (nameEl) nameEl.innerText = profile.full_name;
-                        }
-                    }
-                } catch (e) {}
+                // Parallel fetch profile and bookings
+                const [profRes, bookingsRes] = await Promise.all([
+                    client.from('profiles').select('avatar_url, full_name').eq('id', user.id).maybeSingle(),
+                    client.from('bookings').select('*, shops(name, phone_number)').eq('customer_id', user.id).order('created_at', { ascending: false })
+                ]);
 
-                // Fetch bookings
-                const { data: dbBookings } = await client
-                    .from('bookings')
-                    .select('*, shops(name, phone_number)')
-                    .eq('customer_id', user.id)
-                    .order('created_at', { ascending: false });
+                const profile = profRes?.data;
+                if (profile) {
+                    if (profile.avatar_url) {
+                        const avatar = document.getElementById('customer-header-avatar');
+                        if (avatar) avatar.src = profile.avatar_url;
+                    }
+                    if (profile.full_name) {
+                        const nameEl = document.getElementById('desktop-header-name');
+                        if (nameEl) nameEl.innerText = profile.full_name;
+                    }
+                }
+
+                const dbBookings = bookingsRes?.data;
 
                 if (dbBookings && dbBookings.length > 0) {
                     // Check if user has an active ongoing booking

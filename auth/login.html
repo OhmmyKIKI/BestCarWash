@@ -281,11 +281,16 @@
                 const name = profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'เจ้าของร้าน';
                 if (avatar) localStorage.setItem('ownerProfileAvatar', avatar);
                 if (name) localStorage.setItem('ownerProfileName', name);
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                localStorage.setItem('lastLoggedInUserId', user.id);
+
+                const meta = user.user_metadata || {};
+                const immediateShopName = meta.shop_name || localStorage.getItem('ownerShopName') || `${name} Car Wash`;
+                if (immediateShopName) localStorage.setItem('ownerShopName', immediateShopName);
 
                 // Also fetch owner shop name, description, address & ensure services are synced
                 if (client) {
                     try {
-                        const meta = user.user_metadata || {};
                         const fallbackDesc = meta.shop_description || meta.description || meta.about || localStorage.getItem('ownerShopDesc') || localStorage.getItem('shopDescription') || '';
                         const fallbackAddr = meta.full_address || meta.address || [meta.street, meta.city, meta.zip].filter(Boolean).join(' ') || [localStorage.getItem('ownerShopStreet'), localStorage.getItem('ownerShopCity'), localStorage.getItem('ownerShopZip')].filter(Boolean).join(' ') || '';
                         const fallbackPhone = meta.phone_number || localStorage.getItem('ownerShopPhone') || '';

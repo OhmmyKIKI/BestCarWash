@@ -705,6 +705,16 @@
         }
 
         showToast('บันทึกการตั้งค่าการแจ้งเตือนเรียบร้อยแล้ว');
+
+        // Non-blocking background sync to Supabase
+        try {
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (client?.auth) {
+                client.auth.updateUser({
+                    data: { customer_notification_settings: settings }
+                }).catch(() => {});
+            }
+        } catch(_) {}
     }
 
     function resetToDefaults() {
@@ -823,7 +833,8 @@
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
                 if (client?.auth) {
-                    const { data: { user } } = await client.auth.getUser();
+                    const sessRes = await client.auth.getSession();
+                    const user = sessRes?.data?.session?.user;
                     if (user) {
                         const { data: prof } = await client.from('profiles').select('avatar_url, full_name').eq('id', user.id).maybeSingle();
                         if (prof?.avatar_url) {

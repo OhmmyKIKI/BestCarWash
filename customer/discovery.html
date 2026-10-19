@@ -425,24 +425,27 @@ tailwind.config = {
             }
         });
 
-        // Sync with Supabase favorite_shops table
-        try {
-            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            if (client?.auth) {
-                const { data: { user } } = await client.auth.getUser();
-                if (user) {
-                    if (added) {
-                        await client.from('favorite_shops').upsert({ customer_id: user.id, shop_id: shopId });
-                    } else {
-                        await client.from('favorite_shops').delete().match({ customer_id: user.id, shop_id: shopId });
+        showToast(added ? 'บันทึกร้านโปรดแล้ว ❤️' : 'นำออกจากร้านโปรดแล้ว');
+
+        // Background sync with Supabase favorite_shops table
+        (async () => {
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (client?.auth) {
+                    const sessRes = await client.auth.getSession();
+                    const userId = sessRes?.data?.session?.user?.id;
+                    if (userId) {
+                        if (added) {
+                            await client.from('favorite_shops').upsert({ customer_id: userId, shop_id: shopId });
+                        } else {
+                            await client.from('favorite_shops').delete().match({ customer_id: userId, shop_id: shopId });
+                        }
                     }
                 }
+            } catch (favErr) {
+                console.warn('Favorite sync error:', favErr);
             }
-        } catch (favErr) {
-            console.warn('Favorite sync error:', favErr);
-        }
-
-        showToast(added ? 'บันทึกร้านโปรดแล้ว ❤️' : 'นำออกจากร้านโปรดแล้ว');
+        })();
     }
 
     function selectAndGoToShop(shopId) {

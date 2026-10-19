@@ -291,10 +291,12 @@
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
                 if (client?.auth) {
-                    const { data: { user } } = await client.auth.getUser();
-                    if (user) {
-                        await client.from('favorite_shops').delete().match({ customer_id: user.id, shop_id: shopId });
-                    }
+                    client.auth.getSession().then(({ data: sessData }) => {
+                        const uid = sessData?.session?.user?.id;
+                        if (uid) {
+                            client.from('favorite_shops').delete().match({ customer_id: uid, shop_id: shopId }).then().catch(() => {});
+                        }
+                    }).catch(() => {});
                 }
             } catch(e) {}
         }
@@ -302,11 +304,12 @@
 
     function undoRemoveFavorite() {
         if (!lastRemovedShopId) return;
+        const restoredId = lastRemovedShopId;
         let ids = getFavoriteShopIds();
         if (lastRemovedIndex >= 0 && lastRemovedIndex <= ids.length) {
-            ids.splice(lastRemovedIndex, 0, lastRemovedShopId);
+            ids.splice(lastRemovedIndex, 0, restoredId);
         } else {
-            ids.push(lastRemovedShopId);
+            ids.push(restoredId);
         }
         saveFavoriteShopIds(ids);
         renderShops();
@@ -316,6 +319,19 @@
         const undoBtn = document.getElementById('toast-undo-btn');
         if (undoBtn) undoBtn.classList.add('hidden');
         showToast('กู้คืนร้านโปรดเรียบร้อยแล้ว', false, 'favorite');
+
+        // Background sync restored shop to Supabase
+        try {
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (client?.auth) {
+                client.auth.getSession().then(({ data: sessData }) => {
+                    const uid = sessData?.session?.user?.id;
+                    if (uid) {
+                        client.from('favorite_shops').upsert({ customer_id: uid, shop_id: restoredId }).then().catch(() => {});
+                    }
+                }).catch(() => {});
+            }
+        } catch(_) {}
     }
 
     function setFilter(filter) {
@@ -529,7 +545,8 @@
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
                 if (!client?.auth) return;
 
-                const { data: { user } } = await client.auth.getUser();
+                const sessRes = await client.auth.getSession();
+                const user = sessRes?.data?.session?.user;
                 if (!user) return;
 
                 // Profile avatar live sync

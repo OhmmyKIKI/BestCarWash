@@ -936,9 +936,16 @@
                 }
                 setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
             } else {
+                const fallbackName = cachedShopName || user?.user_metadata?.shop_name || 'ร้านคาร์แคร์';
+                const subName = document.getElementById('owner-dashboard-shop-name');
+                const subContainer = document.getElementById('owner-dashboard-shop-subtitle');
+                if (subName) subName.textContent = fallbackName;
+                if (subContainer) subContainer.classList.remove('hidden');
+
                 renderTodayBookings([]);
                 updatePopularityChart([]);
-                setCloudSyncStatus('offline', 'ไม่พบข้อมูลร้านค้า');
+                setCloudSyncStatus('offline', 'ระบบออฟไลน์ (แสดงผลจากแคช)');
+
                 const revContainer = document.getElementById('recent-reviews-container');
                 if (revContainer) {
                     revContainer.innerHTML = `

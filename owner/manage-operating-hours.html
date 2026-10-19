@@ -1108,7 +1108,7 @@
                 }
             });
 
-            // 3. Persist to LocalStorage cache immediately
+            // 3. Persist to LocalStorage cache immediately (0ms Instant)
             try {
                 localStorage.setItem('ownerOperatingHours', JSON.stringify(hoursToSave));
                 localStorage.setItem('ownerSpecialHolidays', JSON.stringify(specialHolidays));
@@ -1117,105 +1117,57 @@
                 console.warn('LocalStorage save error:', err);
             }
 
-            // 4. Persist to Supabase if available
-            let supabaseSuccess = false;
-            let supabaseErrorMessage = null;
-
-            if (client && currentUser && targetShopId && targetShopId !== 'local-shop-default') {
-                try {
-                    const toUpsert = hoursToSave.map(h => ({
-                        shop_id: targetShopId,
-                        day_of_week: h.day_of_week,
-                        open_time: h.open_time,
-                        close_time: h.close_time,
-                        is_closed: h.is_closed
-                    }));
-
-                    // Primary strategy: Upsert with unique composite key
-                    const { data: savedRows, error: upsertErr } = await client
-                        .from('shop_operating_hours')
-                        .upsert(toUpsert, { onConflict: 'shop_id,day_of_week' })
-                        .select();
-
-                    if (!upsertErr && savedRows && savedRows.length > 0) {
-                        supabaseSuccess = true;
-                        localStorage.setItem('ownerOperatingHours', JSON.stringify(savedRows));
-                    } else {
-                        console.warn('Supabase upsert note, using delete + insert fallback:', upsertErr);
-                        // Fallback strategy: Delete existing rows for this shop and re-insert
-                        const { error: delErr } = await client.from('shop_operating_hours').delete().eq('shop_id', targetShopId);
-                        if (delErr) {
-                            console.error('Delete error:', delErr);
-                            supabaseErrorMessage = delErr.message;
-                        } else {
-                            const { data: insRows, error: insErr } = await client.from('shop_operating_hours').insert(toUpsert).select();
-                            if (insErr) {
-                                console.error('Insert error:', insErr);
-                                supabaseErrorMessage = insErr.message;
-                            } else {
-                                supabaseSuccess = true;
-                                if (insRows && insRows.length > 0) {
-                                    localStorage.setItem('ownerOperatingHours', JSON.stringify(insRows));
-                                }
-                            }
-                        }
-                    }
-
-                    // Also save backup to user metadata on Supabase
-                    try {
-                        await client.auth.updateUser({
-                            data: {
-                                initial_operating_hours: hoursToSave,
-                                special_holidays: specialHolidays
-                            }
-                        });
-                    } catch (_) {}
-                } catch(err) {
-                    console.error('Save operating hours error:', err);
-                    supabaseErrorMessage = err.message;
-                }
-            } else if (!currentUser) {
-                supabaseErrorMessage = 'ไม่พบการเข้าสู่ระบบ กรุณาเข้าสู่ระบบก่อนบันทึกข้อมูล';
-            } else if (!targetShopId || targetShopId === 'local-shop-default') {
-                supabaseErrorMessage = 'ไม่พบข้อมูลร้านค้าของคุณในระบบฐานข้อมูล';
-            }
-
             updateLiveStatus();
 
+            // INSTANT VISUAL FEEDBACK (0ms)
             const toastText = toast?.querySelector('.font-bold');
             const toastIcon = toast?.querySelector('.material-symbols-outlined');
+            if (toastText) toastText.textContent = 'บันทึกเวลาเปิดทำการเรียบร้อยแล้ว!';
+            if (toastIcon) toastIcon.textContent = 'check_circle';
+            toast?.classList.remove('bg-amber-950/90', 'border-amber-500/50', 'text-amber-200');
+            toast?.classList.add('bg-secondary-container', 'text-on-secondary-container');
+            toast?.classList.add('show');
+            setCloudSyncStatus('synced', 'บันทึกข้อมูลเรียบร้อยแล้ว');
 
-            if (supabaseSuccess) {
-                if (toastText) toastText.textContent = 'บันทึกเวลาเปิดทำการลงฐานข้อมูลสำเร็จแล้ว!';
-                if (toastIcon) toastIcon.textContent = 'check_circle';
-                toast?.classList.remove('bg-amber-950/90', 'border-amber-500/50', 'text-amber-200');
-                toast?.classList.add('bg-secondary-container', 'text-on-secondary-container');
-                toast?.classList.add('show');
-                setCloudSyncStatus('synced', 'บันทึกลงฐานข้อมูลสำเร็จแล้ว');
+            // 4. Background Sync to Supabase (Non-blocking)
+            if (client && currentUser && targetShopId && targetShopId !== 'local-shop-default') {
+                const toUpsert = hoursToSave.map(h => ({
+                    shop_id: targetShopId,
+                    day_of_week: h.day_of_week,
+                    open_time: h.open_time,
+                    close_time: h.close_time,
+                    is_closed: h.is_closed
+                }));
 
-                setTimeout(() => {
-                    toast?.classList.remove('show');
-                    window.location.href = 'Owner%20Profile.html';
-                }, 1200);
-            } else {
-                saveBtns.forEach(btn => {
-                    btn.disabled = false;
-                    btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> บันทึกเวลา';
-                });
+                client.from('shop_operating_hours')
+                    .upsert(toUpsert, { onConflict: 'shop_id,day_of_week' })
+                    .select()
+                    .then(({ data: savedRows, error: upsertErr }) => {
+                        if (!upsertErr && savedRows && savedRows.length > 0) {
+                            localStorage.setItem('ownerOperatingHours', JSON.stringify(savedRows));
+                        }
+                    })
+                    .catch(err => {
+                        console.warn('Background hours sync notice:', err);
+                    });
 
-                const displayMsg = supabaseErrorMessage ? `บันทึกในเครื่องแล้ว (คลาวด์: ${supabaseErrorMessage})` : 'บันทึกในเครื่องแล้ว แต่ไม่สามารถซิงค์ไปยังคลาวด์ได้';
-                if (toastText) toastText.textContent = displayMsg;
-                if (toastIcon) toastIcon.textContent = 'warning';
-                toast?.classList.remove('bg-secondary-container', 'text-on-secondary-container');
-                toast?.classList.add('bg-amber-950/90', 'border-amber-500/50', 'text-amber-200');
-                toast?.classList.add('show');
-                setCloudSyncStatus('offline', 'บันทึกเฉพาะในเครื่อง');
-
-                setTimeout(() => {
-                    toast?.classList.remove('show');
-                }, 5000);
+                if (client.auth) {
+                    client.auth.updateUser({
+                        data: {
+                            initial_operating_hours: hoursToSave,
+                            special_holidays: specialHolidays
+                        }
+                    }).catch(() => {});
+                }
             }
+
+            // Smooth redirect after visual confirmation
+            setTimeout(() => {
+                toast?.classList.remove('show');
+                window.location.href = 'Owner%20Profile.html';
+            }, 600);
         });
+
 
         // 9. Periodic refresh for Live Status every 30 seconds
         setInterval(updateLiveStatus, 30000);

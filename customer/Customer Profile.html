@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th">
 <head>
 <meta charset="utf-8"/>
@@ -561,35 +561,21 @@
             showToast('อัปเดตข้อมูลยานพาหนะสำเร็จ');
 
             if (currentUser && client && !editId.startsWith('car_')) {
-                try {
-                    await client.from('vehicles').update({
-                        brand_model: brand,
-                        plate_number: plate,
-                        car_size: size,
-                        is_default: isPrimary
-                    }).eq('id', editId);
-                } catch(e) { console.warn(e); }
+                client.from('vehicles').update({
+                    brand_model: brand,
+                    plate_number: plate,
+                    car_size: size,
+                    is_default: isPrimary
+                }).eq('id', editId).then().catch(e => console.warn(e));
             }
         } else {
-            // Add new
+            // Add new (Optimistic UI: Instant 0ms add)
             if (isPrimary || cars.length === 0) {
                 cars = cars.map(car => ({ ...car, isPrimary: false }));
             }
-            let newId = 'car_' + Date.now();
-            if (currentUser && client) {
-                try {
-                    const { data: newV } = await client.from('vehicles').insert({
-                        customer_id: currentUser.id,
-                        brand_model: brand,
-                        plate_number: plate,
-                        car_size: size,
-                        is_default: isPrimary || cars.length === 0
-                    }).select('id').single();
-                    if (newV?.id) newId = newV.id;
-                } catch(e) { console.warn(e); }
-            }
+            const tempId = 'car_' + Date.now();
             const newCar = {
-                id: newId,
+                id: tempId,
                 brand,
                 plate,
                 size,
@@ -597,6 +583,24 @@
             };
             cars.push(newCar);
             showToast('เพิ่มยานพาหนะใหม่สำเร็จ');
+
+            // Background sync to Supabase
+            if (currentUser && client) {
+                client.from('vehicles').insert({
+                    customer_id: currentUser.id,
+                    brand_model: brand,
+                    plate_number: plate,
+                    car_size: size,
+                    is_default: isPrimary || cars.length === 0
+                }).select('id').maybeSingle().then(({ data: newV }) => {
+                    if (newV?.id) {
+                        let curCars = getCars();
+                        curCars = curCars.map(c => c.id === tempId ? { ...c, id: newV.id } : c);
+                        saveCarsToStorage(curCars);
+                        renderCars();
+                    }
+                }).catch(e => console.warn('Background add car notice:', e));
+            }
         }
 
         saveCarsToStorage(cars);
@@ -604,8 +608,8 @@
         closeAddCarModal();
     };
 
-    // --- Set Primary Car ---
-    window.setPrimaryCar = async function(carId) {
+    // --- Set Primary Car (Optimistic UI) ---
+    window.setPrimaryCar = function(carId) {
         let cars = getCars();
         cars = cars.map(c => ({
             ...c,
@@ -615,23 +619,25 @@
         renderCars();
         showToast('ตั้งเป็นยานพาหนะคันหลักแล้ว');
 
-        // Sync to Supabase if connected
-        try {
-            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            if (client?.auth) {
-                const { data: { user } } = await client.auth.getUser();
-                if (user) {
-                    await client.from('vehicles').update({ is_default: false }).eq('customer_id', user.id);
+        // Background sync to Supabase
+        (async () => {
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                const uid = currentUser?.id || localStorage.getItem('lastLoggedInUserId');
+                if (client && uid) {
+                    await client.from('vehicles').update({ is_default: false }).eq('customer_id', uid);
                     if (!carId.startsWith('car_')) {
                         await client.from('vehicles').update({ is_default: true }).eq('id', carId);
                     }
                 }
+            } catch(e) {
+                console.warn('Set primary car notice:', e);
             }
-        } catch(e) {}
+        })();
     };
 
-    // --- Delete Car ---
-    window.deleteCar = async function(carId) {
+    // --- Delete Car (Optimistic UI) ---
+    window.deleteCar = function(carId) {
         let cars = getCars();
         const carToDelete = cars.find(c => c.id === carId);
         if (!carToDelete) return;
@@ -643,7 +649,6 @@
         const wasPrimary = carToDelete.isPrimary;
         cars = cars.filter(c => c.id !== carId);
 
-        // If the deleted car was primary and there are still cars, set the first one as primary
         if (wasPrimary && cars.length > 0) {
             cars[0].isPrimary = true;
         }
@@ -652,13 +657,13 @@
         renderCars();
         showToast('ลบยานพาหนะเรียบร้อยแล้ว');
 
-        // Sync to Supabase
-        try {
+        // Background sync to Supabase
+        if (!carId.startsWith('car_')) {
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            if (client?.auth && !carId.startsWith('car_')) {
-                await client.from('vehicles').delete().eq('id', carId);
+            if (client) {
+                client.from('vehicles').delete().eq('id', carId).then().catch(() => {});
             }
-        } catch(e) {}
+        }
     };
 
     const DEFAULT_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='cgrad' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%231e3a8a'/><stop offset='100%' stop-color='%233b82f6'/></linearGradient></defs><circle cx='50' cy='50' r='50' fill='url(%23cgrad)'/><circle cx='50' cy='37' r='16' fill='%23ffffff'/><path d='M50 60c-18 0 -30 11 -30 25v5h60v-5c0-14-12-25-30-25z' fill='%23ffffff'/></svg>";

@@ -1151,8 +1151,8 @@
             setTimeout(() => { toast.classList.remove('show'); }, 1500);
         });
 
-        // Confirm Add New Service to Supabase
-        confirmAddBtn.addEventListener('click', async () => {
+        // Confirm Add New Service with Optimistic UI (0ms Instant Feedback)
+        confirmAddBtn.addEventListener('click', () => {
             const name = document.getElementById('modalInputName').value.trim();
             const desc = document.getElementById('modalInputDesc').value.trim();
             const price = document.getElementById('modalInputPrice').value.trim() || '250';
@@ -1171,40 +1171,16 @@
             const pXL = Math.round(pNum * 1.5);
             const durMinutes = parseInt(duration) || 30;
 
-            confirmAddBtn.disabled = true;
-            confirmAddBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>';
-
-            let newSrvId = null;
-            try {
-                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                if (client && currentShopId && isValidUuid(currentShopId)) {
-                    const { data: newSrv, error: insErr } = await client.from('services').insert({
-                        shop_id: currentShopId,
-                        name: name,
-                        description: desc,
-                        price: pNum,
-                        price_s: pS,
-                        price_m: pM,
-                        price_l: pL,
-                        price_xl: pXL,
-                        duration_minutes: durMinutes
-                    }).select().maybeSingle();
-                    if (!insErr && newSrv) newSrvId = newSrv.id;
-                }
-            } catch(insErr) {
-                console.warn('Insert service error:', insErr);
-            }
-
-            confirmAddBtn.disabled = false;
-            confirmAddBtn.textContent = 'เพิ่มบริการ';
+            const tempId = 'srv_' + Date.now();
 
             const emptyState = document.getElementById('services-empty-state');
             if (emptyState) emptyState.remove();
             const loadingState = document.getElementById('services-loading-state');
             if (loadingState) loadingState.remove();
 
+            // 1. Immediately Render to UI (0ms)
             const newCardHtml = createServiceCardHtml({
-                id: newSrvId || ('srv_' + Date.now()),
+                id: tempId,
                 name: name,
                 description: desc,
                 icon: icon,
@@ -1220,17 +1196,49 @@
             updateCounts();
             syncCurrentCardsToLocalStorage();
             hideAddModal();
+
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 1500);
+
+            // 2. Background Sync to Supabase
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (client && currentShopId && isValidUuid(currentShopId)) {
+                client.from('services').insert({
+                    shop_id: currentShopId,
+                    name: name,
+                    description: desc,
+                    price: pNum,
+                    price_s: pS,
+                    price_m: pM,
+                    price_l: pL,
+                    price_xl: pXL,
+                    duration_minutes: durMinutes
+                }).select().maybeSingle().then(({ data: newSrv }) => {
+                    if (newSrv?.id) {
+                        const addedCard = document.querySelector(`[data-id="${tempId}"]`);
+                        if (addedCard) addedCard.setAttribute('data-id', newSrv.id);
+                        syncCurrentCardsToLocalStorage();
+                    }
+                }).catch(err => {
+                    console.warn('Background insert service notice:', err);
+                });
+            }
         });
 
-        // Submit Form (Save Batch Prices)
-        form.addEventListener('submit', async (e) => {
+        // Submit Form (Save Batch Prices in Parallel with Instant Feedback)
+        form.addEventListener('submit', (e) => {
             e.preventDefault();
 
+            // 1. Instant Local Save & Feedback (0ms)
+            syncCurrentCardsToLocalStorage();
+            toast.classList.add('show');
+
+            // 2. Parallel Background Sync to Supabase
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            const cards = document.querySelectorAll('#service-list .service-card');
+            const cards = Array.from(document.querySelectorAll('#service-list .service-card'));
 
             if (client && cards.length > 0) {
-                for (const card of cards) {
+                const syncPromises = cards.map(card => {
                     const id = card.getAttribute('data-id');
                     const title = card.querySelector('.card-title')?.textContent.trim() || '';
                     const desc = card.querySelector('.card-desc')?.textContent.trim() || '';
@@ -1249,7 +1257,7 @@
                     const isActive = card.querySelector('.toggle-checkbox')?.checked ?? true;
 
                     if (isValidUuid(id)) {
-                        await client.from('services').update({
+                        return client.from('services').update({
                             price: priceM,
                             price_s: priceS,
                             price_m: priceM,
@@ -1258,36 +1266,37 @@
                             is_active: isActive
                         }).eq('id', id);
                     } else if (currentShopId && isValidUuid(currentShopId)) {
-                        try {
-                            const { data: newRow } = await client.from('services').insert({
-                                shop_id: currentShopId,
-                                name: title,
-                                description: desc,
-                                price: priceM,
-                                price_s: priceS,
-                                price_m: priceM,
-                                price_l: priceL,
-                                price_xl: priceXL,
-                                duration_minutes: durMinutes,
-                                is_active: isActive
-                            }).select().maybeSingle();
+                        return client.from('services').insert({
+                            shop_id: currentShopId,
+                            name: title,
+                            description: desc,
+                            price: priceM,
+                            price_s: priceS,
+                            price_m: priceM,
+                            price_l: priceL,
+                            price_xl: priceXL,
+                            duration_minutes: durMinutes,
+                            is_active: isActive
+                        }).select().maybeSingle().then(({ data: newRow }) => {
                             if (newRow?.id) {
                                 card.setAttribute('data-id', newRow.id);
                             }
-                        } catch(insErr) {
+                        }).catch(insErr => {
                             console.warn('Sync service to database notice:', insErr);
-                        }
+                        });
                     }
-                }
+                    return Promise.resolve();
+                });
+
+                Promise.allSettled(syncPromises).then(() => {
+                    syncCurrentCardsToLocalStorage();
+                });
             }
 
-            syncCurrentCardsToLocalStorage();
-
-            toast.classList.add('show');
             setTimeout(() => {
                 toast.classList.remove('show');
                 window.location.href = 'Owner%20Profile.html';
-            }, 1200);
+            }, 600);
         });
     });
 </script>

@@ -468,8 +468,33 @@
             updateResetBtn();
         };
 
-        // Immediately populate avatar & shop name from localStorage
-        const savedAvatar = localStorage.getItem('ownerProfileAvatar');
+        // Helper to extract cached user and metadata directly from localStorage
+        function getCachedOwnerData() {
+            try {
+                const direct = localStorage.getItem('currentUser');
+                if (direct) {
+                    const u = JSON.parse(direct);
+                    if (u) return u;
+                }
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+                        const raw = localStorage.getItem(k);
+                        if (raw) {
+                            const parsed = JSON.parse(raw);
+                            if (parsed?.user) return parsed.user;
+                        }
+                    }
+                }
+            } catch (_) {}
+            return null;
+        }
+
+        const cachedOwnerUser = getCachedOwnerData();
+        const cachedMeta = cachedOwnerUser?.user_metadata || {};
+
+        // Immediately populate avatar & shop name from localStorage / metadata
+        const savedAvatar = localStorage.getItem('ownerProfileAvatar') || cachedMeta.avatar_url || cachedMeta.logo_url;
         if (savedAvatar && !savedAvatar.includes('googleusercontent')) {
             if (img) img.src = savedAvatar;
             if (headerImg) headerImg.src = savedAvatar;
@@ -477,25 +502,28 @@
         }
         updateResetBtn();
 
-        // 1. Immediately populate personal name from localStorage (Header & Profile Subtitle)
-        const savedPersonName = localStorage.getItem('ownerProfileName');
+        // 1. Immediately populate personal name from localStorage / metadata (Header & Profile Subtitle)
+        const savedPersonName = localStorage.getItem('ownerProfileName') || cachedMeta.full_name || cachedOwnerUser?.email?.split('@')[0] || 'ohm';
         if (savedPersonName) {
             const desktopName = document.getElementById('owner-desktop-name');
             if (desktopName) desktopName.textContent = savedPersonName;
             const personNameEl = document.getElementById('owner-person-name');
             if (personNameEl) personNameEl.textContent = savedPersonName;
+            localStorage.setItem('ownerProfileName', savedPersonName);
         }
 
-        // 2. Immediately populate shop name from localStorage (Main Title only)
-        const savedShopName = localStorage.getItem('ownerShopName');
-        if (savedShopName) {
+        // 2. Immediately populate shop name from localStorage / metadata (Main Title)
+        const initialShopName = localStorage.getItem('ownerShopName') || cachedMeta.shop_name || (savedPersonName ? `${savedPersonName} Car Wash` : 'ร้านคาร์แคร์');
+        if (initialShopName) {
             const shopNameDisplay = document.getElementById('owner-shop-name-display');
-            if (shopNameDisplay) shopNameDisplay.innerText = savedShopName;
+            if (shopNameDisplay) shopNameDisplay.innerText = initialShopName;
+            localStorage.setItem('ownerShopName', initialShopName);
         }
 
         // Layer 1: Instant 0ms Render of Cached Profile Stats & Hours Summary
         updateHoursSummaryOnProfile();
         const savedStats = localStorage.getItem('ownerProfileStats');
+        const savedKPI = localStorage.getItem('ownerDashboardKPI');
         if (savedStats) {
             try {
                 const s = JSON.parse(savedStats);
@@ -506,6 +534,27 @@
                     if (statToday && s.today !== undefined) statToday.textContent = `${s.today} คิว`;
                 }
             } catch(e) {}
+        } else if (savedKPI) {
+            try {
+                const kpi = JSON.parse(savedKPI);
+                if (kpi) {
+                    const statCompleted = document.getElementById('owner-stat-completed');
+                    if (statCompleted && kpi.delivered !== undefined) statCompleted.textContent = `${kpi.delivered} คัน`;
+                    const statToday = document.getElementById('owner-stat-today');
+                    if (statToday && kpi.inService !== undefined) statToday.textContent = `${kpi.inService} คิว`;
+                }
+            } catch(e) {}
+        }
+
+        const savedReviews = localStorage.getItem('ownerReviewsSummary');
+        if (savedReviews) {
+            try {
+                const r = JSON.parse(savedReviews);
+                const statReviews = document.getElementById('owner-stat-reviews');
+                if (statReviews && r.count !== undefined) statReviews.textContent = `${r.count} รีวิว`;
+                const statRating = document.getElementById('owner-stat-rating-badge');
+                if (statRating && r.rating) statRating.textContent = `${r.rating} ★`;
+            } catch(_) {}
         }
 
         // Layer 2: Fast-Track Background Sync from Supabase (Robust & Cascade-Protected)
@@ -521,16 +570,19 @@
                 if (!client) return;
 
                 const savedShopId = localStorage.getItem('currentShopId');
-                const fallbackUserId = localStorage.getItem('lastLoggedInUserId');
+                const fallbackUserId = localStorage.getItem('lastLoggedInUserId') || cachedOwnerUser?.id;
                 const cachedShopName = localStorage.getItem('ownerShopName');
 
                 // 1. Session check
-                let currentUser = null;
+                let currentUser = cachedOwnerUser;
                 try {
                     const sessRes = await (client.auth ? client.auth.getSession() : Promise.resolve({ data: null }));
-                    currentUser = sessRes?.data?.session?.user || null;
+                    if (sessRes?.data?.session?.user) {
+                        currentUser = sessRes.data.session.user;
+                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    }
                 } catch (sessErr) {
-                    if (isNetErr(sessErr)) return;
+                    console.warn('Session check notice:', sessErr);
                 }
 
                 const effectiveUserId = currentUser?.id || fallbackUserId;
@@ -541,7 +593,6 @@
                 // 2. Fetch Profile & Role Guard (Single clean call)
                 if (effectiveUserId) {
                     client.from('profiles').select('avatar_url, full_name, role').eq('id', effectiveUserId).maybeSingle().then(({ data: profile, error: pErr }) => {
-                        if (pErr && isNetErr(pErr)) return;
                         if (profile) {
                             if (profile.role === 'CUSTOMER' || currentUser?.user_metadata?.role === 'CUSTOMER') {
                                 const mainContainer = document.querySelector('main');
@@ -586,61 +637,61 @@
                     }).catch(() => {});
                 }
 
-                // 3. Resolve Shop cleanly without cascading fallback loops
+                // 3. Resolve Shop cleanly with graceful fallback
                 let shop = null;
                 if (savedShopId && savedShopId.length > 20) {
-                    const { data: s, error: sErr } = await client.from('shops').select('*').eq('id', savedShopId).maybeSingle();
-                    if (sErr && isNetErr(sErr)) {
-                        console.warn('Network sync notice (shop): Offline, using cached display.');
-                        return;
+                    try {
+                        const { data: s } = await client.from('shops').select('*').eq('id', savedShopId).maybeSingle();
+                        if (s) shop = s;
+                    } catch(e) {
+                        console.warn('Network sync notice (shop by id):', e);
                     }
-                    if (s) shop = s;
                 }
 
                 if (!shop && effectiveUserId) {
-                    const { data: s, error: sErr } = await client.from('shops').select('*').eq('owner_id', effectiveUserId).maybeSingle();
-                    if (sErr && isNetErr(sErr)) {
-                        console.warn('Network sync notice (shop by owner): Offline, using cached display.');
-                        return;
+                    try {
+                        const { data: s } = await client.from('shops').select('*').eq('owner_id', effectiveUserId).maybeSingle();
+                        if (s) shop = s;
+                    } catch(e) {
+                        console.warn('Network sync notice (shop by owner):', e);
                     }
-                    if (s) shop = s;
                 }
 
-                // Fallback to cached shop info if DB query did not find row
-                if (!shop && savedShopId) {
-                    shop = { id: savedShopId, name: cachedShopName || 'ohm Car Wash' };
-                }
-
-                const meta = currentUser?.user_metadata || {};
-                const finalShopName = shop?.name || meta.shop_name || cachedShopName;
+                // Fallback to cached shop info or user metadata if DB query did not find row or had network drop
+                const meta = currentUser?.user_metadata || cachedMeta;
+                const fallbackShopName = cachedShopName || meta.shop_name || (savedPersonName ? `${savedPersonName} Car Wash` : 'ร้านคาร์แคร์');
+                const finalShopName = shop?.name || fallbackShopName;
                 if (finalShopName) {
                     const shopNameDisplay = document.getElementById('owner-shop-name-display');
                     if (shopNameDisplay) shopNameDisplay.innerText = finalShopName;
                     localStorage.setItem('ownerShopName', finalShopName);
                 }
 
-                if (shop?.id) {
-                    localStorage.setItem('currentShopId', shop.id);
-                    if (shop.address) localStorage.setItem('ownerShopAddress', shop.address);
-                    if (shop.latitude) localStorage.setItem('ownerShopLat', shop.latitude);
-                    if (shop.longitude) localStorage.setItem('ownerShopLng', shop.longitude);
+                const targetShopId = shop?.id || savedShopId;
+                if (targetShopId) {
+                    localStorage.setItem('currentShopId', targetShopId);
+                    const finalAddr = shop?.address || meta.full_address || meta.address;
+                    if (finalAddr) localStorage.setItem('ownerShopAddress', finalAddr);
+                    if (shop?.latitude || meta.latitude) localStorage.setItem('ownerShopLat', shop?.latitude || meta.latitude);
+                    if (shop?.longitude || meta.longitude) localStorage.setItem('ownerShopLng', shop?.longitude || meta.longitude);
                     if (meta.map_link) localStorage.setItem('ownerShopMapLink', meta.map_link);
-                    else if (shop.latitude && shop.longitude) localStorage.setItem('ownerShopMapLink', `https://maps.google.com/?q=${shop.latitude},${shop.longitude}`);
+                    else if (shop?.latitude && shop?.longitude) localStorage.setItem('ownerShopMapLink', `https://maps.google.com/?q=${shop.latitude},${shop.longitude}`);
 
-                    if (shop.logo_url) {
+                    const logoUrl = shop?.logo_url || meta.avatar_url || meta.logo_url;
+                    if (logoUrl) {
                         const curAv = localStorage.getItem('ownerProfileAvatar');
                         if (!curAv || curAv === DEFAULT_OWNER_AVATAR || curAv.includes('googleusercontent')) {
-                            if (img) img.src = shop.logo_url;
-                            if (headerImg) headerImg.src = shop.logo_url;
-                            if (desktopAvatar) desktopAvatar.src = shop.logo_url;
-                            localStorage.setItem('ownerProfileAvatar', shop.logo_url);
+                            if (img) img.src = logoUrl;
+                            if (headerImg) headerImg.src = logoUrl;
+                            if (desktopAvatar) desktopAvatar.src = logoUrl;
+                            localStorage.setItem('ownerProfileAvatar', logoUrl);
                             updateResetBtn();
                         }
                     }
 
                     // 4. Fetch Bookings stats cleanly
                     try {
-                        const { data: bookings, error: bErr } = await client.from('bookings').select('id, status').eq('shop_id', shop.id);
+                        const { data: bookings, error: bErr } = await client.from('bookings').select('id, status').eq('shop_id', targetShopId);
                         if (!bErr && bookings && bookings.length > 0) {
                             const completedCount = bookings.filter(b => b.status === 'completed').length;
                             const todayCount = bookings.filter(b => ['confirmed', 'arrived', 'washing', 'ready'].includes(b.status)).length;
@@ -654,10 +705,24 @@
 
                     // 5. Fetch Operating Hours summary cleanly
                     try {
-                        const { data: dbHours, error: hErr } = await client.from('shop_operating_hours').select('*').eq('shop_id', shop.id).order('day_of_week', { ascending: true });
+                        const { data: dbHours, error: hErr } = await client.from('shop_operating_hours').select('*').eq('shop_id', targetShopId).order('day_of_week', { ascending: true });
                         if (!hErr && dbHours && dbHours.length > 0) {
                             localStorage.setItem('ownerOperatingHours', JSON.stringify(dbHours));
                             updateHoursSummaryOnProfile();
+                        }
+                    } catch (_) {}
+
+                    // 6. Fetch Reviews summary cleanly
+                    try {
+                        const { data: dbReviews, error: rErr } = await client.from('reviews').select('rating').eq('shop_id', targetShopId);
+                        if (!rErr && dbReviews && dbReviews.length > 0) {
+                            const revCount = dbReviews.length;
+                            const avgRating = (dbReviews.reduce((sum, r) => sum + (parseFloat(r.rating) || 5), 0) / revCount).toFixed(1);
+                            const statReviews = document.getElementById('owner-stat-reviews');
+                            if (statReviews) statReviews.textContent = `${revCount} รีวิว`;
+                            const statRating = document.getElementById('owner-stat-rating-badge');
+                            if (statRating) statRating.textContent = `${avgRating} ★`;
+                            localStorage.setItem('ownerReviewsSummary', JSON.stringify({ count: revCount, rating: avgRating }));
                         }
                     } catch (_) {}
                 }

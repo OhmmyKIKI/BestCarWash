@@ -462,25 +462,27 @@
         }
         localStorage.setItem('favoriteShopIds', JSON.stringify(ids));
         updateFavoriteUI();
+        showToast(isAdded ? 'บันทึกร้านโปรดแล้ว ❤️' : 'นำออกจากรายการโปรด');
 
-        // Sync to Supabase favorite_shops
-        try {
-            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            if (client?.auth) {
-                const { data: { user } } = await client.auth.getUser();
-                if (user) {
-                    if (isAdded) {
-                        await client.from('favorite_shops').upsert({ customer_id: user.id, shop_id: currentShopId });
-                    } else {
-                        await client.from('favorite_shops').delete().match({ customer_id: user.id, shop_id: currentShopId });
+        // Background sync to Supabase favorite_shops
+        (async () => {
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (client?.auth) {
+                    const sessRes = await client.auth.getSession();
+                    const userId = sessRes?.data?.session?.user?.id;
+                    if (userId) {
+                        if (isAdded) {
+                            await client.from('favorite_shops').upsert({ customer_id: userId, shop_id: currentShopId });
+                        } else {
+                            await client.from('favorite_shops').delete().match({ customer_id: userId, shop_id: currentShopId });
+                        }
                     }
                 }
+            } catch (favErr) {
+                console.warn('Favorite sync notice:', favErr);
             }
-        } catch (favErr) {
-            console.warn('Favorite sync notice:', favErr);
-        }
-
-        showToast(isAdded ? 'บันทึกร้านโปรดแล้ว ❤️' : 'นำออกจากรายการโปรด');
+        })();
     }
 
     function shareShop() {
@@ -953,9 +955,10 @@
                     dbShop = data;
                 }
                 if (!dbShop && client.auth) {
-                    const { data: userData } = await client.auth.getUser();
-                    if (userData?.user) {
-                        const { data } = await client.from('shops').select('*').eq('owner_id', userData.user.id).maybeSingle();
+                    const sessRes = await client.auth.getSession();
+                    const currentUid = sessRes?.data?.session?.user?.id;
+                    if (currentUid) {
+                        const { data } = await client.from('shops').select('*').eq('owner_id', currentUid).maybeSingle();
                         dbShop = data;
                     }
                 }

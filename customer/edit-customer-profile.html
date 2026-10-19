@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
@@ -196,8 +196,6 @@
         </div>
     </form>
 </main>
-    </form>
-</main>
 
 <!-- Toast Notification -->
 <div id="toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-secondary-container text-on-secondary-container px-6 py-3 rounded-full shadow-lg border border-secondary/30 flex items-center gap-2 z-50">
@@ -344,7 +342,7 @@
             reader.readAsDataURL(file);
         });
 
-        form.addEventListener('submit', async (e) => {
+        form.addEventListener('submit', (e) => {
             e.preventDefault();
             
             const profileData = {
@@ -355,29 +353,42 @@
             };
             localStorage.setItem('customerProfile', JSON.stringify(profileData));
 
-            // Sync to Supabase
-            try {
-                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                if (client?.auth) {
-                    const { data: { user } } = await client.auth.getUser();
-                    if (user) {
-                        await client.from('profiles').update({
-                            full_name: profileData.fullName,
-                            phone_number: profileData.phone,
-                            avatar_url: profileData.avatar
-                        }).eq('id', user.id);
-                    }
-                }
-            } catch (err) {
-                console.warn('Profile Supabase update notice:', err);
-            }
-            
+            // Instant feedback (0ms)
             toast.classList.add('show');
+
+            // Non-blocking background sync to Supabase
+            (async () => {
+                try {
+                    const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                    if (client?.auth) {
+                        const sessRes = await client.auth.getSession();
+                        const user = sessRes?.data?.session?.user;
+                        if (user) {
+                            await Promise.allSettled([
+                                client.from('profiles').update({
+                                    full_name: profileData.fullName,
+                                    phone_number: profileData.phone,
+                                    avatar_url: profileData.avatar
+                                }).eq('id', user.id),
+                                client.auth.updateUser({
+                                    data: {
+                                        full_name: profileData.fullName,
+                                        phone_number: profileData.phone,
+                                        avatar_url: profileData.avatar
+                                    }
+                                })
+                            ]);
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Profile Supabase update notice:', err);
+                }
+            })();
             
             setTimeout(() => {
                 toast.classList.remove('show');
-                window.location.href = 'Customer Profile.html';
-            }, 1000);
+                window.location.href = 'Customer%20Profile.html';
+            }, 500);
         });
     });
 </script>

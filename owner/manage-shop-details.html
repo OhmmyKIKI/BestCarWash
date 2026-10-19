@@ -734,28 +734,27 @@
                 if (savedShopId && savedShopId.length > 20) {
                     try {
                         const { data: s, error: sErr } = await client.from('shops').select('*').eq('id', savedShopId).maybeSingle();
-                        if (sErr && isNetErr(sErr)) {
-                            console.warn('Network sync notice (shop): Offline, using cached display.');
-                            return;
-                        }
                         if (s) shop = s;
+                        else if (sErr && isNetErr(sErr)) {
+                            console.warn('Network sync notice (shop by id): Offline, continuing with cached display.');
+                        }
                     } catch (e) {
-                        if (isNetErr(e)) return;
+                        console.warn('Network sync notice (shop by id exception):', e);
                     }
                 }
 
                 if (!shop && effectiveUserId) {
                     try {
                         const { data: s, error: sErr } = await client.from('shops').select('*').eq('owner_id', effectiveUserId).maybeSingle();
-                        if (sErr && isNetErr(sErr)) {
-                            console.warn('Network sync notice (shop by owner): Offline, using cached display.');
-                            return;
-                        }
                         if (s) shop = s;
+                        else if (sErr && isNetErr(sErr)) {
+                            console.warn('Network sync notice (shop by owner): Offline, continuing with cached display.');
+                        }
                     } catch (e) {
-                        if (isNetErr(e)) return;
+                        console.warn('Network sync notice (shop by owner exception):', e);
                     }
                 }
+
 
                 if (shop) {
                     currentShopId = shop.id;
@@ -1050,38 +1049,29 @@
                 localStorage.setItem('ownerShopGallery', JSON.stringify(shopPhotos));
             }
 
-            // 2. NOW SYNC TO SUPABASE (If client available)
-            try {
-                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                if (client?.auth) {
+            // INSTANT OPTIMISTIC UI FEEDBACK (0ms)
+            if (saveBtn) {
+                saveBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">check_circle</span> บันทึกสำเร็จ';
+                saveBtn.classList.remove('bg-secondary');
+                saveBtn.classList.add('bg-secondary-fixed');
+            }
+            toast.classList.add('show');
+
+            // 2. BACKGROUND SYNC TO SUPABASE (Non-blocking & Parallelized)
+            (async () => {
+                try {
+                    const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                    if (!client) return;
+
                     let userId = currentUserId || localStorage.getItem('lastLoggedInUserId');
-                    if (!userId) {
+                    if (!userId && client.auth) {
                         try {
                             const sess = await client.auth.getSession();
                             userId = sess?.data?.session?.user?.id;
                         } catch (_) {}
                     }
-                    if (!userId) {
-                        try {
-                            const { data: { user } } = await client.auth.getUser();
-                            if (user) {
-                                userId = user.id;
-                                currentUserId = user.id;
-                            }
-                        } catch (_) {}
-                    }
 
                     if (userId) {
-                        // A. Update logo in public.profiles if changed
-                        if (newLogoCompressed) {
-                            try {
-                                await client.from('profiles').update({ avatar_url: newLogoCompressed }).eq('id', userId);
-                            } catch (profErr) {
-                                console.warn('Update profile avatar notice:', profErr);
-                            }
-                        }
-
-                        // B. Update public.shops with ONLY valid database columns!
                         const validShopData = {
                             name: name,
                             phone_number: phone,
@@ -1093,76 +1083,65 @@
                             validShopData.latitude = lat;
                             validShopData.longitude = lng;
                         }
-                        if (mainCoverPhoto) {
-                            validShopData.cover_image_url = mainCoverPhoto;
-                        }
-                        if (newLogoCompressed) {
-                            validShopData.logo_url = newLogoCompressed;
-                        }
+                        if (mainCoverPhoto) validShopData.cover_image_url = mainCoverPhoto;
+                        if (newLogoCompressed) validShopData.logo_url = newLogoCompressed;
 
-                        if (!currentShopId) {
-                            currentShopId = localStorage.getItem('currentShopId');
-                        }
-                        if (!currentShopId) {
-                            const { data: existingShop } = await client.from('shops').select('id').eq('owner_id', userId).maybeSingle();
-                            if (existingShop) currentShopId = existingShop.id;
-                        }
+                        if (!currentShopId) currentShopId = localStorage.getItem('currentShopId');
+
+                        // Parallelize Shop Sync + Profile Sync + Metadata Sync
+                        const promises = [];
 
                         if (currentShopId) {
-                            await client.from('shops').update(validShopData).eq('id', currentShopId);
+                            promises.push(client.from('shops').update(validShopData).eq('id', currentShopId));
                         } else {
-                            const { data: newShop } = await client.from('shops').insert({
-                                owner_id: userId,
-                                ...validShopData
-                            }).select('id').single();
-                            if (newShop) currentShopId = newShop.id;
+                            promises.push(
+                                client.from('shops').insert({ owner_id: userId, ...validShopData }).select('id').maybeSingle().then(({ data: ns }) => {
+                                    if (ns?.id) localStorage.setItem('currentShopId', ns.id);
+                                })
+                            );
                         }
 
-                        // C. Update user_metadata with all custom fields
-                        const userMetaUpdate = {
-                            shop_name: name,
-                            phone_number: phone,
-                            shop_description: rawDesc,
-                            description: rawDesc,
-                            street: street,
-                            address: street,
-                            full_address: fullAddr,
-                            sub_district: subDist,
-                            city: cty,
-                            zip: zip,
-                            map_link: mapLink
-                        };
-                        if (lat !== null && lng !== null) {
-                            userMetaUpdate.latitude = lat;
-                            userMetaUpdate.longitude = lng;
-                        }
-                        if (mainCoverPhoto) {
-                            userMetaUpdate.cover_image_url = mainCoverPhoto;
-                        }
-                        if (shopPhotos && shopPhotos.length > 0) {
-                            userMetaUpdate.shop_images = shopPhotos;
-                        }
                         if (newLogoCompressed) {
-                            userMetaUpdate.avatar_url = newLogoCompressed;
+                            promises.push(client.from('profiles').update({ avatar_url: newLogoCompressed }).eq('id', userId));
                         }
 
-                        await client.auth.updateUser({ data: userMetaUpdate });
-                    }
-                }
-            } catch (err) {
-                console.warn('Shop update notice:', err);
-            }
+                        if (client.auth) {
+                            const userMetaUpdate = {
+                                shop_name: name,
+                                phone_number: phone,
+                                shop_description: rawDesc,
+                                description: rawDesc,
+                                street: street,
+                                address: street,
+                                full_address: fullAddr,
+                                sub_district: subDist,
+                                city: cty,
+                                zip: zip,
+                                map_link: mapLink
+                            };
+                            if (lat !== null && lng !== null) {
+                                userMetaUpdate.latitude = lat;
+                                userMetaUpdate.longitude = lng;
+                            }
+                            if (mainCoverPhoto) userMetaUpdate.cover_image_url = mainCoverPhoto;
+                            if (shopPhotos && shopPhotos.length > 0) userMetaUpdate.shop_images = shopPhotos;
+                            if (newLogoCompressed) userMetaUpdate.avatar_url = newLogoCompressed;
 
-            if (saveBtn) {
-                saveBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">check_circle</span> บันทึกสำเร็จ';
-                saveBtn.classList.remove('bg-secondary');
-                saveBtn.classList.add('bg-secondary-fixed');
-            }
-            toast.classList.add('show');
+                            promises.push(client.auth.updateUser({ data: userMetaUpdate }));
+                        }
+
+                        await Promise.allSettled(promises);
+                    }
+                } catch (err) {
+                    console.warn('Background shop sync notice:', err);
+                }
+            })();
+
+            // Smooth redirect after visual confirmation (Fast & Snappy)
             setTimeout(() => {
                 toast.classList.remove('show');
                 window.location.href = 'Owner%20Profile.html';
-            }, 800);
+            }, 600);
         });
     });
 </script>
