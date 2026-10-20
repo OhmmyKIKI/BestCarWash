@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="light" lang="th">
 <head>
     <meta charset="utf-8"/>
@@ -507,18 +507,15 @@
                 const fallbackUserId = localStorage.getItem('lastLoggedInUserId');
                 const cachedShopName = localStorage.getItem('ownerShopName');
 
-                // FAST-TRACK: Query history bookings immediately in parallel with session
+                // FAST-TRACK: Query history bookings immediately via safeSupabaseRest
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
                 let fastHistoryPromise = null;
-                if (savedShopId && savedShopId.length > 20) {
-                    fastHistoryPromise = client
-                        .from('bookings')
-                        .select('*')
-                        .eq('shop_id', savedShopId)
-                        .in('status', ['completed', 'refunded', 'declined', 'no_show', 'refund_requested'])
-                        .order('created_at', { ascending: false });
+                const historyStatuses = 'completed,refunded,declined,no_show,refund_requested';
+                if (savedShopId && savedShopId.length > 20 && fetcher) {
+                    fastHistoryPromise = fetcher(`bookings?shop_id=eq.${savedShopId}&status=in.(${historyStatuses})&order=created_at.desc`);
                 }
 
-                const sessionPromise = client.auth ? client.auth.getSession() : Promise.resolve({ data: null });
+                const sessionPromise = client.auth ? client.auth.getSession().catch(() => ({ data: null })) : Promise.resolve({ data: null });
 
                 const [historyRes, sessRes] = await Promise.all([
                     fastHistoryPromise || Promise.resolve(null),
@@ -531,8 +528,9 @@
                 if (!effectiveUserId && !cachedShopName && !savedShopId) return;
 
                 // Non-blocking Role Guard & Profile sync in background
-                if (effectiveUserId) {
-                    client.from('profiles').select('avatar_url, full_name, role').eq('id', effectiveUserId).maybeSingle().then(({ data: profile }) => {
+                if (effectiveUserId && fetcher) {
+                    fetcher(`profiles?id=eq.${effectiveUserId}&select=avatar_url,full_name,role&limit=1`).then(profs => {
+                        const profile = Array.isArray(profs) && profs.length > 0 ? profs[0] : null;
                         if (profile?.role === 'CUSTOMER' || user?.user_metadata?.role === 'CUSTOMER') {
                             const mainContainer = document.querySelector('main');
                             if (mainContainer) {
@@ -573,30 +571,26 @@
                 }
 
                 // If fast-track returned bookings directly, merge and render immediately!
-                let dbBookings = historyRes?.data;
-                if (!dbBookings) {
+                let dbBookings = Array.isArray(historyRes) ? historyRes : null;
+                if (!dbBookings && fetcher) {
                     let shop = null;
                     if (effectiveUserId) {
-                        const { data: s } = await client.from('shops').select('id, name').eq('owner_id', effectiveUserId).maybeSingle();
-                        if (s) shop = s;
+                        const s = await fetcher(`shops?owner_id=eq.${effectiveUserId}&select=id,name&limit=1`);
+                        if (Array.isArray(s) && s.length > 0) shop = s[0];
                     }
                     if (!shop && savedShopId && savedShopId.length > 20) {
-                        const { data: s } = await client.from('shops').select('id, name').eq('id', savedShopId).maybeSingle();
-                        if (s) shop = s;
+                        const s = await fetcher(`shops?id=eq.${savedShopId}&select=id,name&limit=1`);
+                        if (Array.isArray(s) && s.length > 0) shop = s[0];
                     }
                     if (!shop && cachedShopName) {
-                        const { data: s } = await client.from('shops').select('id, name').eq('name', cachedShopName).maybeSingle();
-                        if (s) shop = s;
+                        const s = await fetcher(`shops?name=eq.${encodeURIComponent(cachedShopName)}&select=id,name&limit=1`);
+                        if (Array.isArray(s) && s.length > 0) shop = s[0];
                     }
                     if (shop) {
                         localStorage.setItem('currentShopId', shop.id);
                         if (shop.name) localStorage.setItem('ownerShopName', shop.name);
-                        const { data: bList } = await client
-                            .from('bookings')
-                            .select('*')
-                            .eq('shop_id', shop.id)
-                            .in('status', ['completed', 'refunded', 'declined', 'no_show', 'refund_requested']);
-                        dbBookings = bList;
+                        const bList = await fetcher(`bookings?shop_id=eq.${shop.id}&status=in.(${historyStatuses})&order=created_at.desc`);
+                        if (Array.isArray(bList)) dbBookings = bList;
                     }
                 }
 

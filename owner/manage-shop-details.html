@@ -729,27 +729,22 @@
                     }).catch(() => {});
                 }
 
-                // 2. Fetch Shop row
+                // 2. Fetch Shop row via safeSupabaseRest
                 let shop = null;
-                if (savedShopId && savedShopId.length > 20) {
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                if (savedShopId && savedShopId.length > 20 && fetcher) {
                     try {
-                        const { data: s, error: sErr } = await client.from('shops').select('*').eq('id', savedShopId).maybeSingle();
-                        if (s) shop = s;
-                        else if (sErr && isNetErr(sErr)) {
-                            console.warn('Network sync notice (shop by id): Offline, continuing with cached display.');
-                        }
+                        const shops = await fetcher(`shops?id=eq.${savedShopId}&limit=1`);
+                        if (Array.isArray(shops) && shops.length > 0) shop = shops[0];
                     } catch (e) {
                         console.warn('Network sync notice (shop by id exception):', e);
                     }
                 }
 
-                if (!shop && effectiveUserId) {
+                if (!shop && effectiveUserId && fetcher) {
                     try {
-                        const { data: s, error: sErr } = await client.from('shops').select('*').eq('owner_id', effectiveUserId).maybeSingle();
-                        if (s) shop = s;
-                        else if (sErr && isNetErr(sErr)) {
-                            console.warn('Network sync notice (shop by owner): Offline, continuing with cached display.');
-                        }
+                        const shops = await fetcher(`shops?owner_id=eq.${effectiveUserId}&limit=1`);
+                        if (Array.isArray(shops) && shops.length > 0) shop = shops[0];
                     } catch (e) {
                         console.warn('Network sync notice (shop by owner exception):', e);
                     }
@@ -1090,19 +1085,33 @@
 
                         // Parallelize Shop Sync + Profile Sync + Metadata Sync
                         const promises = [];
+                        const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
 
-                        if (currentShopId) {
-                            promises.push(client.from('shops').update(validShopData).eq('id', currentShopId));
-                        } else {
-                            promises.push(
-                                client.from('shops').insert({ owner_id: userId, ...validShopData }).select('id').maybeSingle().then(({ data: ns }) => {
-                                    if (ns?.id) localStorage.setItem('currentShopId', ns.id);
-                                })
-                            );
-                        }
+                        if (fetcher) {
+                            if (currentShopId) {
+                                promises.push(fetcher(`shops?id=eq.${currentShopId}`, {
+                                    method: 'PATCH',
+                                    body: validShopData
+                                }));
+                            } else {
+                                promises.push(
+                                    fetcher('shops', {
+                                        method: 'POST',
+                                        headers: { 'Prefer': 'return=representation' },
+                                        body: { owner_id: userId, ...validShopData }
+                                    }).then(ns => {
+                                        const row = Array.isArray(ns) && ns.length > 0 ? ns[0] : ns;
+                                        if (row?.id) localStorage.setItem('currentShopId', row.id);
+                                    })
+                                );
+                            }
 
-                        if (newLogoCompressed) {
-                            promises.push(client.from('profiles').update({ avatar_url: newLogoCompressed }).eq('id', userId));
+                            if (newLogoCompressed) {
+                                promises.push(fetcher(`profiles?id=eq.${userId}`, {
+                                    method: 'PATCH',
+                                    body: { avatar_url: newLogoCompressed }
+                                }));
+                            }
                         }
 
                         if (client.auth) {

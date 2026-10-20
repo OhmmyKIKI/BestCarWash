@@ -267,29 +267,36 @@
 
         updateResetButtonVisibility();
 
-        // Load live profile from Supabase if available
+        // Load live profile from Supabase if available via safeSupabaseRest
         (async () => {
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                if (!client?.auth) return;
-                const { data: { user } } = await client.auth.getUser();
-                if (!user) return;
+                let user = null;
+                if (client?.auth) {
+                    const sessRes = await client.auth.getSession().catch(() => null);
+                    user = sessRes?.data?.session?.user;
+                }
+                const uid = user?.id || localStorage.getItem('lastLoggedInUserId');
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
 
-                if (user.email && !emailInput.value) emailInput.value = user.email;
+                if (user?.email && !emailInput.value) emailInput.value = user.email;
 
-                const { data: profile } = await client.from('profiles').select('*').eq('id', user.id).single();
-                if (profile) {
-                    if (profile.full_name) {
-                        fullNameInput.value = profile.full_name;
-                        const desktopName = document.getElementById('desktop-header-name');
-                        if (desktopName) desktopName.innerText = profile.full_name;
-                    }
-                    if (profile.phone_number) phoneInput.value = profile.phone_number;
-                    if (profile.avatar_url && profile.avatar_url !== DEFAULT_AVATAR) {
-                        currentAvatar = profile.avatar_url;
-                        previewImg.src = profile.avatar_url;
-                        if (headerAvatar) headerAvatar.src = profile.avatar_url;
-                        updateResetButtonVisibility();
+                if (uid && fetcher) {
+                    const profiles = await fetcher(`profiles?id=eq.${uid}&limit=1`);
+                    const profile = Array.isArray(profiles) && profiles.length > 0 ? profiles[0] : null;
+                    if (profile) {
+                        if (profile.full_name) {
+                            fullNameInput.value = profile.full_name;
+                            const desktopName = document.getElementById('desktop-header-name');
+                            if (desktopName) desktopName.innerText = profile.full_name;
+                        }
+                        if (profile.phone_number) phoneInput.value = profile.phone_number;
+                        if (profile.avatar_url && profile.avatar_url !== DEFAULT_AVATAR) {
+                            currentAvatar = profile.avatar_url;
+                            previewImg.src = profile.avatar_url;
+                            if (headerAvatar) headerAvatar.src = profile.avatar_url;
+                            updateResetButtonVisibility();
+                        }
                     }
                 }
             } catch(e) {
@@ -360,25 +367,33 @@
             (async () => {
                 try {
                     const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                    let user = null;
                     if (client?.auth) {
-                        const sessRes = await client.auth.getSession();
-                        const user = sessRes?.data?.session?.user;
-                        if (user) {
-                            await Promise.allSettled([
-                                client.from('profiles').update({
-                                    full_name: profileData.fullName,
-                                    phone_number: profileData.phone,
-                                    avatar_url: profileData.avatar
-                                }).eq('id', user.id),
-                                client.auth.updateUser({
-                                    data: {
-                                        full_name: profileData.fullName,
-                                        phone_number: profileData.phone,
-                                        avatar_url: profileData.avatar
-                                    }
-                                })
-                            ]);
-                        }
+                        const sessRes = await client.auth.getSession().catch(() => null);
+                        user = sessRes?.data?.session?.user;
+                    }
+                    const uid = user?.id || localStorage.getItem('lastLoggedInUserId');
+                    const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+
+                    if (uid && fetcher) {
+                        await fetcher(`profiles?id=eq.${uid}`, {
+                            method: 'PATCH',
+                            body: {
+                                full_name: profileData.fullName,
+                                phone_number: profileData.phone,
+                                avatar_url: profileData.avatar
+                            }
+                        });
+                    }
+
+                    if (client?.auth && user) {
+                        await client.auth.updateUser({
+                            data: {
+                                full_name: profileData.fullName,
+                                phone_number: profileData.phone,
+                                avatar_url: profileData.avatar
+                            }
+                        }).catch(() => {});
                     }
                 } catch (err) {
                     console.warn('Profile Supabase update notice:', err);

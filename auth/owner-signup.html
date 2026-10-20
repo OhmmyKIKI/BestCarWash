@@ -1355,16 +1355,19 @@
                 if (initialServices.length > 0) localStorage.setItem('ownerServices', JSON.stringify(initialServices));
                 if (initialOperatingHours.length > 0) localStorage.setItem('ownerOperatingHours', JSON.stringify(initialOperatingHours));
 
-                // 1.5 Update profile avatar in public.profiles
+                // 1.5 Update profile avatar in public.profiles via safeSupabaseRest
                 if (uploadedLogoBase64) {
                     try {
-                        await client.from('profiles').update({ avatar_url: uploadedLogoBase64 }).eq('id', userId);
+                        await safeSupabaseRest(`profiles?id=eq.${userId}`, {
+                            method: 'PATCH',
+                            body: JSON.stringify({ avatar_url: uploadedLogoBase64 })
+                        });
                     } catch (profErr) {
                         console.warn('Update profile avatar notice:', profErr);
                     }
                 }
 
-                // 2. Fetch or create shop record with ONLY valid database columns
+                // 2. Fetch or create shop record with ONLY valid database columns via safeSupabaseRest
                 const validShopFields = {
                     name: shopName,
                     description: shopDesc,
@@ -1379,30 +1382,31 @@
                 };
 
                 let shopId = null;
-                const { data: existingShop } = await client
-                    .from('shops')
-                    .select('id')
-                    .eq('owner_id', userId)
-                    .maybeSingle();
+                try {
+                    const { data: existingShops } = await safeSupabaseRest(`shops?select=id&owner_id=eq.${userId}&limit=1`);
+                    if (existingShops && existingShops.length > 0 && existingShops[0].id) {
+                        shopId = existingShops[0].id;
+                        await safeSupabaseRest(`shops?id=eq.${shopId}`, {
+                            method: 'PATCH',
+                            body: JSON.stringify(validShopFields)
+                        });
+                    } else {
+                        const { data: newShopList, error: insertShopErr } = await safeSupabaseRest('shops', {
+                            method: 'POST',
+                            headers: { 'Prefer': 'return=representation' },
+                            body: JSON.stringify({
+                                owner_id: userId,
+                                ...validShopFields
+                            })
+                        });
 
-                if (existingShop && existingShop.id) {
-                    shopId = existingShop.id;
-                    await client
-                        .from('shops')
-                        .update(validShopFields)
-                        .eq('id', shopId);
-                } else {
-                    const { data: newShop, error: insertShopErr } = await client
-                        .from('shops')
-                        .insert({
-                            owner_id: userId,
-                            ...validShopFields
-                        })
-                        .select('id')
-                        .single();
-
-                    if (insertShopErr) console.warn('Shop insert notice:', insertShopErr);
-                    shopId = newShop?.id;
+                        if (insertShopErr) console.warn('Shop insert notice:', insertShopErr);
+                        if (newShopList && newShopList.length > 0) {
+                            shopId = newShopList[0].id;
+                        }
+                    }
+                } catch (shopErr) {
+                    console.warn('Shop creation error:', shopErr);
                 }
 
                 if (shopId) {
@@ -1412,7 +1416,7 @@
                     localStorage.setItem('ownerShopName', shopName);
                 }
 
-                // 3. Insert Services and Operating Hours into Supabase in parallel
+                // 3. Insert Services and Operating Hours into Supabase in parallel via safeSupabaseRest
                 if (shopId) {
                     submitBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> กำลังบันทึกข้อมูลบริการและเวลาทำการ...';
                     
@@ -1424,11 +1428,19 @@
                         const priceInput = row.querySelector('.service-price-input') || row.querySelector('input[type="number"]');
                         const durationSelect = row.querySelector('.service-duration-select') || row.querySelector('select');
                         if (nameInput && nameInput.value.trim()) {
+                            const pM = parseFloat(priceInput?.value) || 150;
+                            const pS = Math.round(pM * 0.8);
+                            const pL = Math.round(pM * 1.2);
+                            const pXL = Math.round(pM * 1.5);
                             servicesToInsert.push({
                                 shop_id: shopId,
                                 name: nameInput.value.trim(),
                                 description: descInput?.value.trim() || 'บริการมาตรฐาน',
-                                price: parseFloat(priceInput?.value) || 150,
+                                price: pM,
+                                price_s: pS,
+                                price_m: pM,
+                                price_l: pL,
+                                price_xl: pXL,
                                 duration_minutes: parseInt(durationSelect?.value) || 30
                             });
                         }
@@ -1442,13 +1454,39 @@
                         is_closed: !!h.is_closed
                     }));
 
-                    // Parallel execution for maximum speed
+                    // Parallel execution for maximum speed with schema adaptability via safeSupabaseRest
                     const promises = [];
                     if (servicesToInsert.length > 0) {
-                        promises.push(client.from('services').insert(servicesToInsert).catch(e => console.warn('Services insert notice:', e)));
+                        const srvPromise = (async () => {
+                            try {
+                                const { error } = await safeSupabaseRest('services', {
+                                    method: 'POST',
+                                    body: JSON.stringify(servicesToInsert)
+                                });
+                                if (error) throw error;
+                            } catch (insertErr) {
+                                console.warn('Full size columns insert notice, attempting base schema fallback:', insertErr);
+                                const baseServices = servicesToInsert.map(s => ({
+                                    shop_id: s.shop_id,
+                                    name: s.name,
+                                    description: s.description,
+                                    price: s.price,
+                                    duration_minutes: s.duration_minutes
+                                }));
+                                await safeSupabaseRest('services', {
+                                    method: 'POST',
+                                    body: JSON.stringify(baseServices)
+                                }).catch(e => console.warn('Base services insert error:', e));
+                            }
+                        })();
+                        promises.push(srvPromise);
+                        localStorage.setItem('ownerServices', JSON.stringify(servicesToInsert));
                     }
                     if (hoursToInsert.length > 0) {
-                        promises.push(client.from('shop_operating_hours').insert(hoursToInsert).catch(e => console.warn('Hours insert notice:', e)));
+                        promises.push(safeSupabaseRest('shop_operating_hours', {
+                            method: 'POST',
+                            body: JSON.stringify(hoursToInsert)
+                        }).catch(e => console.warn('Hours insert notice:', e)));
                     }
                     await Promise.all(promises);
                     localStorage.setItem('ownerOperatingHours', JSON.stringify(hoursToInsert));

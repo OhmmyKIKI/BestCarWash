@@ -468,15 +468,25 @@
         (async () => {
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                let userId = null;
                 if (client?.auth) {
-                    const sessRes = await client.auth.getSession();
-                    const userId = sessRes?.data?.session?.user?.id;
-                    if (userId) {
-                        if (isAdded) {
-                            await client.from('favorite_shops').upsert({ customer_id: userId, shop_id: currentShopId });
-                        } else {
-                            await client.from('favorite_shops').delete().match({ customer_id: userId, shop_id: currentShopId });
-                        }
+                    const sessRes = await client.auth.getSession().catch(() => null);
+                    userId = sessRes?.data?.session?.user?.id;
+                }
+                if (!userId) userId = localStorage.getItem('lastLoggedInUserId');
+
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                if (fetcher && userId && currentShopId) {
+                    if (isAdded) {
+                        await fetcher('favorite_shops?on_conflict=customer_id,shop_id', {
+                            method: 'POST',
+                            headers: { 'Prefer': 'resolution=merge-duplicates' },
+                            body: { customer_id: userId, shop_id: currentShopId }
+                        });
+                    } else {
+                        await fetcher(`favorite_shops?customer_id=eq.${userId}&shop_id=eq.${currentShopId}`, {
+                            method: 'DELETE'
+                        });
                     }
                 }
             } catch (favErr) {
@@ -620,17 +630,13 @@
             }
         } catch (_) {}
 
-        // Layer 2: If Supabase client and shopId available, fetch live
-        if (client && shopId) {
+        // Layer 2: Live background fetch via resilient REST
+        const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+        if (fetcher && shopId) {
             try {
-                const { data, error } = await client
-                    .from('shop_operating_hours')
-                    .select('*')
-                    .eq('shop_id', shopId)
-                    .order('day_of_week', { ascending: true });
-
-                if (!error && data && data.length > 0) {
-                    hours = data;
+                const dbHours = await fetcher(`shop_operating_hours?shop_id=eq.${shopId}&order=day_of_week.asc&select=*`);
+                if (Array.isArray(dbHours) && dbHours.length > 0) {
+                    hours = dbHours;
                 }
             } catch (_) {}
         }
@@ -945,46 +951,44 @@
         // LAYER 2: SILENT FAST-TRACK BACKGROUND SYNC WITH SUPABASE
         // ========================================================
         (async () => {
-            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            if (!client) return;
+            const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+            if (!fetcher) return;
 
             try {
                 let dbShop = null;
                 if (paramId) {
-                    const { data } = await client.from('shops').select('*').eq('id', paramId).maybeSingle();
-                    dbShop = data;
+                    const shops = await fetcher(`shops?id=eq.${paramId}&limit=1`);
+                    if (Array.isArray(shops) && shops.length > 0) dbShop = shops[0];
                 }
-                if (!dbShop && client.auth) {
-                    const sessRes = await client.auth.getSession();
-                    const currentUid = sessRes?.data?.session?.user?.id;
-                    if (currentUid) {
-                        const { data } = await client.from('shops').select('*').eq('owner_id', currentUid).maybeSingle();
-                        dbShop = data;
+                if (!dbShop) {
+                    const localShopId = localStorage.getItem('currentShopId');
+                    if (localShopId) {
+                        const shops = await fetcher(`shops?id=eq.${localShopId}&limit=1`);
+                        if (Array.isArray(shops) && shops.length > 0) dbShop = shops[0];
                     }
                 }
                 if (!dbShop) {
                     const localName = localStorage.getItem('ownerShopName');
                     if (localName) {
-                        const { data } = await client.from('shops').select('*').eq('name', localName).maybeSingle();
-                        dbShop = data;
+                        const shops = await fetcher(`shops?name=eq.${encodeURIComponent(localName)}&limit=1`);
+                        if (Array.isArray(shops) && shops.length > 0) dbShop = shops[0];
                     }
                 }
                 if (!dbShop) {
-                    const { data } = await client.from('shops').select('*').limit(1).maybeSingle();
-                    dbShop = data;
+                    const shops = await fetcher('shops?limit=1');
+                    if (Array.isArray(shops) && shops.length > 0) dbShop = shops[0];
                 }
 
                 if (dbShop) {
-                    // Parallel fetch of owner avatar, services and reviews
                     const [profRes, servRes, revRes] = await Promise.all([
-                        client.from('profiles').select('avatar_url').eq('id', dbShop.owner_id).maybeSingle(),
-                        client.from('services').select('*').eq('shop_id', dbShop.id),
-                        client.from('reviews').select('*, customer:customer_id(full_name, avatar_url)').eq('shop_id', dbShop.id).order('created_at', { ascending: false })
+                        dbShop.owner_id ? fetcher(`profiles?id=eq.${dbShop.owner_id}&select=avatar_url&limit=1`) : Promise.resolve([]),
+                        fetcher(`services?shop_id=eq.${dbShop.id}&order=created_at.asc`),
+                        fetcher(`reviews?shop_id=eq.${dbShop.id}&order=created_at.desc&select=*,customer:customer_id(full_name,avatar_url)`)
                     ]);
 
-                    const ownerProf = profRes?.data;
-                    const dbServices = servRes?.data || [];
-                    const liveReviews = revRes?.data || [];
+                    const ownerProf = Array.isArray(profRes) && profRes.length > 0 ? profRes[0] : null;
+                    let dbServices = Array.isArray(servRes) ? servRes : [];
+                    const liveReviews = Array.isArray(revRes) ? revRes : [];
 
                     const shopLogo = dbShop.logo_url || ownerProf?.avatar_url || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80';
                     const coverImg = dbShop.cover_image_url || 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80';
@@ -1017,7 +1021,7 @@
                         services: (dbServices && dbServices.length > 0) ? dbServices.map((s, idx) => ({
                             id: s.id,
                             name: s.name,
-                            price: parseFloat(s.price) || 200,
+                            price: parseFloat(s.price_s || s.price) || 200,
                             duration: s.duration_minutes ? `${s.duration_minutes} นาที` : '45 นาที',
                             popular: idx === 0,
                             items: [s.description || 'บริการล้างทำความสะอาดรถยนต์']

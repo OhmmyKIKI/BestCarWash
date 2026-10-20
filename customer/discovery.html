@@ -10,6 +10,13 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-client.js"></script>
 <script src="../supabase-client.js"></script>
+<script>
+    window.SUPABASE_URL = window.SUPABASE_URL || 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+    window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+    if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
+        window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+    }
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script id="tailwind-config">
@@ -414,32 +421,42 @@ tailwind.config = {
         document.querySelectorAll(`.fav-icon-${shopId}`).forEach(icon => {
             if (added) {
                 icon.textContent = 'favorite';
-                icon.classList.remove('text-on-surface-variant');
+                icon.classList.remove('text-on-surface-variant', 'text-slate-500');
                 icon.classList.add('text-error');
                 icon.style.fontVariationSettings = "'FILL' 1";
             } else {
                 icon.textContent = 'favorite_border';
                 icon.classList.remove('text-error');
-                icon.classList.add('text-on-surface-variant');
+                icon.classList.add('text-slate-500');
                 icon.style.fontVariationSettings = '';
             }
         });
 
         showToast(added ? 'บันทึกร้านโปรดแล้ว ❤️' : 'นำออกจากร้านโปรดแล้ว');
 
-        // Background sync with Supabase favorite_shops table
+        // Background sync with Supabase favorite_shops table via safeSupabaseRest
         (async () => {
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                let userId = null;
                 if (client?.auth) {
-                    const sessRes = await client.auth.getSession();
-                    const userId = sessRes?.data?.session?.user?.id;
-                    if (userId) {
-                        if (added) {
-                            await client.from('favorite_shops').upsert({ customer_id: userId, shop_id: shopId });
-                        } else {
-                            await client.from('favorite_shops').delete().match({ customer_id: userId, shop_id: shopId });
-                        }
+                    try {
+                        const sessRes = await client.auth.getSession();
+                        userId = sessRes?.data?.session?.user?.id;
+                    } catch (_) {}
+                }
+                userId = userId || localStorage.getItem('lastLoggedInUserId');
+                if (userId) {
+                    if (added) {
+                        await safeSupabaseRest('favorite_shops', {
+                            method: 'POST',
+                            headers: { 'Prefer': 'resolution=merge-duplicates' },
+                            body: JSON.stringify({ customer_id: userId, shop_id: shopId })
+                        });
+                    } else {
+                        await safeSupabaseRest(`favorite_shops?customer_id=eq.${userId}&shop_id=eq.${shopId}`, {
+                            method: 'DELETE'
+                        });
                     }
                 }
             } catch (favErr) {
@@ -929,78 +946,112 @@ tailwind.config = {
             }
         } catch (_) {}
 
+        // REST Helper for resilient direct queries (fallback for SDK protocol/token resets)
+        async function fetchDiscoveryRest(endpoint) {
+            try {
+                const sUrl = window.SUPABASE_URL || 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+                const sKey = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+                const res = await fetch(`${sUrl}/rest/v1/${endpoint}`, {
+                    headers: {
+                        'apikey': sKey,
+                        'Authorization': `Bearer ${sKey}`
+                    }
+                });
+                if (res.ok) {
+                    return await res.json();
+                }
+            } catch (err) {
+                console.warn(`Direct fetch fallback notice on [${endpoint}]:`, err);
+            }
+            return null;
+        }
+
         // Layer 2: Fast-Track Background Sync from Supabase
         (async () => {
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                if (client) {
-                    const { data: dbShops, error: shopErr } = await client.from('shops').select('*');
-                    if (dbShops && dbShops.length > 0) {
-                        const { data: allServices } = await client.from('services').select('*');
-                        const { data: allProfiles } = await client.from('profiles').select('id, avatar_url');
+                
+                // 1. Fetch live shops via safeSupabaseRest
+                let dbShops = null;
+                const { data: shopsData } = await safeSupabaseRest('shops?select=*');
+                if (Array.isArray(shopsData) && shopsData.length > 0) dbShops = shopsData;
 
-                        shops = dbShops.map((db, i) => {
-                            const shopServices = (allServices || []).filter(srv => srv.shop_id === db.id);
-                            const minPrice = shopServices.length > 0 ? Math.min(...shopServices.map(srv => parseFloat(srv.price) || 200)) : 150;
-                            const ownerProf = (allProfiles || []).find(p => p.id === db.owner_id);
-                            const logo = db.logo_url || ownerProf?.avatar_url || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80';
+                // 2. If shops are present in database, fetch related services and profiles
+                if (Array.isArray(dbShops) && dbShops.length > 0) {
+                    let allServices = null;
+                    const { data: srvData } = await safeSupabaseRest('services?select=*');
+                    if (Array.isArray(srvData)) allServices = srvData;
 
-                            const offset = SHOP_OFFSETS[i % SHOP_OFFSETS.length];
-                            const lat = (db.latitude !== null && db.latitude !== undefined && !isNaN(Number(db.latitude))) ? Number(db.latitude) : (userLocation[0] + offset.latOff);
-                            const lng = (db.longitude !== null && db.longitude !== undefined && !isNaN(Number(db.longitude))) ? Number(db.longitude) : (userLocation[1] + offset.lngOff);
-                            const distKm = calculateDistanceKm(userLocation[0], userLocation[1], lat, lng);
+                    let allProfiles = null;
+                    const { data: profData } = await safeSupabaseRest('profiles?select=id,avatar_url');
+                    if (Array.isArray(profData)) allProfiles = profData;
 
-                            return {
-                                id: db.id,
-                                name: db.name || 'ร้านคาร์แคร์',
-                                distance: distKm + ' กม.',
-                                rating: db.rating ? Number(db.rating).toFixed(1) : '5.0',
-                                reviews: db.review_count ? `${db.review_count} รีวิว` : 'ใหม่',
-                                tags: (db.facilities && db.facilities.length > 0) ? db.facilities : ['คาร์แคร์', 'ล้างสีดูดฝุ่น'],
-                                price: '฿' + minPrice,
-                                image: logo,
-                                lat: Number(lat.toFixed(6)),
-                                lng: Number(lng.toFixed(6)),
-                                badge: db.is_open ? 'เปิดอยู่' : 'ปิดชั่วคราว',
-                                badgeColor: db.is_open ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
-                            };
-                        });
+                    shops = dbShops.map((db, i) => {
+                        const shopServices = (allServices || []).filter(srv => srv.shop_id === db.id);
+                        const minPrice = shopServices.length > 0 ? Math.min(...shopServices.map(srv => parseFloat(srv.price_s || srv.price) || 200)) : 150;
+                        const ownerProf = (allProfiles || []).find(p => p.id === db.owner_id);
+                        const logo = db.logo_url || ownerProf?.avatar_url || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80';
 
-                        // Cache fresh shops for next instant 0ms load
-                        localStorage.setItem('cachedDiscoveryShops', JSON.stringify(shops));
-                    } else if (!hasCachedShops) {
+                        const offset = SHOP_OFFSETS[i % SHOP_OFFSETS.length];
+                        const lat = (db.latitude !== null && db.latitude !== undefined && !isNaN(Number(db.latitude))) ? Number(db.latitude) : (userLocation[0] + offset.latOff);
+                        const lng = (db.longitude !== null && db.longitude !== undefined && !isNaN(Number(db.longitude))) ? Number(db.longitude) : (userLocation[1] + offset.lngOff);
+                        const distKm = calculateDistanceKm(userLocation[0], userLocation[1], lat, lng);
+
+                        return {
+                            id: db.id,
+                            name: db.name || 'ร้านคาร์แคร์',
+                            distance: distKm + ' กม.',
+                            rating: db.rating ? Number(db.rating).toFixed(1) : '5.0',
+                            reviews: db.review_count ? `${db.review_count} รีวิว` : 'ใหม่',
+                            tags: (db.facilities && db.facilities.length > 0) ? db.facilities : ['คาร์แคร์', 'ล้างสีดูดฝุ่น'],
+                            price: '฿' + minPrice,
+                            image: logo,
+                            lat: Number(lat.toFixed(6)),
+                            lng: Number(lng.toFixed(6)),
+                            badge: db.is_open ? 'เปิดอยู่' : 'ปิดชั่วคราว',
+                            badgeColor: db.is_open ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
+                        };
+                    });
+
+                    // Cache fresh shops for next instant 0ms load
+                    localStorage.setItem('cachedDiscoveryShops', JSON.stringify(shops));
+                    renderDesktopCards(shops);
+                    renderMobileCards(shops);
+                    if (map) {
+                        renderMarkers(shops);
+                        fitMapToPoints(true);
+                    }
+                } else if (Array.isArray(dbShops) && dbShops.length === 0) {
+                    if (!hasCachedShops) {
                         shops = [];
+                        renderDesktopCards(shops);
+                        renderMobileCards(shops);
+                        if (map) renderMarkers(shops);
                     }
                 }
             } catch(e) {
                 console.warn('Live shops fetch notice:', e);
-                if (!hasCachedShops) shops = [];
             }
 
-            renderDesktopCards(shops);
-            renderMobileCards(shops);
-            if (map) {
-                renderMarkers(shops);
-                fitMapToPoints(true);
-            }
-
-            // Sync User Favorites from Supabase
+            // Sync User Favorites from Supabase safely
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                let currentCustomerUser = null;
                 if (client?.auth) {
-                    const { data: { user } } = await client.auth.getUser();
-                    if (user) {
-                        const { data: dbFavs } = await client.from('favorite_shops').select('shop_id').eq('customer_id', user.id);
-                        if (dbFavs) {
-                            const ids = dbFavs.map(f => f.shop_id);
-                            localStorage.setItem('favoriteShopIds', JSON.stringify(ids));
-                            renderDesktopCards(shops);
-                            renderMobileCards(shops);
-                        }
+                    const sess = await client.auth.getSession().catch(() => null);
+                    currentCustomerUser = sess?.data?.session?.user;
+                }
+                if (currentCustomerUser?.id) {
+                    const { data: dbFavs } = await safeSupabaseRest(`favorite_shops?customer_id=eq.${currentCustomerUser.id}&select=shop_id`);
+                    if (Array.isArray(dbFavs)) {
+                        const ids = dbFavs.map(f => f.shop_id);
+                        localStorage.setItem('favoriteShopIds', JSON.stringify(ids));
+                        renderDesktopCards(shops);
+                        renderMobileCards(shops);
                     }
                 }
             } catch (favSyncErr) {
-                console.warn('Sync favorites error:', favSyncErr);
+                console.warn('Sync favorites notice:', favSyncErr);
             }
         })();
         
@@ -1109,20 +1160,26 @@ tailwind.config = {
             }
         }
 
-        // Live Supabase check
+        // Live Supabase check via safeSupabaseRest
         try {
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            let userId = null;
             if (client?.auth) {
-                const { data: { user } } = await client.auth.getUser();
-                if (user) {
-                    const { data: prof } = await client.from('profiles').select('avatar_url, full_name').eq('id', user.id).maybeSingle();
-                    if (prof?.avatar_url && avatar) {
-                        avatar.src = prof.avatar_url;
-                        const cur = JSON.parse(localStorage.getItem('customerProfile') || '{}');
-                        cur.avatar = prof.avatar_url;
-                        if (prof.full_name) cur.fullName = prof.full_name;
-                        localStorage.setItem('customerProfile', JSON.stringify(cur));
-                    }
+                try {
+                    const { data: s } = await client.auth.getSession();
+                    userId = s?.session?.user?.id;
+                } catch (_) {}
+            }
+            userId = userId || localStorage.getItem('lastLoggedInUserId');
+            if (userId) {
+                const { data } = await safeSupabaseRest(`profiles?select=avatar_url,full_name&id=eq.${userId}&limit=1`);
+                const prof = Array.isArray(data) && data.length > 0 ? data[0] : null;
+                if (prof?.avatar_url && avatar) {
+                    avatar.src = prof.avatar_url;
+                    const cur = JSON.parse(localStorage.getItem('customerProfile') || '{}');
+                    cur.avatar = prof.avatar_url;
+                    if (prof.full_name) cur.fullName = prof.full_name;
+                    localStorage.setItem('customerProfile', JSON.stringify(cur));
                 }
             }
         } catch(profErr) {

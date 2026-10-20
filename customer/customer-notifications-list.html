@@ -224,33 +224,27 @@
     async function loadLiveNotifications() {
         try {
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            if (!client?.auth) {
+            let user = null;
+            if (client?.auth) {
+                const sessRes = await client.auth.getSession().catch(() => null);
+                user = sessRes?.data?.session?.user;
+            }
+            const uid = user?.id || localStorage.getItem('lastLoggedInUserId');
+            const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+
+            if (!uid || !fetcher) {
                 showEmptyState(true);
                 return;
             }
 
-            const { data: { user } } = await client.auth.getUser();
-            if (!user) {
+            const notifs = await fetcher(`notifications?user_id=eq.${uid}&order=created_at.desc`);
+            if (Array.isArray(notifs)) {
+                userNotifications = notifs;
+                localStorage.setItem('cachedCustomerNotifications', JSON.stringify(userNotifications));
+                renderNotificationsList(userNotifications);
+            } else {
                 showEmptyState(true);
-                return;
             }
-
-            const { data: notifs, error } = await client
-                .from('notifications')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                console.warn('Notifications fetch error:', error);
-                showEmptyState(true);
-                return;
-            }
-
-            userNotifications = notifs || [];
-            localStorage.setItem('cachedCustomerNotifications', JSON.stringify(userNotifications));
-            renderNotificationsList(userNotifications);
-
         } catch (e) {
             console.warn('Notifications exception:', e);
             if (!localStorage.getItem('cachedCustomerNotifications')) {
@@ -311,12 +305,19 @@
 
         try {
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            let user = null;
             if (client?.auth) {
-                const { data: { user } } = await client.auth.getUser();
-                if (user) {
-                    await client.from('notifications').update({ is_read: true }).eq('user_id', user.id);
-                    await loadLiveNotifications();
-                }
+                const sessRes = await client.auth.getSession().catch(() => null);
+                user = sessRes?.data?.session?.user;
+            }
+            const uid = user?.id || localStorage.getItem('lastLoggedInUserId');
+            const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+            if (uid && fetcher) {
+                await fetcher(`notifications?user_id=eq.${uid}`, {
+                    method: 'PATCH',
+                    body: { is_read: true }
+                });
+                await loadLiveNotifications();
             }
         } catch(e) {}
     }
@@ -362,14 +363,19 @@
         (async () => {
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                let user = null;
                 if (client?.auth) {
-                    const { data: { user } } = await client.auth.getUser();
-                    if (user) {
-                        const { data: prof } = await client.from('profiles').select('avatar_url, full_name').eq('id', user.id).maybeSingle();
-                        if (prof?.avatar_url) {
-                            const avatar = document.getElementById('desktop-header-avatar');
-                            if (avatar) avatar.src = prof.avatar_url;
-                        }
+                    const sessRes = await client.auth.getSession().catch(() => null);
+                    user = sessRes?.data?.session?.user;
+                }
+                const uid = user?.id || localStorage.getItem('lastLoggedInUserId');
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                if (uid && fetcher) {
+                    const profs = await fetcher(`profiles?id=eq.${uid}&select=avatar_url,full_name&limit=1`);
+                    const prof = Array.isArray(profs) && profs.length > 0 ? profs[0] : null;
+                    if (prof?.avatar_url) {
+                        const avatar = document.getElementById('desktop-header-avatar');
+                        if (avatar) avatar.src = prof.avatar_url;
                     }
                 }
             } catch(e) {}

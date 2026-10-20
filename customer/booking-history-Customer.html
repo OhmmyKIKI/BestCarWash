@@ -1918,17 +1918,22 @@
         (async () => {
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                const sessRes = await client.auth.getSession();
-                const user = sessRes?.data?.session?.user;
-                if (!user) return;
+                let user = null;
+                if (client?.auth) {
+                    const sessRes = await client.auth.getSession().catch(() => null);
+                    user = sessRes?.data?.session?.user;
+                }
+                const uid = user?.id || localStorage.getItem('lastLoggedInUserId');
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                if (!uid || !fetcher) return;
 
-                // Parallel fetch profile and bookings
+                // Parallel fetch profile and bookings via safeSupabaseRest
                 const [profRes, bookingsRes] = await Promise.all([
-                    client.from('profiles').select('avatar_url, full_name').eq('id', user.id).maybeSingle(),
-                    client.from('bookings').select('*, shops(name, phone_number)').eq('customer_id', user.id).order('created_at', { ascending: false })
+                    fetcher(`profiles?id=eq.${uid}&select=avatar_url,full_name&limit=1`),
+                    fetcher(`bookings?customer_id=eq.${uid}&select=*,shops(name,phone_number)&order=created_at.desc`)
                 ]);
 
-                const profile = profRes?.data;
+                const profile = Array.isArray(profRes) && profRes.length > 0 ? profRes[0] : null;
                 if (profile) {
                     if (profile.avatar_url) {
                         const avatar = document.getElementById('customer-header-avatar');
@@ -1940,7 +1945,7 @@
                     }
                 }
 
-                const dbBookings = bookingsRes?.data;
+                const dbBookings = Array.isArray(bookingsRes) ? bookingsRes : [];
 
                 if (dbBookings && dbBookings.length > 0) {
                     // Check if user has an active ongoing booking

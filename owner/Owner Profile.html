@@ -590,9 +590,10 @@
                     return;
                 }
 
-                // 2. Fetch Profile & Role Guard (Single clean call)
+                // 2. Fetch Profile & Role Guard (Single clean call via safeSupabaseRest)
                 if (effectiveUserId) {
-                    client.from('profiles').select('avatar_url, full_name, role').eq('id', effectiveUserId).maybeSingle().then(({ data: profile, error: pErr }) => {
+                    safeSupabaseRest(`profiles?select=avatar_url,full_name,role&id=eq.${effectiveUserId}&limit=1`).then(({ data: profileList, error: pErr }) => {
+                        const profile = Array.isArray(profileList) && profileList.length > 0 ? profileList[0] : null;
                         if (profile) {
                             if (profile.role === 'CUSTOMER' || currentUser?.user_metadata?.role === 'CUSTOMER') {
                                 const mainContainer = document.querySelector('main');
@@ -637,12 +638,12 @@
                     }).catch(() => {});
                 }
 
-                // 3. Resolve Shop cleanly with graceful fallback
+                // 3. Resolve Shop cleanly with graceful fallback via safeSupabaseRest
                 let shop = null;
                 if (savedShopId && savedShopId.length > 20) {
                     try {
-                        const { data: s } = await client.from('shops').select('*').eq('id', savedShopId).maybeSingle();
-                        if (s) shop = s;
+                        const { data: sList } = await safeSupabaseRest(`shops?select=*&id=eq.${savedShopId}&limit=1`);
+                        if (sList && sList.length > 0) shop = sList[0];
                     } catch(e) {
                         console.warn('Network sync notice (shop by id):', e);
                     }
@@ -650,8 +651,8 @@
 
                 if (!shop && effectiveUserId) {
                     try {
-                        const { data: s } = await client.from('shops').select('*').eq('owner_id', effectiveUserId).maybeSingle();
-                        if (s) shop = s;
+                        const { data: sList } = await safeSupabaseRest(`shops?select=*&owner_id=eq.${effectiveUserId}&limit=1`);
+                        if (sList && sList.length > 0) shop = sList[0];
                     } catch(e) {
                         console.warn('Network sync notice (shop by owner):', e);
                     }
@@ -689,9 +690,9 @@
                         }
                     }
 
-                    // 4. Fetch Bookings stats cleanly
+                    // 4. Fetch Bookings stats cleanly via safeSupabaseRest
                     try {
-                        const { data: bookings, error: bErr } = await client.from('bookings').select('id, status').eq('shop_id', targetShopId);
+                        const { data: bookings, error: bErr } = await safeSupabaseRest(`bookings?select=id,status&shop_id=eq.${targetShopId}`);
                         if (!bErr && bookings && bookings.length > 0) {
                             const completedCount = bookings.filter(b => b.status === 'completed').length;
                             const todayCount = bookings.filter(b => ['confirmed', 'arrived', 'washing', 'ready'].includes(b.status)).length;
@@ -703,18 +704,18 @@
                         }
                     } catch (_) {}
 
-                    // 5. Fetch Operating Hours summary cleanly
+                    // 5. Fetch Operating Hours summary cleanly via safeSupabaseRest
                     try {
-                        const { data: dbHours, error: hErr } = await client.from('shop_operating_hours').select('*').eq('shop_id', targetShopId).order('day_of_week', { ascending: true });
+                        const { data: dbHours, error: hErr } = await safeSupabaseRest(`shop_operating_hours?select=*&shop_id=eq.${targetShopId}&order=day_of_week.asc`);
                         if (!hErr && dbHours && dbHours.length > 0) {
                             localStorage.setItem('ownerOperatingHours', JSON.stringify(dbHours));
                             updateHoursSummaryOnProfile();
                         }
                     } catch (_) {}
 
-                    // 6. Fetch Reviews summary cleanly
+                    // 6. Fetch Reviews summary cleanly via safeSupabaseRest
                     try {
-                        const { data: dbReviews, error: rErr } = await client.from('reviews').select('rating').eq('shop_id', targetShopId);
+                        const { data: dbReviews, error: rErr } = await safeSupabaseRest(`reviews?select=rating&shop_id=eq.${targetShopId}`);
                         if (!rErr && dbReviews && dbReviews.length > 0) {
                             const revCount = dbReviews.length;
                             const avgRating = (dbReviews.reduce((sum, r) => sum + (parseFloat(r.rating) || 5), 0) / revCount).toFixed(1);
@@ -744,11 +745,17 @@
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
                 let activeId = null;
                 if (client?.auth) {
-                    activeId = (await client.auth.getSession())?.data?.session?.user?.id || (await client.auth.getUser())?.data?.user?.id;
+                    try {
+                        const s = await client.auth.getSession();
+                        activeId = s?.data?.session?.user?.id;
+                    } catch (_) {}
                 }
                 activeId = activeId || localStorage.getItem('lastLoggedInUserId');
-                if (activeId && client) {
-                    await client.from('profiles').update({ avatar_url: null }).eq('id', activeId);
+                if (activeId) {
+                    await safeSupabaseRest(`profiles?id=eq.${activeId}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ avatar_url: null })
+                    });
                 }
             } catch(err) {
                 console.warn('Reset profile avatar error:', err);
@@ -801,11 +808,17 @@
                                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
                                 let activeId = null;
                                 if (client?.auth) {
-                                    activeId = (await client.auth.getSession())?.data?.session?.user?.id || (await client.auth.getUser())?.data?.user?.id;
+                                    try {
+                                        const s = await client.auth.getSession();
+                                        activeId = s?.data?.session?.user?.id;
+                                    } catch (_) {}
                                 }
                                 activeId = activeId || localStorage.getItem('lastLoggedInUserId');
-                                if (activeId && client) {
-                                    await client.from('profiles').update({ avatar_url: compressed }).eq('id', activeId);
+                                if (activeId) {
+                                    await safeSupabaseRest(`profiles?id=eq.${activeId}`, {
+                                        method: 'PATCH',
+                                        body: JSON.stringify({ avatar_url: compressed })
+                                    });
                                 }
                             } catch(err) {
                                 console.warn('Update profile avatar error:', err);

@@ -290,13 +290,18 @@
 
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                let uid = null;
                 if (client?.auth) {
-                    client.auth.getSession().then(({ data: sessData }) => {
-                        const uid = sessData?.session?.user?.id;
-                        if (uid) {
-                            client.from('favorite_shops').delete().match({ customer_id: uid, shop_id: shopId }).then().catch(() => {});
+                    const sess = client.auth.getSession().catch(() => null);
+                    sess.then(s => {
+                        const uid = s?.data?.session?.user?.id || localStorage.getItem('lastLoggedInUserId');
+                        const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                        if (uid && fetcher) {
+                            fetcher(`favorite_shops?customer_id=eq.${uid}&shop_id=eq.${shopId}`, {
+                                method: 'DELETE'
+                            }).catch(() => {});
                         }
-                    }).catch(() => {});
+                    });
                 }
             } catch(e) {}
         }
@@ -325,9 +330,14 @@
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
             if (client?.auth) {
                 client.auth.getSession().then(({ data: sessData }) => {
-                    const uid = sessData?.session?.user?.id;
-                    if (uid) {
-                        client.from('favorite_shops').upsert({ customer_id: uid, shop_id: restoredId }).then().catch(() => {});
+                    const uid = sessData?.session?.user?.id || localStorage.getItem('lastLoggedInUserId');
+                    const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                    if (uid && fetcher) {
+                        fetcher('favorite_shops?on_conflict=customer_id,shop_id', {
+                            method: 'POST',
+                            headers: { 'Prefer': 'resolution=merge-duplicates' },
+                            body: { customer_id: uid, shop_id: restoredId }
+                        }).catch(() => {});
                     }
                 }).catch(() => {});
             }
@@ -543,14 +553,18 @@
         (async () => {
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                if (!client?.auth) return;
-
-                const sessRes = await client.auth.getSession();
-                const user = sessRes?.data?.session?.user;
-                if (!user) return;
+                let user = null;
+                if (client?.auth) {
+                    const sessRes = await client.auth.getSession().catch(() => null);
+                    user = sessRes?.data?.session?.user;
+                }
+                const uid = user?.id || localStorage.getItem('lastLoggedInUserId');
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                if (!uid || !fetcher) return;
 
                 // Profile avatar live sync
-                client.from('profiles').select('avatar_url, full_name').eq('id', user.id).maybeSingle().then(({ data: prof }) => {
+                fetcher(`profiles?id=eq.${uid}&select=avatar_url,full_name&limit=1`).then(profs => {
+                    const prof = Array.isArray(profs) && profs.length > 0 ? profs[0] : null;
                     if (prof?.avatar_url) {
                         const avatar = document.getElementById('desktop-header-avatar');
                         if (avatar) avatar.src = prof.avatar_url;
@@ -562,19 +576,20 @@
                 }).catch(() => {});
 
                 // Favorites list sync from Supabase favorite_shops
-                const { data: favs } = await client.from('favorite_shops').select('shop_id').eq('customer_id', user.id);
-                const favIds = (favs || []).map(f => f.shop_id);
-                saveFavoriteShopIds(favIds);
+                const favs = await fetcher(`favorite_shops?customer_id=eq.${uid}&select=shop_id`);
+                const favIds = Array.isArray(favs) ? favs.map(f => f.shop_id).filter(Boolean) : [];
+                if (favIds.length > 0) saveFavoriteShopIds(favIds);
 
                 if (favIds.length > 0) {
-                    const { data: shops } = await client.from('shops').select('*').in('id', favIds);
-                    if (shops && shops.length > 0) {
+                    const idFilter = favIds.join(',');
+                    const shops = await fetcher(`shops?id=in.(${idFilter})`);
+                    if (Array.isArray(shops) && shops.length > 0) {
                         const [servicesRes, profilesRes] = await Promise.all([
-                            client.from('services').select('*').in('shop_id', favIds),
-                            client.from('profiles').select('id, avatar_url')
+                            fetcher(`services?shop_id=in.(${idFilter})`),
+                            fetcher('profiles?select=id,avatar_url')
                         ]);
-                        const services = servicesRes?.data || [];
-                        const profiles = profilesRes?.data || [];
+                        let services = Array.isArray(servicesRes) ? servicesRes : [];
+                        const profiles = Array.isArray(profilesRes) ? profilesRes : [];
 
                         const newShopsData = {};
                         shops.forEach(s => {

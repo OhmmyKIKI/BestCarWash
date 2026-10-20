@@ -481,23 +481,24 @@
                 const fallbackUserId = localStorage.getItem('lastLoggedInUserId');
                 const cachedShopName = localStorage.getItem('ownerShopName');
 
-                // FAST-TRACK: Query reviews & shop details in parallel with session
+                // FAST-TRACK: Query reviews & shop details in parallel with session via safeSupabaseRest
                 let fastReviewsPromise = null;
                 let fastShopPromise = null;
                 if (savedShopId && savedShopId.length > 20) {
-                    fastReviewsPromise = client
-                        .from('reviews')
-                        .select('*, customer:customer_id(full_name, avatar_url)')
-                        .eq('shop_id', savedShopId)
-                        .order('created_at', { ascending: false });
-                    fastShopPromise = client.from('shops').select('id, name, rating, review_count').eq('id', savedShopId).maybeSingle();
+                    fastReviewsPromise = safeSupabaseRest(`reviews?select=*,customer:customer_id(full_name,avatar_url)&shop_id=eq.${savedShopId}&order=created_at.desc`);
+                    fastShopPromise = safeSupabaseRest(`shops?select=id,name,rating,review_count&id=eq.${savedShopId}&limit=1`);
                 }
 
-                const sessionPromise = client.auth ? client.auth.getSession() : Promise.resolve({ data: null });
+                const sessionPromise = (async () => {
+                    if (client?.auth) {
+                        try { return await client.auth.getSession(); } catch (_) { return { data: null }; }
+                    }
+                    return { data: null };
+                })();
 
                 const [reviewsRes, shopRes, sessRes] = await Promise.all([
-                    fastReviewsPromise || Promise.resolve(null),
-                    fastShopPromise || Promise.resolve(null),
+                    fastReviewsPromise || Promise.resolve({ data: null }),
+                    fastShopPromise || Promise.resolve({ data: null }),
                     sessionPromise
                 ]);
 
@@ -511,9 +512,10 @@
                     return;
                 }
 
-                // Non-blocking Role Guard in background
+                // Non-blocking Role Guard in background via safeSupabaseRest
                 if (effectiveUserId) {
-                    client.from('profiles').select('role').eq('id', effectiveUserId).maybeSingle().then(({ data: prof }) => {
+                    safeSupabaseRest(`profiles?select=role&id=eq.${effectiveUserId}&limit=1`).then(({ data: pList }) => {
+                        const prof = Array.isArray(pList) && pList.length > 0 ? pList[0] : null;
                         if (prof?.role === 'CUSTOMER' || user?.user_metadata?.role === 'CUSTOMER') {
                             const mainContainer = document.querySelector('main');
                             if (mainContainer) {
@@ -540,14 +542,14 @@
                 }
 
                 // Resolve shop (fast-track or fallback)
-                let shop = shopRes?.data || null;
+                let shop = (shopRes?.data && shopRes.data.length > 0) ? shopRes.data[0] : null;
                 if (!shop && effectiveUserId) {
-                    const { data: shopByOwner } = await client.from('shops').select('id, name, rating, review_count').eq('owner_id', effectiveUserId).maybeSingle();
-                    if (shopByOwner) shop = shopByOwner;
+                    const { data: sList } = await safeSupabaseRest(`shops?select=id,name,rating,review_count&owner_id=eq.${effectiveUserId}&limit=1`);
+                    if (sList && sList.length > 0) shop = sList[0];
                 }
                 if (!shop && cachedShopName) {
-                    const { data: shopByName } = await client.from('shops').select('id, name, rating, review_count').eq('name', cachedShopName).maybeSingle();
-                    if (shopByName) shop = shopByName;
+                    const { data: sList } = await safeSupabaseRest(`shops?select=id,name,rating,review_count&name=eq.${encodeURIComponent(cachedShopName)}&limit=1`);
+                    if (sList && sList.length > 0) shop = sList[0];
                 }
 
                 if (!shop) {
@@ -569,11 +571,7 @@
 
                 let reviews = reviewsRes?.data;
                 if (!reviews) {
-                    const { data } = await client
-                        .from('reviews')
-                        .select('*, customer:customer_id(full_name, avatar_url)')
-                        .eq('shop_id', shop.id)
-                        .order('created_at', { ascending: false });
+                    const { data } = await safeSupabaseRest(`reviews?select=*,customer:customer_id(full_name,avatar_url)&shop_id=eq.${shop.id}&order=created_at.desc`);
                     reviews = data;
                 }
 
@@ -638,12 +636,12 @@
                 localStorage.setItem('ownerReviewsReplies', JSON.stringify(replies));
             } catch(e) {}
 
-            // Try updating Supabase reviews table
+            // Try updating Supabase reviews table via safeSupabaseRest
             try {
-                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                if (client) {
-                    await client.from('reviews').update({ reply: text, replied_at: new Date().toISOString() }).eq('id', reviewId);
-                }
+                await safeSupabaseRest(`reviews?id=eq.${reviewId}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ reply: text, replied_at: new Date().toISOString() })
+                });
             } catch(err) {
                 console.warn('Update review reply in Supabase notice:', err);
             }

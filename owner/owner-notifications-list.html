@@ -151,22 +151,20 @@
     async function loadOwnerNotifications() {
         try {
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            if (!client?.auth) {
+            let userId = null;
+            if (client?.auth) {
+                try {
+                    const { data: s } = await client.auth.getSession();
+                    userId = s?.session?.user?.id;
+                } catch(_) {}
+            }
+            userId = userId || localStorage.getItem('lastLoggedInUserId');
+            if (!userId) {
                 if (!localStorage.getItem('cachedOwnerNotifications')) showEmptyState(true);
                 return;
             }
 
-            const { data: { user } } = await client.auth.getUser();
-            if (!user) {
-                if (!localStorage.getItem('cachedOwnerNotifications')) showEmptyState(true);
-                return;
-            }
-
-            const { data: notifs, error } = await client
-                .from('notifications')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
+            const { data: notifs, error } = await safeSupabaseRest(`notifications?user_id=eq.${userId}&order=created_at.desc`);
 
             if (error) {
                 console.warn('Owner notifications fetch error:', error);
@@ -186,12 +184,20 @@
     async function markAllAsRead() {
         try {
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            let userId = null;
             if (client?.auth) {
-                const { data: { user } } = await client.auth.getUser();
-                if (user) {
-                    await client.from('notifications').update({ is_read: true }).eq('user_id', user.id);
-                    await loadOwnerNotifications();
-                }
+                try {
+                    const { data: s } = await client.auth.getSession();
+                    userId = s?.session?.user?.id;
+                } catch(_) {}
+            }
+            userId = userId || localStorage.getItem('lastLoggedInUserId');
+            if (userId) {
+                await safeSupabaseRest(`notifications?user_id=eq.${userId}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ is_read: true })
+                });
+                await loadOwnerNotifications();
             }
         } catch(e) {
             console.warn('Owner mark read error:', e);

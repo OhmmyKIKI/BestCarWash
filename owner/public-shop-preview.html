@@ -614,7 +614,7 @@
                 return srvs.map((s, idx) => ({
                     id: s.id || `srv_local_${idx}`,
                     name: s.name,
-                    price: parseFloat(s.price) || 150,
+                    price: parseFloat(s.price_s || s.price) || 150,
                     duration: `${s.duration_minutes || s.duration || 30} นาที`,
                     popular: idx === 1,
                     icon: s.icon || (idx === 0 ? 'local_car_wash' : (idx === 1 ? 'cleaning_services' : 'auto_awesome')),
@@ -1121,30 +1121,26 @@
                 user = data?.user;
             }
 
-            // 1. Fetch Shop by owner_id or selectedShopId
+            // 1. Fetch Shop by owner_id or selectedShopId via safeSupabaseRest
             let shop = null;
             if (user) {
-                const { data } = await client
-                    .from('shops')
-                    .select('*')
-                    .eq('owner_id', user.id)
-                    .maybeSingle();
-                shop = data;
+                const { data } = await safeSupabaseRest(`shops?owner_id=eq.${user.id}&limit=1`);
+                if (data && data.length > 0) shop = data[0];
             }
 
             if (!shop) {
-                const savedShopId = localStorage.getItem('selectedShopId');
+                const savedShopId = localStorage.getItem('selectedShopId') || localStorage.getItem('currentShopId');
                 if (savedShopId) {
-                    const { data } = await client.from('shops').select('*').eq('id', savedShopId).maybeSingle();
-                    shop = data;
+                    const { data } = await safeSupabaseRest(`shops?id=eq.${savedShopId}&limit=1`);
+                    if (data && data.length > 0) shop = data[0];
                 }
             }
 
             if (!shop) {
                 const localName = localStorage.getItem('ownerShopName');
                 if (localName) {
-                    const { data } = await client.from('shops').select('*').eq('name', localName).maybeSingle();
-                    shop = data;
+                    const { data } = await safeSupabaseRest(`shops?name=eq.${encodeURIComponent(localName)}&limit=1`);
+                    if (data && data.length > 0) shop = data[0];
                 }
             }
 
@@ -1240,12 +1236,8 @@
             const customMapLink = user?.user_metadata?.map_link || localStorage.getItem('ownerShopMapLink') || `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
             if (searchLink) searchLink.href = customMapLink;
 
-            // 2. Fetch Operating Hours
-            const { data: hours } = await client
-                .from('shop_operating_hours')
-                .select('*')
-                .eq('shop_id', shop.id)
-                .order('day_of_week', { ascending: true });
+            // 2. Fetch Operating Hours via safeSupabaseRest
+            const { data: hours } = await safeSupabaseRest(`shop_operating_hours?shop_id=eq.${shop.id}&order=day_of_week.asc`);
 
             if (hours && hours.length > 0) {
                 renderOperatingHours(hours);
@@ -1262,12 +1254,12 @@
                 }
             }
 
-            // 3. Fetch Services safely (Strictly NO auto-seed insert into live database)
-            let { data: services } = await client
-                .from('services')
-                .select('*')
-                .eq('shop_id', shop.id)
-                .order('created_at', { ascending: true });
+            // 3. Fetch Services safely via safeSupabaseRest
+            let services = null;
+            try {
+                const res = await safeSupabaseRest(`services?shop_id=eq.${shop.id}&order=created_at.asc`);
+                services = res?.data;
+            } catch (_) {}
 
             if (!services || services.length === 0) {
                 let savedServices = user?.user_metadata?.initial_services;
@@ -1292,7 +1284,7 @@
                     return {
                         id: srv.id || `srv_${idx}`,
                         name: srv.name,
-                        price: parseFloat(srv.price) || 150,
+                        price: parseFloat(srv.price_s || srv.price) || 150,
                         duration: `${srv.duration_minutes || srv.duration || 30} นาที`,
                         popular: idx === 1,
                         icon: srv.icon || icon,
@@ -1303,12 +1295,8 @@
 
             renderPackages();
 
-            // 4. Fetch Live Customer Reviews
-            const { data: dbReviews } = await client
-                .from('reviews')
-                .select('*, customer:customer_id(full_name, avatar_url)')
-                .eq('shop_id', shop.id)
-                .order('created_at', { ascending: false });
+            // 4. Fetch Live Customer Reviews via safeSupabaseRest
+            const { data: dbReviews } = await safeSupabaseRest(`reviews?select=*,customer:customer_id(full_name,avatar_url)&shop_id=eq.${shop.id}&order=created_at.desc`);
 
             renderShopReviews(dbReviews || []);
 

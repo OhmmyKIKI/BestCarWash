@@ -828,23 +828,27 @@
             }
         }
 
-        // Background profile sync
+        // Background profile sync via safeSupabaseRest
         (async () => {
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                let user = null;
                 if (client?.auth) {
-                    const sessRes = await client.auth.getSession();
-                    const user = sessRes?.data?.session?.user;
-                    if (user) {
-                        const { data: prof } = await client.from('profiles').select('avatar_url, full_name').eq('id', user.id).maybeSingle();
-                        if (prof?.avatar_url) {
-                            const avatar = document.getElementById('desktop-header-avatar');
-                            if (avatar) avatar.src = prof.avatar_url;
-                        }
-                        if (prof?.full_name) {
-                            const nameEl = document.getElementById('desktop-header-name');
-                            if (nameEl) nameEl.innerText = prof.full_name;
-                        }
+                    const sessRes = await client.auth.getSession().catch(() => null);
+                    user = sessRes?.data?.session?.user;
+                }
+                const uid = user?.id || localStorage.getItem('lastLoggedInUserId');
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                if (uid && fetcher) {
+                    const profs = await fetcher(`profiles?id=eq.${uid}&select=avatar_url,full_name&limit=1`);
+                    const prof = Array.isArray(profs) && profs.length > 0 ? profs[0] : null;
+                    if (prof?.avatar_url) {
+                        const avatar = document.getElementById('desktop-header-avatar');
+                        if (avatar) avatar.src = prof.avatar_url;
+                    }
+                    if (prof?.full_name) {
+                        const nameEl = document.getElementById('desktop-header-name');
+                        if (nameEl) nameEl.innerText = prof.full_name;
                     }
                 }
             } catch(_) {}

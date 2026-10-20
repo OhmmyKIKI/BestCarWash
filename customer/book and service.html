@@ -981,15 +981,24 @@
         // Persist to Supabase
         try {
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            let uid = null;
             if (client?.auth) {
-                const { data: { user } } = await client.auth.getUser();
-                if (user) {
-                    await client.from('vehicles').insert({
-                        customer_id: user.id,
-                        brand_model: brand,
-                        plate_number: plate,
-                        car_size: size,
-                        is_default: isPrimary
+                const sess = await client.auth.getSession().catch(() => null);
+                uid = sess?.data?.session?.user?.id;
+            }
+            if (!uid) uid = localStorage.getItem('lastLoggedInUserId');
+            if (uid) {
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                if (fetcher) {
+                    await fetcher('vehicles', {
+                        method: 'POST',
+                        body: {
+                            customer_id: uid,
+                            brand_model: brand,
+                            plate_number: plate,
+                            car_size: size,
+                            is_default: isPrimary
+                        }
                     });
                 }
             }
@@ -1401,21 +1410,58 @@
                 localStorage.setItem('appBookingsList', JSON.stringify(list));
             } catch(e) {}
 
-            // Sync to Supabase bookings table
+            // Sync to Supabase bookings table via safeSupabaseRest
             (async () => {
                 try {
+                    let validShopId = currentShop?.id;
+                    const isValidUuid = id => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+                    if (!isValidUuid(validShopId)) {
+                        const cachedId = localStorage.getItem('currentShopId') || localStorage.getItem('selectedShopId');
+                        if (isValidUuid(cachedId)) {
+                            validShopId = cachedId;
+                        } else {
+                            const shops = await (window.safeSupabaseRest || window.fetchSupabaseRest)('shops?select=id&limit=1');
+                            if (Array.isArray(shops) && shops.length > 0) validShopId = shops[0].id;
+                        }
+                    }
+
                     const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                    let userId = null;
                     if (client?.auth) {
-                        const { data: { user } } = await client.auth.getUser();
-                        if (user) {
-                            await client.from('bookings').insert({
-                                customer_id: user.id,
-                                status: 'PENDING',
-                                booking_date: new Date().toISOString().split('T')[0],
-                                total_price: parseFloat(selectedServicePrice) || 450,
-                                deposit_amount: 50.00,
-                                notes: `${activeBooking.serviceName} - ${activeBooking.carName}`
+                        const sess = await client.auth.getSession().catch(() => null);
+                        userId = sess?.data?.session?.user?.id;
+                    }
+                    if (!userId) userId = localStorage.getItem('lastLoggedInUserId');
+
+                    if (userId && isValidUuid(validShopId)) {
+                        const rawTime = (selectedTimeText || '10:00').replace(/[^0-9:]/g, '');
+                        const cleanTime = rawTime.includes(':') ? (rawTime.length === 5 ? `${rawTime}:00` : rawTime) : '10:00:00';
+                        const bookingPayload = {
+                            customer_id: userId,
+                            shop_id: validShopId,
+                            status: 'PENDING',
+                            booking_date: new Date().toISOString().split('T')[0],
+                            booking_time: cleanTime,
+                            vehicle_info: `${carBrand} (${carPlate}) - ${carSize}`,
+                            total_price: parseFloat(selectedServicePrice) || 450,
+                            customer_phone: customerPhone || '-',
+                            notes: `${activeBooking.serviceName} | สลิป: ${uploadedSlipData ? 'แนบแล้ว' : 'ชำระหน้าร้าน'}`
+                        };
+
+                        const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                        if (fetcher) {
+                            const inserted = await fetcher('bookings', {
+                                method: 'POST',
+                                headers: { 'Prefer': 'return=representation' },
+                                body: bookingPayload
                             });
+
+                            if (inserted && Array.isArray(inserted) && inserted.length > 0) {
+                                activeBooking.id = inserted[0].id;
+                                activeBooking.bookingId = '#' + inserted[0].id.slice(0, 8).toUpperCase();
+                                localStorage.setItem('activeCustomerBooking', JSON.stringify(activeBooking));
+                            }
                         }
                     }
                 } catch(bErr) {
@@ -1669,60 +1715,62 @@
         // ========================================================
         (async () => {
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            if (!client) return;
+            const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+            if (!fetcher) return;
 
             // Sync vehicles
-            if (client.auth) {
-                client.auth.getUser().then(({ data: userData }) => {
-                    const user = userData?.user;
-                    if (!user) return;
-                    client.from('vehicles')
-                        .select('*')
-                        .eq('customer_id', user.id)
-                        .order('is_default', { ascending: false })
-                        .then(({ data: dbVehicles }) => {
-                            if (dbVehicles) {
-                                const mapped = dbVehicles.map(v => ({
-                                    id: v.id,
-                                    brand: v.brand_model,
-                                    plate: v.plate_number,
-                                    size: v.car_size || 'M',
-                                    isPrimary: v.is_default || false
-                                }));
-                                saveCarsToStorage(mapped);
-                                renderCarsList();
-                            }
-                        }).catch(e => console.warn('Book page vehicles fetch notice:', e));
-                }).catch(() => {});
+            try {
+                let uid = null;
+                if (client?.auth) {
+                    const sess = await client.auth.getSession().catch(() => null);
+                    uid = sess?.data?.session?.user?.id;
+                }
+                if (!uid) uid = localStorage.getItem('lastLoggedInUserId');
+                if (uid) {
+                    const dbVehicles = await fetcher(`vehicles?customer_id=eq.${uid}&order=is_default.desc`);
+                    if (Array.isArray(dbVehicles) && dbVehicles.length > 0) {
+                        const mapped = dbVehicles.map(v => ({
+                            id: v.id,
+                            brand: v.brand_model,
+                            plate: v.plate_number,
+                            size: v.car_size || 'M',
+                            isPrimary: v.is_default || false
+                        }));
+                        saveCarsToStorage(mapped);
+                        renderCarsList();
+                    }
+                }
+            } catch(e) {
+                console.warn('Book page vehicles fetch notice:', e);
             }
 
             // Sync live shop
             try {
                 let dbShop = null;
                 if (paramShopId) {
-                    const { data } = await client.from('shops').select('*').eq('id', paramShopId).maybeSingle();
-                    dbShop = data;
+                    const shops = await fetcher(`shops?id=eq.${paramShopId}&limit=1`);
+                    if (Array.isArray(shops) && shops.length > 0) dbShop = shops[0];
                 }
-                if (!dbShop && client.auth) {
-                    const { data: userData } = await client.auth.getUser();
-                    if (userData?.user) {
-                        const { data } = await client.from('shops').select('*').eq('owner_id', userData.user.id).maybeSingle();
-                        dbShop = data;
+                if (!dbShop) {
+                    const cachedShopId = localStorage.getItem('currentShopId');
+                    if (cachedShopId) {
+                        const shops = await fetcher(`shops?id=eq.${cachedShopId}&limit=1`);
+                        if (Array.isArray(shops) && shops.length > 0) dbShop = shops[0];
                     }
                 }
                 if (!dbShop) {
                     const localName = localStorage.getItem('ownerShopName');
                     if (localName) {
-                        const { data } = await client.from('shops').select('*').eq('name', localName).maybeSingle();
-                        dbShop = data;
+                        const shops = await fetcher(`shops?name=eq.${encodeURIComponent(localName)}&limit=1`);
+                        if (Array.isArray(shops) && shops.length > 0) dbShop = shops[0];
                     }
                 }
                 if (!dbShop) {
-                    const { data } = await client.from('shops').select('*').limit(1).maybeSingle();
-                    dbShop = data;
+                    const shops = await fetcher('shops?limit=1');
+                    if (Array.isArray(shops) && shops.length > 0) dbShop = shops[0];
                 }
                 if (dbShop) {
-                    const { data: dbServices } = await client.from('services').select('*').eq('shop_id', dbShop.id);
+                    const dbServices = await fetcher(`services?shop_id=eq.${dbShop.id}&order=created_at.asc`);
                     const liveShopObj = {
                         id: dbShop.id,
                         name: dbShop.name || 'ร้านคาร์แคร์',

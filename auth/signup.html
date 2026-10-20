@@ -545,18 +545,24 @@
                 if (error) throw error;
                 if (!data?.user) throw new Error('ไม่สามารถสร้างบัญชีผู้ใช้ได้ กรุณาลองใหม่อีกครั้ง');
 
-                // 1.5 Update profile avatar & insert initial vehicle in parallel
+                // 1.5 Update profile avatar & insert initial vehicle in parallel via safeSupabaseRest
                 const postTasks = [];
                 if (uploadedCustomerAvatarBase64) {
-                    postTasks.push(client.from('profiles').update({ avatar_url: uploadedCustomerAvatarBase64 }).eq('id', data.user.id).catch(e => console.warn(e)));
+                    postTasks.push(safeSupabaseRest(`profiles?id=eq.${data.user.id}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ avatar_url: uploadedCustomerAvatarBase64 })
+                    }).catch(e => console.warn('Avatar update error:', e)));
                 }
                 if (carModel) {
-                    postTasks.push(client.from('vehicles').insert({
-                        customer_id: data.user.id,
-                        brand_model: carModel,
-                        plate_number: licensePlate || '-',
-                        is_default: true
-                    }).catch(e => console.warn(e)));
+                    postTasks.push(safeSupabaseRest('vehicles', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            customer_id: data.user.id,
+                            brand_model: carModel,
+                            plate_number: licensePlate || '-',
+                            is_default: true
+                        })
+                    }).catch(e => console.warn('Vehicle insert error:', e)));
                 }
                 if (postTasks.length > 0) {
                     await Promise.all(postTasks);

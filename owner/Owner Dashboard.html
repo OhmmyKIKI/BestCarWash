@@ -562,11 +562,7 @@
         const kpiReviewsCount = document.getElementById('kpi-reviews-count');
 
         try {
-            const { data: reviews, error } = await client
-                .from('reviews')
-                .select('*, customer:customer_id(full_name, avatar_url)')
-                .eq('shop_id', shopId)
-                .order('created_at', { ascending: false });
+            const { data: reviews, error } = await safeSupabaseRest(`reviews?select=*,customer:customer_id(full_name,avatar_url)&shop_id=eq.${shopId}&order=created_at.desc`);
 
             const revList = Array.isArray(reviews) ? reviews : [];
 
@@ -707,18 +703,19 @@
             const fallbackUserId = localStorage.getItem('lastLoggedInUserId');
             const cachedShopName = localStorage.getItem('ownerShopName');
 
-            // FAST-TRACK: Launch parallel queries if currentShopId is available
+            // FAST-TRACK: Launch parallel queries via resilient REST
+            const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
             let fastBookingsPromise = null;
             let fastShopPromise = null;
             let fastReviewsPromise = null;
 
-            if (savedShopId && savedShopId.length > 20) {
-                fastBookingsPromise = client.from('bookings').select('*').eq('shop_id', savedShopId).order('created_at', { ascending: false });
-                fastShopPromise = client.from('shops').select('*').eq('id', savedShopId).maybeSingle();
-                fastReviewsPromise = client.from('reviews').select('*').eq('shop_id', savedShopId).order('created_at', { ascending: false });
+            if (savedShopId && savedShopId.length > 20 && fetcher) {
+                fastBookingsPromise = fetcher(`bookings?shop_id=eq.${savedShopId}&order=created_at.desc`);
+                fastShopPromise = fetcher(`shops?id=eq.${savedShopId}&limit=1`);
+                fastReviewsPromise = fetcher(`reviews?shop_id=eq.${savedShopId}&order=created_at.desc`);
             }
 
-            const sessionPromise = client.auth ? client.auth.getSession() : Promise.resolve({ data: null });
+            const sessionPromise = client.auth ? client.auth.getSession().catch(() => ({ data: null })) : Promise.resolve({ data: null });
 
             const [bookingsRes, shopRes, reviewsRes, sessRes] = await Promise.all([
                 fastBookingsPromise || Promise.resolve(null),
@@ -749,8 +746,9 @@
             }
 
             // Non-blocking Role Guard & Profile sync in background
-            if (effectiveUserId) {
-                client.from('profiles').select('avatar_url, full_name, role').eq('id', effectiveUserId).maybeSingle().then(({ data: profile }) => {
+            if (effectiveUserId && fetcher) {
+                fetcher(`profiles?id=eq.${effectiveUserId}&select=avatar_url,full_name,role&limit=1`).then(profs => {
+                    const profile = Array.isArray(profs) && profs.length > 0 ? profs[0] : null;
                     if (profile?.role === 'CUSTOMER' || user?.user_metadata?.role === 'CUSTOMER') {
                         const mainContainer = document.querySelector('main');
                         if (mainContainer) {
@@ -791,14 +789,14 @@
             }
 
             // Resolve Shop: Use fast-track shop if found, else fallback
-            let shop = shopRes?.data || null;
-            if (!shop && effectiveUserId) {
-                const { data: s } = await client.from('shops').select('*').eq('owner_id', effectiveUserId).maybeSingle();
-                if (s) shop = s;
+            let shop = Array.isArray(shopRes) && shopRes.length > 0 ? shopRes[0] : (shopRes?.id ? shopRes : null);
+            if (!shop && effectiveUserId && fetcher) {
+                const s = await fetcher(`shops?owner_id=eq.${effectiveUserId}&limit=1`);
+                if (Array.isArray(s) && s.length > 0) shop = s[0];
             }
-            if (!shop && cachedShopName) {
-                const { data: s } = await client.from('shops').select('*').eq('name', cachedShopName).maybeSingle();
-                if (s) shop = s;
+            if (!shop && cachedShopName && fetcher) {
+                const s = await fetcher(`shops?name=eq.${encodeURIComponent(cachedShopName)}&limit=1`);
+                if (Array.isArray(s) && s.length > 0) shop = s[0];
             }
 
             if (shop) {
@@ -825,10 +823,10 @@
                 }
 
                 // Retrieve bookings (from fast-track or query now)
-                let dbBookings = bookingsRes?.data;
-                if (!dbBookings) {
-                    const { data } = await client.from('bookings').select('*').eq('shop_id', shop.id).order('created_at', { ascending: false });
-                    dbBookings = data;
+                let dbBookings = Array.isArray(bookingsRes) ? bookingsRes : null;
+                if (!dbBookings && fetcher) {
+                    const bList = await fetcher(`bookings?shop_id=eq.${shop.id}&order=created_at.desc`);
+                    if (Array.isArray(bList)) dbBookings = bList;
                 }
                 let list = Array.isArray(dbBookings) ? dbBookings : [];
 

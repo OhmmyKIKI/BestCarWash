@@ -544,6 +544,10 @@
             const targetId = delBtn.getAttribute('data-id');
             specialHolidays = specialHolidays.filter((h, idx) => (h.id || `hol_${idx}`) !== targetId);
             localStorage.setItem('ownerSpecialHolidays', JSON.stringify(specialHolidays));
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (client?.auth) {
+                client.auth.updateUser({ data: { special_holidays: specialHolidays } }).catch(() => {});
+            }
             renderHolidays();
             updateLiveStatus();
         });
@@ -682,7 +686,21 @@
             }
         }
 
-        // 5. Dual-Layer Loading: Cache-First (0ms Instant Display) + Fast-Track Background Sync
+        // Helper: Validate UUID format
+        function isValidUuid(id) {
+            return typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        }
+
+        // Use centralized resilient REST helper from supabase-client.js
+        const fetchSupabaseRest = (endpoint, options) => (window.safeSupabaseRest || window.fetchSupabaseRest)(endpoint, options);
+
+        // Direct REST fetch for operating hours (bypasses expired session tokens)
+        async function fetchOperatingHoursRest(shopId) {
+            if (!shopId || !isValidUuid(shopId)) return null;
+            return await fetchSupabaseRest(`shop_operating_hours?shop_id=eq.${shopId}&order=day_of_week.asc&select=*`);
+        }
+
+        // 5. Dual-Layer Loading: Cache-First (0ms Instant Display) + REST Fast-Track Sync
         async function loadOperatingHours() {
             // Layer 1: INSTANT 0ms RENDER from LocalStorage (Stale-While-Revalidate)
             let hasCache = false;
@@ -705,53 +723,25 @@
             loadSpecialHolidays();
             updateLiveStatus();
 
-            if (!hasCache) {
-                setCloudSyncStatus('syncing', 'กำลังโหลดเวลาเปิด-ปิด...');
-            }
+            setCloudSyncStatus('syncing', 'กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...');
 
-            // Layer 2: Fast-Track Background Sync with Supabase (Parallel Execution)
+            // Layer 2: Fast-Track Background Sync with Supabase (REST First to avoid expired token drops)
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                if (!client) {
-                    setCloudSyncStatus(hasCache ? 'offline' : 'offline', 'ระบบออฟไลน์ (ใช้ข้อมูลในเครื่อง)');
-                    return;
-                }
-
-                const savedShopId = localStorage.getItem('currentShopId');
+                let savedShopId = localStorage.getItem('currentShopId');
                 const fallbackUserId = localStorage.getItem('lastLoggedInUserId');
 
-                // FAST-TRACK: If shop ID is cached, query operating hours immediately in parallel!
-                let fastHoursPromise = null;
-                if (savedShopId && savedShopId.length > 20) {
-                    fastHoursPromise = client
-                        .from('shop_operating_hours')
-                        .select('*')
-                        .eq('shop_id', savedShopId)
-                        .order('day_of_week', { ascending: true });
+                // Try fetching session if client is available
+                let user = null;
+                if (client?.auth) {
+                    try {
+                        const sessRes = await client.auth.getSession();
+                        user = sessRes?.data?.session?.user;
+                    } catch (_) {}
                 }
-
-                // In parallel, retrieve session
-                const sessionPromise = client.auth ? client.auth.getSession() : Promise.resolve({ data: null });
-
-                const [hoursRes, sessRes] = await Promise.all([
-                    fastHoursPromise || Promise.resolve(null),
-                    sessionPromise
-                ]);
-
-                // CIRCUIT BREAKER: If fastHoursPromise failed due to network / connection drop, stop gracefully!
-                if (hoursRes?.error) {
-                    const errMsg = hoursRes.error.message || '';
-                    if (errMsg.includes('fetch') || errMsg.includes('network') || errMsg.includes('Failed') || errMsg.includes('Abort')) {
-                        console.warn('Network sync notice (operating hours): Offline or aborted stream, using cached data.');
-                        setCloudSyncStatus('offline', 'ใช้งานข้อมูลในเครื่อง (ออฟไลน์)');
-                        return;
-                    }
-                }
-
-                const user = sessRes?.data?.session?.user;
                 const effectiveUserId = user?.id || fallbackUserId;
 
-                // Cloud hydration: Sync special holidays from user_metadata if local is empty
+                // Sync special holidays from user_metadata if local is empty
                 const cloudHolidays = user?.user_metadata?.special_holidays;
                 if (Array.isArray(cloudHolidays) && cloudHolidays.length > 0 && (!specialHolidays || specialHolidays.length === 0)) {
                     specialHolidays = cloudHolidays;
@@ -761,8 +751,9 @@
                 }
 
                 // Non-blocking Role Guard check in background
-                if (effectiveUserId && client) {
-                    client.from('profiles').select('role').eq('id', effectiveUserId).maybeSingle().then(({ data: prof }) => {
+                if (effectiveUserId && isValidUuid(effectiveUserId)) {
+                    fetchSupabaseRest(`profiles?id=eq.${effectiveUserId}&select=role`).then(profList => {
+                        const prof = Array.isArray(profList) && profList.length > 0 ? profList[0] : null;
                         if (prof?.role === 'CUSTOMER' || user?.user_metadata?.role === 'CUSTOMER') {
                             const mainContainer = document.querySelector('main');
                             if (mainContainer) {
@@ -788,134 +779,80 @@
                     }).catch(() => {});
                 }
 
-                // If fast-track returned hours directly from Supabase, apply and cache immediately!
-                if (hoursRes && !hoursRes.error && hoursRes.data && hoursRes.data.length > 0) {
-                    currentShopId = savedShopId;
-                    hoursRes.data.forEach(h => {
+                // 1) Fast-track REST fetch if savedShopId is valid
+                let dbHours = null;
+                if (savedShopId && isValidUuid(savedShopId)) {
+                    dbHours = await fetchOperatingHoursRest(savedShopId);
+                }
+
+                // 2) If no hours found or savedShopId not set, resolve shop from Supabase
+                if ((!dbHours || dbHours.length === 0) && effectiveUserId && isValidUuid(effectiveUserId)) {
+                    const shopData = await fetchSupabaseRest(`shops?owner_id=eq.${effectiveUserId}&select=id,name&limit=1`);
+                    if (Array.isArray(shopData) && shopData.length > 0) {
+                        savedShopId = shopData[0].id;
+                        currentShopId = savedShopId;
+                        localStorage.setItem('currentShopId', savedShopId);
+                        if (shopData[0].name) localStorage.setItem('ownerShopName', shopData[0].name);
+                        dbHours = await fetchOperatingHoursRest(savedShopId);
+                    }
+                }
+
+                // 3) Fallback by shop name
+                if ((!dbHours || dbHours.length === 0) && !savedShopId) {
+                    const sName = localStorage.getItem('ownerShopName');
+                    if (sName) {
+                        const shopData = await fetchSupabaseRest(`shops?name=eq.${encodeURIComponent(sName)}&select=id,name&limit=1`);
+                        if (Array.isArray(shopData) && shopData.length > 0) {
+                            savedShopId = shopData[0].id;
+                            currentShopId = savedShopId;
+                            localStorage.setItem('currentShopId', savedShopId);
+                            dbHours = await fetchOperatingHoursRest(savedShopId);
+                        }
+                    }
+                }
+
+                // If DB hours retrieved successfully, apply and cache!
+                if (Array.isArray(dbHours) && dbHours.length > 0) {
+                    dbHours.forEach(h => {
                         applyHoursRow(h.day_of_week, h.open_time, h.close_time, h.is_closed);
                     });
-                    localStorage.setItem('ownerOperatingHours', JSON.stringify(hoursRes.data));
+                    localStorage.setItem('ownerOperatingHours', JSON.stringify(dbHours));
                     updateLiveStatus();
                     setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
                     return;
                 }
 
-                // Fallback: If no savedShopId yet or no hours, resolve shop only if network is healthy
-                let shop = null;
-                if (savedShopId) {
-                    shop = { id: savedShopId, name: localStorage.getItem('ownerShopName') || 'ohm Car Wash' };
-                } else if (effectiveUserId) {
-                    const { data } = await client.from('shops').select('id, name').eq('owner_id', effectiveUserId).maybeSingle();
-                    shop = data;
-                }
-
-                if (!shop && localStorage.getItem('ownerShopName')) {
-                    const { data } = await client.from('shops').select('id, name').eq('name', localStorage.getItem('ownerShopName')).maybeSingle();
-                    shop = data;
-                }
-
-                const meta = user?.user_metadata || {};
-                if (!shop && meta.shop_name) {
-                    const { data } = await client.from('shops').select('id, name').eq('name', meta.shop_name).maybeSingle();
-                    shop = data;
-                }
-
-                // Auto-provision shop if missing (only when authenticated and online)
-                if (!shop && effectiveUserId) {
-                    const sName = meta.shop_name || localStorage.getItem('ownerShopName') || 'My Car Wash';
-                    const sPhone = meta.phone_number || localStorage.getItem('ownerShopPhone') || '';
-                    const sDesc = meta.shop_description || meta.description || localStorage.getItem('ownerShopDesc') || 'ศูนย์บริการคาร์แคร์';
-                    const sAddr = meta.full_address || meta.address || localStorage.getItem('ownerShopStreet') || '';
+                // 4) Self-healing: If shop exists in DB but no hours configured, seed standard hours
+                if (savedShopId && isValidUuid(savedShopId)) {
+                    const defaultHours = [
+                        { shop_id: savedShopId, day_of_week: 1, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                        { shop_id: savedShopId, day_of_week: 2, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                        { shop_id: savedShopId, day_of_week: 3, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                        { shop_id: savedShopId, day_of_week: 4, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                        { shop_id: savedShopId, day_of_week: 5, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                        { shop_id: savedShopId, day_of_week: 6, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
+                        { shop_id: savedShopId, day_of_week: 0, open_time: '08:00:00', close_time: '18:00:00', is_closed: true }
+                    ];
                     try {
-                        const { data: newShop } = await client.from('shops').insert({
-                            owner_id: effectiveUserId,
-                            name: sName,
-                            phone_number: sPhone,
-                            description: sDesc,
-                            address: sAddr,
-                            is_open: true
-                        }).select('id, name').maybeSingle();
-                        if (newShop) shop = newShop;
-                    } catch(e) {
-                        console.warn('Auto-create shop notice in loadOperatingHours:', e);
-                    }
-                }
-
-                if (shop?.id) {
-                    currentShopId = shop.id;
-                    localStorage.setItem('currentShopId', shop.id);
-                    if (shop.name) localStorage.setItem('ownerShopName', shop.name);
-
-                    let { data: hours, error } = await client
-                        .from('shop_operating_hours')
-                        .select('*')
-                        .eq('shop_id', shop.id)
-                        .order('day_of_week', { ascending: true });
-
-                    // Self-healing: If DB has shop record but no hours configured, seed custom or standard hours
-                    if (!error && (!hours || hours.length === 0)) {
-                        let hoursToSeed = null;
-
-                        // Priority 1: user_metadata configured during registration
-                        const metaHours = user?.user_metadata?.initial_operating_hours;
-                        if (Array.isArray(metaHours) && metaHours.length > 0) {
-                            hoursToSeed = metaHours.map(h => ({
-                                shop_id: shop.id,
-                                day_of_week: h.day_of_week,
-                                open_time: h.open_time || '08:00:00',
-                                close_time: h.close_time || '18:00:00',
-                                is_closed: !!h.is_closed
-                            }));
-                        }
-
-                        // Priority 2: localStorage
-                        if (!hoursToSeed) {
-                            try {
-                                const local = JSON.parse(localStorage.getItem('ownerOperatingHours') || 'null');
-                                if (Array.isArray(local) && local.length > 0) {
-                                    hoursToSeed = local.map(h => ({
-                                        shop_id: shop.id,
-                                        day_of_week: h.day_of_week,
-                                        open_time: h.open_time || '08:00:00',
-                                        close_time: h.close_time || '18:00:00',
-                                        is_closed: !!h.is_closed
-                                    }));
-                                }
-                            } catch(_) {}
-                        }
-
-                        const defaultHours = hoursToSeed || [
-                            { shop_id: shop.id, day_of_week: 1, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
-                            { shop_id: shop.id, day_of_week: 2, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
-                            { shop_id: shop.id, day_of_week: 3, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
-                            { shop_id: shop.id, day_of_week: 4, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
-                            { shop_id: shop.id, day_of_week: 5, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
-                            { shop_id: shop.id, day_of_week: 6, open_time: '08:00:00', close_time: '18:00:00', is_closed: false },
-                            { shop_id: shop.id, day_of_week: 0, open_time: '08:00:00', close_time: '18:00:00', is_closed: true }
-                        ];
-                        try {
-                            const { data: seededHours } = await client.from('shop_operating_hours').upsert(defaultHours, { onConflict: 'shop_id,day_of_week' }).select();
-                            hours = seededHours || defaultHours;
-                        } catch(seedErr) {
-                            console.warn('Seed operating hours notice:', seedErr);
-                        }
-                    }
-
-                    if (hours && hours.length > 0) {
-                        hours.forEach(h => {
-                            applyHoursRow(h.day_of_week, h.open_time, h.close_time, h.is_closed);
+                        const seededHours = await fetchSupabaseRest('shop_operating_hours?on_conflict=shop_id,day_of_week', {
+                            method: 'POST',
+                            headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
+                            body: defaultHours
                         });
-                        localStorage.setItem('ownerOperatingHours', JSON.stringify(hours));
-                        updateLiveStatus();
-                    }
-                    setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
-                } else {
-                    currentShopId = localStorage.getItem('currentShopId') || null;
-                    setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
+                        if (Array.isArray(seededHours) && seededHours.length > 0) {
+                            seededHours.forEach(h => {
+                                applyHoursRow(h.day_of_week, h.open_time, h.close_time, h.is_closed);
+                            });
+                            localStorage.setItem('ownerOperatingHours', JSON.stringify(seededHours));
+                            updateLiveStatus();
+                        }
+                    } catch (_) {}
                 }
+
+                setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
             } catch (err) {
                 console.warn('Supabase hours load notice:', err);
-                setCloudSyncStatus('offline', 'แสดงผลจากข้อมูลในเครื่อง (ออฟไลน์)');
+                setCloudSyncStatus(hasCache ? 'synced' : 'offline', hasCache ? 'ข้อมูลเป็นปัจจุบันแล้ว' : 'แสดงผลจากข้อมูลในเครื่อง (ออฟไลน์)');
             }
         }
 
@@ -1005,6 +942,10 @@
             }
 
             localStorage.setItem('ownerSpecialHolidays', JSON.stringify(specialHolidays));
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (client?.auth) {
+                client.auth.updateUser({ data: { special_holidays: specialHolidays } }).catch(() => {});
+            }
             renderHolidays();
             updateLiveStatus();
             hideHolidayModal();
@@ -1030,14 +971,26 @@
 
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
 
-            // 1. Verify active session & authenticated user
-            let session = null;
+            // 1. Verify active session & refresh if near expiration
             let currentUser = null;
             if (client?.auth) {
                 try {
                     const sessRes = await client.auth.getSession();
-                    session = sessRes?.data?.session;
-                    currentUser = session?.user;
+                    const session = sessRes?.data?.session;
+                    if (session?.access_token) {
+                        try {
+                            const payload = JSON.parse(atob(session.access_token.split('.')[1]));
+                            const now = Math.floor(Date.now() / 1000);
+                            if (payload.exp && (payload.exp - now < 300)) {
+                                const refreshRes = await client.auth.refreshSession();
+                                currentUser = refreshRes?.data?.session?.user || session.user;
+                            } else {
+                                currentUser = session.user;
+                            }
+                        } catch (_) {
+                            currentUser = session.user;
+                        }
+                    }
                 } catch(e) {
                     console.warn('Session check notice:', e);
                 }
@@ -1045,31 +998,16 @@
 
             // 2. Resolve shop strictly belonging to the currently authenticated user
             let targetShopId = localStorage.getItem('currentShopId') || currentShopId;
-            if ((!targetShopId || targetShopId.length < 20 || targetShopId === 'local-shop-default') && currentUser && client) {
+            const effectiveOwnerId = currentUser?.id || localStorage.getItem('lastLoggedInUserId');
+            if ((!targetShopId || !isValidUuid(targetShopId) || targetShopId === 'local-shop-default') && effectiveOwnerId) {
                 try {
-                    let { data: s } = await client.from('shops').select('id, name').eq('owner_id', currentUser.id).maybeSingle();
+                    const shopsData = await fetchSupabaseRest(`shops?owner_id=eq.${effectiveOwnerId}&select=id,name&limit=1`);
+                    let s = Array.isArray(shopsData) && shopsData.length > 0 ? shopsData[0] : null;
 
-                    const meta = currentUser.user_metadata || {};
+                    const meta = currentUser?.user_metadata || {};
                     if (!s && meta.shop_name) {
-                        const { data: byName } = await client.from('shops').select('id, name').eq('name', meta.shop_name).maybeSingle();
-                        if (byName) s = byName;
-                    }
-
-                    if (!s) {
-                        // AUTO-PROVISION SHOP IMMEDIATELY!
-                        const sName = meta.shop_name || localStorage.getItem('ownerShopName') || 'My Car Wash';
-                        const sPhone = meta.phone_number || localStorage.getItem('ownerShopPhone') || '';
-                        const sDesc = meta.shop_description || meta.description || localStorage.getItem('ownerShopDesc') || 'ศูนย์บริการคาร์แคร์';
-                        const sAddr = meta.full_address || meta.address || localStorage.getItem('ownerShopStreet') || '';
-                        const { data: newShop } = await client.from('shops').insert({
-                            owner_id: currentUser.id,
-                            name: sName,
-                            phone_number: sPhone,
-                            description: sDesc,
-                            address: sAddr,
-                            is_open: true
-                        }).select('id, name').maybeSingle();
-                        if (newShop) s = newShop;
+                        const byName = await fetchSupabaseRest(`shops?name=eq.${encodeURIComponent(meta.shop_name)}&select=id,name&limit=1`);
+                        if (Array.isArray(byName) && byName.length > 0) s = byName[0];
                     }
 
                     if (s?.id) {
@@ -1083,7 +1021,7 @@
                 }
             }
 
-            const effectiveShopId = targetShopId || 'local-shop-default';
+            const effectiveShopId = (targetShopId && isValidUuid(targetShopId)) ? targetShopId : (currentShopId || 'local-shop-default');
 
             const hoursToSave = [];
             dayRows.forEach(row => {
@@ -1119,39 +1057,62 @@
 
             updateLiveStatus();
 
-            // INSTANT VISUAL FEEDBACK (0ms)
-            const toastText = toast?.querySelector('.font-bold');
-            const toastIcon = toast?.querySelector('.material-symbols-outlined');
-            if (toastText) toastText.textContent = 'บันทึกเวลาเปิดทำการเรียบร้อยแล้ว!';
-            if (toastIcon) toastIcon.textContent = 'check_circle';
-            toast?.classList.remove('bg-amber-950/90', 'border-amber-500/50', 'text-amber-200');
-            toast?.classList.add('bg-secondary-container', 'text-on-secondary-container');
-            toast?.classList.add('show');
-            setCloudSyncStatus('synced', 'บันทึกข้อมูลเรียบร้อยแล้ว');
-
-            // 4. Background Sync to Supabase (Non-blocking)
-            if (client && currentUser && targetShopId && targetShopId !== 'local-shop-default') {
+            // 4. Guaranteed Awaited Sync to Supabase via Direct REST
+            let savedSuccessfully = false;
+            if (isValidUuid(effectiveShopId)) {
                 const toUpsert = hoursToSave.map(h => ({
-                    shop_id: targetShopId,
+                    shop_id: effectiveShopId,
                     day_of_week: h.day_of_week,
                     open_time: h.open_time,
                     close_time: h.close_time,
                     is_closed: h.is_closed
                 }));
 
-                client.from('shop_operating_hours')
-                    .upsert(toUpsert, { onConflict: 'shop_id,day_of_week' })
-                    .select()
-                    .then(({ data: savedRows, error: upsertErr }) => {
-                        if (!upsertErr && savedRows && savedRows.length > 0) {
-                            localStorage.setItem('ownerOperatingHours', JSON.stringify(savedRows));
-                        }
-                    })
-                    .catch(err => {
-                        console.warn('Background hours sync notice:', err);
+                // Attempt 1: Direct REST batch upsert
+                try {
+                    const restRes = await fetchSupabaseRest('shop_operating_hours?on_conflict=shop_id,day_of_week', {
+                        method: 'POST',
+                        headers: {
+                            'Prefer': 'resolution=merge-duplicates,return=representation'
+                        },
+                        body: toUpsert
                     });
+                    if (restRes && Array.isArray(restRes) && restRes.length > 0) {
+                        savedSuccessfully = true;
+                        localStorage.setItem('ownerOperatingHours', JSON.stringify(restRes));
+                    }
+                } catch (restErr) {
+                    console.warn('REST upsert error:', restErr);
+                }
 
-                if (client.auth) {
+                // Attempt 2: Day-by-day PATCH fallback
+                if (!savedSuccessfully) {
+                    try {
+                        let patchCount = 0;
+                        for (const row of toUpsert) {
+                            const patchRes = await fetchSupabaseRest(`shop_operating_hours?shop_id=eq.${effectiveShopId}&day_of_week=eq.${row.day_of_week}`, {
+                                method: 'PATCH',
+                                headers: { 'Prefer': 'return=representation' },
+                                body: {
+                                    open_time: row.open_time,
+                                    close_time: row.close_time,
+                                    is_closed: row.is_closed
+                                }
+                            });
+                            if (patchRes && Array.isArray(patchRes) && patchRes.length > 0) {
+                                patchCount++;
+                            }
+                        }
+                        if (patchCount > 0) {
+                            savedSuccessfully = true;
+                        }
+                    } catch (patchErr) {
+                        console.warn('Day-by-day PATCH fallback notice:', patchErr);
+                    }
+                }
+
+                // Sync metadata
+                if (client?.auth && currentUser) {
                     client.auth.updateUser({
                         data: {
                             initial_operating_hours: hoursToSave,
@@ -1161,11 +1122,40 @@
                 }
             }
 
-            // Smooth redirect after visual confirmation
-            setTimeout(() => {
-                toast?.classList.remove('show');
-                window.location.href = 'Owner%20Profile.html';
-            }, 600);
+            // Visual confirmation
+            const toastText = toast?.querySelector('.font-bold');
+            const toastIcon = toast?.querySelector('.material-symbols-outlined');
+
+            if (savedSuccessfully) {
+                if (toastText) toastText.textContent = 'บันทึกเวลาเปิดทำการไปยัง Supabase สำเร็จแล้ว!';
+                if (toastIcon) toastIcon.textContent = 'check_circle';
+                toast?.classList.remove('bg-amber-950/90', 'border-amber-500/50', 'text-amber-200');
+                toast?.classList.add('bg-secondary-container', 'text-on-secondary-container');
+                toast?.classList.add('show');
+                setCloudSyncStatus('synced', 'บันทึกข้อมูลเรียบร้อยแล้ว');
+
+                // Smooth redirect after visual confirmation
+                setTimeout(() => {
+                    toast?.classList.remove('show');
+                    window.location.href = 'Owner%20Profile.html';
+                }, 800);
+            } else {
+                if (toastText) toastText.textContent = 'บันทึกในเครื่องแล้ว (กรุณาปลดล็อก RLS ใน Supabase)';
+                if (toastIcon) toastIcon.textContent = 'warning';
+                toast?.classList.remove('bg-secondary-container', 'text-on-secondary-container');
+                toast?.classList.add('bg-amber-950/90', 'border-amber-500/50', 'text-amber-200');
+                toast?.classList.add('show');
+                setCloudSyncStatus('offline', 'บันทึกลงในเครื่องเท่านั้น');
+
+                saveBtns.forEach(btn => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class="material-symbols-outlined text-[20px]">save</span><span>บันทึก</span>';
+                });
+
+                setTimeout(() => {
+                    toast?.classList.remove('show');
+                }, 4000);
+            }
         });
 
 

@@ -256,17 +256,13 @@
             const client = getClient();
             let profile = null;
 
-            // Fetch live profile details from public.profiles
-            if (user.id && client) {
+            // Fetch live profile details from public.profiles via safeSupabaseRest
+            if (user.id) {
                 try {
-                    const { data } = await client
-                        .from('profiles')
-                        .select('*')
-                        .eq('id', user.id)
-                        .maybeSingle();
-                    if (data) {
-                        profile = data;
-                        if (data.role) role = data.role;
+                    const { data } = await safeSupabaseRest(`profiles?id=eq.${user.id}&limit=1`);
+                    if (data && data.length > 0) {
+                        profile = data[0];
+                        if (profile.role) role = profile.role;
                     }
                 } catch (err) {
                     console.error('Error fetching profile on login:', err);
@@ -297,26 +293,33 @@
                         const fallbackLat = meta.latitude || parseFloat(localStorage.getItem('ownerShopLat')) || null;
                         const fallbackLng = meta.longitude || parseFloat(localStorage.getItem('ownerShopLng')) || null;
 
-                        let { data: shop } = await client.from('shops').select('*').eq('owner_id', user.id).maybeSingle();
+                        let shop = null;
+                        const { data: sList } = await safeSupabaseRest(`shops?owner_id=eq.${user.id}&limit=1`);
+                        if (sList && sList.length > 0) shop = sList[0];
+
                         if (!shop && meta.shop_name) {
-                            const { data: byName } = await client.from('shops').select('*').eq('name', meta.shop_name).maybeSingle();
-                            if (byName) shop = byName;
+                            const { data: byName } = await safeSupabaseRest(`shops?name=eq.${encodeURIComponent(meta.shop_name)}&limit=1`);
+                            if (byName && byName.length > 0) shop = byName[0];
                         }
 
                         if (!shop) {
                             const sName = meta.shop_name || `${name}'s Car Wash`;
-                            const { data: newShop, error: newShopErr } = await client.from('shops').insert({
-                                owner_id: user.id,
-                                name: sName,
-                                phone_number: fallbackPhone,
-                                description: fallbackDesc,
-                                address: fallbackAddr,
-                                latitude: fallbackLat,
-                                longitude: fallbackLng,
-                                is_open: true
-                            }).select('*').maybeSingle();
+                            const { data: newShopList, error: newShopErr } = await safeSupabaseRest('shops', {
+                                method: 'POST',
+                                headers: { 'Prefer': 'return=representation' },
+                                body: JSON.stringify({
+                                    owner_id: user.id,
+                                    name: sName,
+                                    phone_number: fallbackPhone,
+                                    description: fallbackDesc,
+                                    address: fallbackAddr,
+                                    latitude: fallbackLat,
+                                    longitude: fallbackLng,
+                                    is_open: true
+                                })
+                            });
 
-                            if (newShop) shop = newShop;
+                            if (newShopList && newShopList.length > 0) shop = newShopList[0];
                             else if (newShopErr) console.warn('New shop insert error in login:', newShopErr);
                         } else {
                             // Self-healing: if shops table has missing description or address, sync from user_metadata or localStorage
@@ -328,7 +331,10 @@
                             if (!shop.longitude && fallbackLng) updateData.longitude = fallbackLng;
 
                             if (Object.keys(updateData).length > 0) {
-                                await client.from('shops').update(updateData).eq('id', shop.id);
+                                await safeSupabaseRest(`shops?id=eq.${shop.id}`, {
+                                    method: 'PATCH',
+                                    body: JSON.stringify(updateData)
+                                });
                                 Object.assign(shop, updateData);
                             }
                         }
@@ -396,11 +402,11 @@
                                 localStorage.setItem('ownerShopGallery', JSON.stringify(meta.shop_images));
                             }
 
-                            // 1. Parallel fetch Services, Hours, and Bookings for ultra-fast login
+                            // 1. Parallel fetch Services, Hours, and Bookings for ultra-fast login via safeSupabaseRest
                             const [srvsRes, hoursRes, bListRes] = await Promise.all([
-                                client.from('services').select('*').eq('shop_id', shop.id).order('created_at', { ascending: true }),
-                                client.from('shop_operating_hours').select('*').eq('shop_id', shop.id).order('day_of_week', { ascending: true }),
-                                client.from('bookings').select('status').eq('shop_id', shop.id)
+                                safeSupabaseRest(`services?shop_id=eq.${shop.id}&order=created_at.asc`),
+                                safeSupabaseRest(`shop_operating_hours?shop_id=eq.${shop.id}&order=day_of_week.asc`),
+                                safeSupabaseRest(`bookings?select=status&shop_id=eq.${shop.id}`)
                             ]);
                             let srvs = srvsRes?.data;
                             let hours = hoursRes?.data;
@@ -420,13 +426,17 @@
                                     { name: 'ดูดฝุ่น & สปาภายในห้องโดยสาร', price: 250, duration_minutes: 45, description: 'ดูดฝุ่น ฟอกเบาะผ้า เช็ดคอนโซล ฆ่าเชื้อแบคทีเรีย' },
                                     { name: 'เคลือบแว็กซ์สีรถ & กระจก', price: 350, duration_minutes: 45, description: 'ลงน้ำยาเคลือบสีพรีเมียม เพิ่มความเงา ป้องกันคราบน้ำ' }
                                 ];
-                                client.from('services').insert(toSeed.map(s => ({
-                                    shop_id: shop.id,
-                                    name: s.name,
-                                    price: parseFloat(s.price) || 150,
-                                    duration_minutes: parseInt(s.duration_minutes) || 30,
-                                    description: s.description || 'บริการมาตรฐาน'
-                                }))).select().then(({ data: seeded }) => {
+                                safeSupabaseRest('services', {
+                                    method: 'POST',
+                                    headers: { 'Prefer': 'return=representation' },
+                                    body: JSON.stringify(toSeed.map(s => ({
+                                        shop_id: shop.id,
+                                        name: s.name,
+                                        price: parseFloat(s.price) || 150,
+                                        duration_minutes: parseInt(s.duration_minutes) || 30,
+                                        description: s.description || 'บริการมาตรฐาน'
+                                    })))
+                                }).then(({ data: seeded }) => {
                                     if (seeded) localStorage.setItem('ownerServices', JSON.stringify(seeded));
                                 }).catch(() => {});
                                 srvs = toSeed;
@@ -435,7 +445,7 @@
                                 localStorage.setItem('ownerServices', JSON.stringify(srvs));
                             }
 
-                            // 2. Operating Hours Self-Healing & Hydration
+                            // 2. Operating Hours Self-Healing & Hydration via safeSupabaseRest
                             if (!hours || hours.length === 0) {
                                 let hoursToSeed = null;
 
@@ -477,9 +487,11 @@
                                     { shop_id: shop.id, day_of_week: 0, open_time: '08:00:00', close_time: '18:00:00', is_closed: true }
                                 ];
 
-                                client.from('shop_operating_hours')
-                                    .upsert(defaultHours, { onConflict: 'shop_id,day_of_week' })
-                                    .select().then().catch(() => {});
+                                safeSupabaseRest('shop_operating_hours', {
+                                    method: 'POST',
+                                    headers: { 'Prefer': 'resolution=merge-duplicates' },
+                                    body: JSON.stringify(defaultHours)
+                                }).then().catch(() => {});
                                 hours = defaultHours;
                             }
                             if (hours && hours.length > 0) {
@@ -513,15 +525,13 @@
                 };
                 localStorage.setItem('customerProfile', JSON.stringify(customerData));
 
-                // Pre-cache customer vehicles in parallel for 0ms discovery & booking flow
-                if (client) {
-                    try {
-                        const { data: vList } = await client.from('vehicles').select('*').eq('customer_id', user.id).order('is_default', { ascending: false });
-                        if (vList && vList.length > 0) {
-                            localStorage.setItem('customerCars', JSON.stringify(vList));
-                        }
-                    } catch(_) {}
-                }
+                // Pre-cache customer vehicles in parallel for 0ms discovery & booking flow via safeSupabaseRest
+                try {
+                    const { data: vList } = await safeSupabaseRest(`vehicles?customer_id=eq.${user.id}&order=is_default.desc`);
+                    if (vList && vList.length > 0) {
+                        localStorage.setItem('customerCars', JSON.stringify(vList));
+                    }
+                } catch(_) {}
 
                 window.location.href = '../customer/discovery.html';
             } else {

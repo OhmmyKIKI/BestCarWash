@@ -625,12 +625,15 @@
                         }
                     }
 
-                    // 5. If shop exists, also update phone_number / payment info in shops table
-                    if (client && currentShopId && currentShopId !== 'local-shop') {
+                    // 5. If shop exists, also update phone_number / payment info in shops table via safeSupabaseRest
+                    if (currentShopId && currentShopId !== 'local-shop') {
                         try {
                             const digits = accNum.replace(/[^0-9]/g, '');
                             if (digits.length >= 9 && digits.length <= 13) {
-                                await client.from('shops').update({ phone_number: digits }).eq('id', currentShopId);
+                                await safeSupabaseRest(`shops?id=eq.${currentShopId}`, {
+                                    method: 'PATCH',
+                                    body: JSON.stringify({ phone_number: digits })
+                                });
                             }
                         } catch(shopErr) {
                             console.warn('Shop phone_number sync notice:', shopErr);
@@ -659,40 +662,27 @@
         try {
             let shop = null;
 
-            // Step 1: Lookup shop by owner_id in Supabase
-            if (client && userId) {
-                const { data } = await client
-                    .from('shops')
-                    .select('id, name')
-                    .eq('owner_id', userId)
-                    .maybeSingle();
-                if (data) shop = data;
+            // Step 1: Lookup shop by owner_id in Supabase via safeSupabaseRest
+            if (userId) {
+                const { data } = await safeSupabaseRest(`shops?select=id,name&owner_id=eq.${userId}&limit=1`);
+                if (data && data.length > 0) shop = data[0];
             }
 
-            // Step 2: Fallback lookup by stored shop ID
-            if (!shop && client) {
+            // Step 2: Fallback lookup by stored shop ID via safeSupabaseRest
+            if (!shop) {
                 const storedShopId = localStorage.getItem('currentShopId') || localStorage.getItem('selectedShopId') || localStorage.getItem('ownerShopId');
                 if (storedShopId) {
-                    const { data } = await client
-                        .from('shops')
-                        .select('id, name')
-                        .eq('id', storedShopId)
-                        .maybeSingle();
-                    if (data) shop = data;
+                    const { data } = await safeSupabaseRest(`shops?select=id,name&id=eq.${storedShopId}&limit=1`);
+                    if (data && data.length > 0) shop = data[0];
                 }
             }
 
-            // Step 3: Fallback lookup by shop name in Supabase
-            if (!shop && client) {
+            // Step 3: Fallback lookup by shop name in Supabase via safeSupabaseRest
+            if (!shop) {
                 const storedShopName = localStorage.getItem('ownerShopName') || localStorage.getItem('userShopName');
                 if (storedShopName) {
-                    const { data } = await client
-                        .from('shops')
-                        .select('id, name')
-                        .ilike('name', `%${storedShopName}%`)
-                        .limit(1)
-                        .maybeSingle();
-                    if (data) shop = data;
+                    const { data } = await safeSupabaseRest(`shops?select=id,name&name=ilike.*${encodeURIComponent(storedShopName)}*&limit=1`);
+                    if (data && data.length > 0) shop = data[0];
                 }
             }
 
@@ -729,15 +719,11 @@
 
             currentShopId = shop.id;
 
-            // Fetch live bookings for this specific shop from Supabase
+            // Fetch live bookings for this specific shop from Supabase via safeSupabaseRest
             let bookings = [];
-            if (client && shop.id && shop.id !== 'local-shop') {
+            if (shop.id && shop.id !== 'local-shop') {
                 try {
-                    const { data, error } = await client
-                        .from('bookings')
-                        .select('*')
-                        .eq('shop_id', shop.id)
-                        .order('created_at', { ascending: false });
+                    const { data, error } = await safeSupabaseRest(`bookings?shop_id=eq.${shop.id}&order=created_at.desc`);
                     if (!error && Array.isArray(data)) {
                         bookings = data;
                     }

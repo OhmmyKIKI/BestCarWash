@@ -560,13 +560,19 @@
             });
             showToast('อัปเดตข้อมูลยานพาหนะสำเร็จ');
 
-            if (currentUser && client && !editId.startsWith('car_')) {
-                client.from('vehicles').update({
-                    brand_model: brand,
-                    plate_number: plate,
-                    car_size: size,
-                    is_default: isPrimary
-                }).eq('id', editId).then().catch(e => console.warn(e));
+            if (currentUser && !editId.startsWith('car_')) {
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                if (fetcher) {
+                    fetcher(`vehicles?id=eq.${editId}`, {
+                        method: 'PATCH',
+                        body: {
+                            brand_model: brand,
+                            plate_number: plate,
+                            car_size: size,
+                            is_default: isPrimary
+                        }
+                    }).catch(e => console.warn(e));
+                }
             }
         } else {
             // Add new (Optimistic UI: Instant 0ms add)
@@ -585,17 +591,24 @@
             showToast('เพิ่มยานพาหนะใหม่สำเร็จ');
 
             // Background sync to Supabase
-            if (currentUser && client) {
-                client.from('vehicles').insert({
-                    customer_id: currentUser.id,
-                    brand_model: brand,
-                    plate_number: plate,
-                    car_size: size,
-                    is_default: isPrimary || cars.length === 0
-                }).select('id').maybeSingle().then(({ data: newV }) => {
-                    if (newV?.id) {
+            const uid = currentUser?.id || localStorage.getItem('lastLoggedInUserId');
+            const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+            if (uid && fetcher) {
+                fetcher('vehicles', {
+                    method: 'POST',
+                    headers: { 'Prefer': 'return=representation' },
+                    body: {
+                        customer_id: uid,
+                        brand_model: brand,
+                        plate_number: plate,
+                        car_size: size,
+                        is_default: isPrimary || cars.length === 0
+                    }
+                }).then(newV => {
+                    const insertedRow = Array.isArray(newV) && newV.length > 0 ? newV[0] : newV;
+                    if (insertedRow?.id) {
                         let curCars = getCars();
-                        curCars = curCars.map(c => c.id === tempId ? { ...c, id: newV.id } : c);
+                        curCars = curCars.map(c => c.id === tempId ? { ...c, id: insertedRow.id } : c);
                         saveCarsToStorage(curCars);
                         renderCars();
                     }
@@ -622,12 +635,18 @@
         // Background sync to Supabase
         (async () => {
             try {
-                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
                 const uid = currentUser?.id || localStorage.getItem('lastLoggedInUserId');
-                if (client && uid) {
-                    await client.from('vehicles').update({ is_default: false }).eq('customer_id', uid);
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                if (uid && fetcher) {
+                    await fetcher(`vehicles?customer_id=eq.${uid}`, {
+                        method: 'PATCH',
+                        body: { is_default: false }
+                    });
                     if (!carId.startsWith('car_')) {
-                        await client.from('vehicles').update({ is_default: true }).eq('id', carId);
+                        await fetcher(`vehicles?id=eq.${carId}`, {
+                            method: 'PATCH',
+                            body: { is_default: true }
+                        });
                     }
                 }
             } catch(e) {
@@ -659,9 +678,11 @@
 
         // Background sync to Supabase
         if (!carId.startsWith('car_')) {
-            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            if (client) {
-                client.from('vehicles').delete().eq('id', carId).then().catch(() => {});
+            const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+            if (fetcher) {
+                fetcher(`vehicles?id=eq.${carId}`, {
+                    method: 'DELETE'
+                }).catch(() => {});
             }
         }
     };
@@ -726,42 +747,44 @@
         if (mainAvatar) mainAvatar.src = avatarToDisplay;
         if (desktopAvatar) desktopAvatar.src = avatarToDisplay;
 
-        // 2. Fetch live data from Supabase
+        // 2. Fetch live data from Supabase via safeSupabaseRest
         try {
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            if (!client?.auth) return;
-
-            const { data: { user } } = await client.auth.getUser();
-            if (!user) return;
-
-            const { data: profile, error } = await client
-                .from('profiles')
-                .select('*')
-                .eq('id', user.id)
-                .single();
-
-            const fullName = profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'ลูกค้า BestCarWash';
-            const phone = profile?.phone_number || user.user_metadata?.phone_number || '';
-            const avatar = profile?.avatar_url || avatarToDisplay;
-
-            if (nameDisplay) nameDisplay.innerText = fullName;
-            const desktopName = document.getElementById('desktop-header-name');
-            if (desktopName) desktopName.innerText = fullName;
-
-            if (avatar && avatar !== DEFAULT_AVATAR) {
-                if (mainAvatar) mainAvatar.src = avatar;
-                if (desktopAvatar) desktopAvatar.src = avatar;
+            let user = null;
+            if (client?.auth) {
+                const sessRes = await client.auth.getSession().catch(() => null);
+                user = sessRes?.data?.session?.user;
             }
+            const uid = user?.id || localStorage.getItem('lastLoggedInUserId');
+            const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
 
-            // Update storage
-            const currentObj = JSON.parse(localStorage.getItem('customerProfile') || '{}');
-            localStorage.setItem('customerProfile', JSON.stringify({
-                ...currentObj,
-                fullName,
-                phone,
-                email: user.email,
-                avatar
-            }));
+            if (uid && fetcher) {
+                const profiles = await fetcher(`profiles?id=eq.${uid}&limit=1`);
+                const profile = Array.isArray(profiles) && profiles.length > 0 ? profiles[0] : null;
+
+                const fullName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'ลูกค้า BestCarWash';
+                const phone = profile?.phone_number || user?.user_metadata?.phone_number || '';
+                const avatar = profile?.avatar_url || avatarToDisplay;
+
+                if (nameDisplay) nameDisplay.innerText = fullName;
+                const desktopName = document.getElementById('desktop-header-name');
+                if (desktopName) desktopName.innerText = fullName;
+
+                if (avatar && avatar !== DEFAULT_AVATAR) {
+                    if (mainAvatar) mainAvatar.src = avatar;
+                    if (desktopAvatar) desktopAvatar.src = avatar;
+                }
+
+                // Update storage
+                const currentObj = JSON.parse(localStorage.getItem('customerProfile') || '{}');
+                localStorage.setItem('customerProfile', JSON.stringify({
+                    ...currentObj,
+                    fullName,
+                    phone,
+                    email: user?.email || currentObj.email,
+                    avatar
+                }));
+            }
         } catch (err) {
             console.warn('Profile fetch notice:', err);
         }
@@ -771,27 +794,29 @@
     async function syncVehiclesWithSupabase() {
         try {
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            if (!client?.auth) return;
+            let uid = null;
+            if (client?.auth) {
+                const sessRes = await client.auth.getSession().catch(() => null);
+                uid = sessRes?.data?.session?.user?.id;
+            }
+            if (!uid) uid = localStorage.getItem('lastLoggedInUserId');
+            const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
 
-            const { data: { user } } = await client.auth.getUser();
-            if (!user) return;
-
-            const { data: dbVehicles, error } = await client
-                .from('vehicles')
-                .select('*')
-                .eq('customer_id', user.id)
-                .order('is_default', { ascending: false });
-
-            const mapped = (dbVehicles || []).map(v => ({
-                id: v.id,
-                brand: v.brand_model,
-                plate: v.plate_number,
-                size: v.car_size || 'M',
-                isPrimary: v.is_default || false
-            }));
-            
-            saveCarsToStorage(mapped);
-            renderCars();
+            if (uid && fetcher) {
+                const dbVehicles = await fetcher(`vehicles?customer_id=eq.${uid}&order=is_default.desc`);
+                if (Array.isArray(dbVehicles) && dbVehicles.length > 0) {
+                    const mapped = dbVehicles.map(v => ({
+                        id: v.id,
+                        brand: v.brand_model,
+                        plate: v.plate_number,
+                        size: v.car_size || 'M',
+                        isPrimary: v.is_default || false
+                    }));
+                    
+                    saveCarsToStorage(mapped);
+                    renderCars();
+                }
+            }
         } catch (e) {
             console.warn('Vehicles fetch notice:', e);
         }
