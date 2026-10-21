@@ -158,35 +158,21 @@
 
             <!-- Step 3: Select Time -->
             <section class="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-5 shadow-sm">
-                <h2 class="text-xl font-bold text-on-surface flex items-center gap-2 mb-4">
-                    <span class="material-symbols-outlined text-primary">schedule</span> 3. เลือกเวลา
-                </h2>
+                <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                    <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">schedule</span> 3. เลือกเวลา
+                    </h2>
+                    <div class="flex items-center gap-3 text-[11px] text-on-surface-variant bg-surface-container px-3 py-1.5 rounded-full border border-outline-variant/30">
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span> ว่าง</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-error shadow-sm shadow-error/50"></span> ติดจอง</span>
+                    </div>
+                </div>
                 
                 <div id="time-container" class="grid grid-cols-3 md:grid-cols-4 gap-3">
-                    <button class="time-btn py-3 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all">09:00 น.</button>
-                    <button class="time-btn py-3 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all">09:30 น.</button>
-                    <button class="time-btn active-time py-3 px-2 rounded-xl border-2 border-primary bg-primary-container/20 text-primary font-bold shadow-[0_0_15px_rgba(37,99,235,0.2)] transition-all">10:00 น.</button>
-                    <button class="time-btn py-3 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all">10:30 น.</button>
-                    <button class="time-btn py-3 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all">11:00 น.</button>
-                    
-                    <!-- Disabled State -->
-                    <button class="py-3 px-2 rounded-xl border border-outline-variant/20 bg-surface-container-highest/50 text-on-surface-variant/40 font-bold cursor-not-allowed relative overflow-hidden" disabled>
-                        11:30 น.
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <div class="w-full h-px bg-on-surface-variant/30 -rotate-12"></div>
-                        </div>
-                    </button>
-                    
-                    <button class="time-btn py-3 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all">12:00 น.</button>
-                    <button class="time-btn py-3 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all">13:00 น.</button>
-                    
-                    <button class="py-3 px-2 rounded-xl border border-outline-variant/20 bg-surface-container-highest/50 text-on-surface-variant/40 font-bold cursor-not-allowed relative overflow-hidden" disabled>
-                        13:30 น.
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <div class="w-full h-px bg-on-surface-variant/30 -rotate-12"></div>
-                        </div>
-                    </button>
-                    <button class="time-btn py-3 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all">14:00 น.</button>
+                    <div class="col-span-full py-6 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-sm animate-spin text-primary">autorenew</span>
+                        <span>กำลังโหลดรอบเวลาที่ว่าง...</span>
+                    </div>
                 </div>
             </section>
 
@@ -253,8 +239,8 @@
                         <div>
                             <div class="text-on-surface-variant text-sm mb-1">บริการที่เลือก</div>
                             <div class="flex justify-between items-start">
-                                <div class="text-on-surface font-bold text-lg" id="summary-service-name">พรีเมียมดีเทลลิ่ง</div>
-                                <div class="text-primary font-black text-xl" id="summary-service-price">฿450</div>
+                                <div class="text-on-surface font-bold text-lg" id="summary-service-name">กำลังโหลดบริการ...</div>
+                                <div class="text-primary font-black text-xl" id="summary-service-price">฿0</div>
                             </div>
                         </div>
                         
@@ -272,7 +258,7 @@
                                 <div>
                                     <div class="text-xs text-on-surface-variant">วันและเวลา</div>
                                     <div class="text-sm font-bold text-on-surface">
-                                        <span class="summary-date-text">5 ต.ค. 2026</span> • <span class="summary-time-text">10:00 น.</span>
+                                        <span class="summary-date-text">-</span> • <span class="summary-time-text">-</span>
                                     </div>
                                 </div>
                             </div>
@@ -290,7 +276,7 @@
                     <div class="flex justify-between items-end mb-6">
                         <div class="flex flex-col">
                             <span class="text-on-surface font-medium">ยอดชำระมัดจำ</span>
-                            <span class="text-xs text-on-surface-variant" id="summary-total-original-price">(จากราคาเริ่มต้น ฿450)</span>
+                            <span class="text-xs text-on-surface-variant" id="summary-total-original-price">(จากราคาเริ่มต้น)</span>
                         </div>
                         <span class="text-3xl font-black text-white">฿50</span>
                     </div>
@@ -316,8 +302,8 @@
 <div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-container-low/95 backdrop-blur-xl border-t border-outline-variant/30 pb-[env(safe-area-inset-bottom,1rem)] pt-3 px-4 shadow-[0_-10px_40px_rgba(0,0,0,0.6)]">
     <div class="flex justify-between items-center mb-3 px-1">
         <div class="flex flex-col">
-            <span class="text-[10px] text-on-surface-variant font-bold" id="mobile-summary-service-name">พรีเมียมดีเทลลิ่ง (มัดจำ)</span>
-            <div class="text-sm font-medium text-on-surface summary-date-text">5 ต.ค. 2026 • <span class="summary-time-text text-primary font-bold">10:00 น.</span></div>
+            <span class="text-[10px] text-on-surface-variant font-bold" id="mobile-summary-service-name">บริการ (มัดจำ)</span>
+            <div class="text-sm font-medium text-on-surface"><span class="summary-date-text">-</span> • <span class="summary-time-text text-primary font-bold">-</span></div>
         </div>
         <div class="text-2xl font-black text-white">฿50</div>
     </div>
@@ -715,18 +701,280 @@
 </div>
 
 <script>
-    // Global State
+    // Global State for Booking, Calendar & Real-Time Availability
+    let selectedDate = new Date();
     let selectedDateText = "";
-    let selectedTimeText = "10:00 น.";
+    let selectedTimeText = "";
+    let shopOperatingHours = null;
+    let shopSpecialHolidays = [];
+
+    const monthsThai = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+    const monthsThaiShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+
+    function getIsoFromDate(d) {
+        if (!d) d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    function getSelectedDateIso() {
+        return getIsoFromDate(selectedDate);
+    }
+
+    function isShopClosedOnDate(d) {
+        if (!d) return { closed: false };
+        const dateIso = getIsoFromDate(d);
+        // 1. Check special holidays
+        if (Array.isArray(shopSpecialHolidays) && shopSpecialHolidays.length > 0) {
+            const hol = shopSpecialHolidays.find(h => h.date === dateIso);
+            if (hol) return { closed: true, reason: hol.reason || 'วันหยุดพิเศษของร้าน' };
+        }
+        // 2. Check weekly operating hours
+        if (Array.isArray(shopOperatingHours) && shopOperatingHours.length > 0) {
+            const dayOfWeek = d.getDay(); // 0 = Sun .. 6 = Sat
+            const dayRow = shopOperatingHours.find(h => Number(h.day_of_week) === dayOfWeek);
+            if (dayRow && (dayRow.is_closed === true || dayRow.is_closed === 'true' || dayRow.is_closed === 1)) {
+                return { closed: true, reason: 'ร้านหยุดทำการประจำสัปดาห์' };
+            }
+        }
+        return { closed: false };
+    }
+
+    // --- Dynamic Time Slots Generation & Booked Slot Disabling ---
+    let timeSlotFetchToken = 0;
+    window.renderTimeSlots = async function(date) {
+        const container = document.getElementById('time-container');
+        if (!container) return;
+
+        if (!date) date = selectedDate || new Date();
+        const thisToken = ++timeSlotFetchToken;
+
+        const closedCheck = isShopClosedOnDate(date);
+        if (closedCheck.closed) {
+            selectedTimeText = "";
+            updateSummary();
+            container.innerHTML = `
+                <div class="col-span-full py-8 px-4 text-center bg-surface-container rounded-2xl border border-dashed border-error/30 text-error">
+                    <span class="material-symbols-outlined text-3xl mb-1 text-error/80">event_busy</span>
+                    <p class="font-bold text-sm text-error">ร้านปิดให้บริการในวันนี้</p>
+                    <p class="text-xs text-on-surface-variant mt-0.5">${closedCheck.reason}</p>
+                    <p class="text-[11px] text-outline mt-2">กรุณาเลือกวันอื่นในปฏิทิน</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Determine operating hours for this day of week
+        const dayOfWeek = date.getDay();
+        let openTime = '08:00';
+        let closeTime = '18:00';
+
+        if (Array.isArray(shopOperatingHours) && shopOperatingHours.length > 0) {
+            const dayRow = shopOperatingHours.find(h => Number(h.day_of_week) === dayOfWeek);
+            if (dayRow && dayRow.open_time && dayRow.close_time) {
+                openTime = dayRow.open_time.slice(0, 5);
+                closeTime = dayRow.close_time.slice(0, 5);
+            }
+        }
+
+        const [openH, openM] = openTime.split(':').map(Number);
+        const [closeH, closeM] = closeTime.split(':').map(Number);
+        const startMins = openH * 60 + openM;
+        const endMins = closeH * 60 + closeM;
+
+        container.innerHTML = `
+            <div class="col-span-full py-6 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-sm animate-spin text-primary">autorenew</span>
+                <span>กำลังตรวจสอบช่วงเวลาว่าง & คิวที่ติดจอง...</span>
+            </div>
+        `;
+
+        // Fetch booked slots for this shop and date
+        const dateIso = getIsoFromDate(date);
+        const bookedTimes = new Set();
+
+        // 1. Supabase bookings table query
+        const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+        if (fetcher && currentShopId) {
+            try {
+                const dbBookings = await fetcher(`bookings?shop_id=eq.${currentShopId}&booking_date=eq.${dateIso}&select=booking_time,status`);
+                if (Array.isArray(dbBookings)) {
+                    dbBookings.forEach(b => {
+                        const st = (b.status || '').toUpperCase();
+                        if (st !== 'CANCELLED' && b.booking_time) {
+                            const t = b.booking_time.slice(0, 5); // '09:30'
+                            bookedTimes.add(t);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn('Notice fetching booked slots from Supabase:', e);
+            }
+        }
+
+        // 2. Shared appBookingsList query (local persistence & fast sync)
+        try {
+            const localList = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
+            localList.forEach(b => {
+                const isSameShop = !b.shopId || b.shopId === currentShopId || (currentShop && b.shopName === currentShop.name);
+                const st = (b.status || '').toLowerCase();
+                const isCancelled = st === 'cancelled' || st === 'refunded';
+                if (isSameShop && !isCancelled) {
+                    let match = false;
+                    if (b.bookingDate && b.bookingDate === dateIso) match = true;
+                    else if (b.dateTime && selectedDateText && b.dateTime.includes(selectedDateText)) match = true;
+                    if (match) {
+                        const timeMatch = (b.bookingTime || b.dateTime || '').match(/(\d{1,2}:\d{2})/);
+                        if (timeMatch) {
+                            const t = timeMatch[1].padStart(5, '0');
+                            bookedTimes.add(t);
+                        }
+                    }
+                }
+            });
+        } catch (_) {}
+
+        // Discard stale response if another date was clicked
+        if (thisToken !== timeSlotFetchToken) return;
+
+        // Check if date is today for past slots
+        const now = new Date();
+        const isToday = now.getFullYear() === date.getFullYear() &&
+                        now.getMonth() === date.getMonth() &&
+                        now.getDate() === date.getDate();
+        const currentMins = now.getHours() * 60 + now.getMinutes();
+
+        let slotButtonsHtml = '';
+        let availableSlotsCount = 0;
+        let firstAvailableSlot = null;
+
+        // Generate slots every 30 minutes
+        for (let m = startMins; m <= endMins - 30; m += 30) {
+            const h = Math.floor(m / 60);
+            const min = m % 60;
+            const timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+            const timeDisplay = `${timeStr} น.`;
+
+            const isBooked = bookedTimes.has(timeStr);
+            const isPast = isToday && (m <= currentMins + 15); // 15-minute advance buffer
+
+            if (isBooked) {
+                slotButtonsHtml += `
+                    <button type="button" disabled class="py-2.5 px-2 rounded-xl border border-outline-variant/20 bg-surface-container-highest/30 text-on-surface-variant/40 font-bold cursor-not-allowed relative overflow-hidden flex flex-col items-center justify-center gap-0.5 select-none transition-all group" title="ช่วงเวลานี้มีลูกค้าจองแล้ว">
+                        <span class="line-through text-xs font-semibold text-on-surface-variant/50">${timeDisplay}</span>
+                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-error/15 text-error border border-error/20 flex items-center gap-0.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-error"></span> ติดจอง
+                        </span>
+                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-40">
+                            <div class="w-full h-px bg-error -rotate-12"></div>
+                        </div>
+                    </button>
+                `;
+            } else if (isPast) {
+                slotButtonsHtml += `
+                    <button type="button" disabled class="py-2.5 px-2 rounded-xl border border-outline-variant/15 bg-surface-container-highest/20 text-on-surface-variant/30 font-medium cursor-not-allowed flex flex-col items-center justify-center gap-0.5 select-none" title="ช่วงเวลานี้เลยเวลาแล้ว">
+                        <span class="line-through text-xs">${timeDisplay}</span>
+                        <span class="text-[9px] text-outline">เลยเวลา</span>
+                    </button>
+                `;
+            } else {
+                availableSlotsCount++;
+                if (!firstAvailableSlot) firstAvailableSlot = timeDisplay;
+                const isSelected = (selectedTimeText === timeDisplay);
+
+                slotButtonsHtml += `
+                    <button type="button" onclick="selectTime('${timeDisplay}', this)" class="time-btn py-2.5 px-2 rounded-xl border ${isSelected ? 'active-time border-2 border-primary bg-primary-container/20 text-primary font-bold shadow-[0_0_15px_rgba(37,99,235,0.2)]' : 'border-outline-variant/50 bg-surface-container text-on-surface font-semibold hover:border-primary hover:text-primary'} transition-all flex flex-col items-center justify-center gap-0.5 active:scale-95">
+                        <span class="text-xs sm:text-sm font-bold">${timeDisplay}</span>
+                        <span class="slot-badge text-[9px] font-bold px-1.5 py-0.5 rounded-full ${isSelected ? 'bg-primary text-white shadow-sm' : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'} flex items-center gap-0.5">
+                            <span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-emerald-400'}"></span>
+                            ${isSelected ? 'เลือกแล้ว' : 'ว่าง'}
+                        </span>
+                    </button>
+                `;
+            }
+        }
+
+        if (slotButtonsHtml === '' || (endMins - startMins < 30)) {
+            container.innerHTML = `
+                <div class="col-span-full py-6 text-center text-xs text-on-surface-variant bg-surface-container rounded-xl border border-outline-variant/20">
+                    ไม่มีรอบเวลาเปิดให้บริการในวันนี้
+                </div>
+            `;
+            selectedTimeText = "";
+            updateSummary();
+            return;
+        }
+
+        if (availableSlotsCount === 0) {
+            container.innerHTML = `
+                <div class="col-span-full py-8 px-4 text-center bg-surface-container rounded-2xl border border-dashed border-outline-variant/40">
+                    <span class="material-symbols-outlined text-3xl mb-1 text-outline">timer_off</span>
+                    <p class="font-bold text-sm text-on-surface">คิวเต็มทุกช่วงเวลาในวันนี้</p>
+                    <p class="text-xs text-outline mt-0.5">ทุกช่วงเวลาติดจองหรือเลยเวลาแล้ว กรุณาเลือกวันอื่นในปฏิทิน</p>
+                </div>
+            `;
+            selectedTimeText = "";
+            updateSummary();
+            return;
+        }
+
+        container.innerHTML = slotButtonsHtml;
+
+        // Auto-select first available slot if currently selected slot is not in the available list
+        const activeBtn = container.querySelector('.time-btn.active-time');
+        if (!activeBtn) {
+            if (firstAvailableSlot) {
+                selectedTimeText = firstAvailableSlot;
+                const firstBtn = container.querySelector('.time-btn');
+                if (firstBtn) {
+                    firstBtn.className = 'time-btn active-time py-2.5 px-2 rounded-xl border-2 border-primary bg-primary-container/20 text-primary font-bold shadow-[0_0_15px_rgba(37,99,235,0.2)] transition-all flex flex-col items-center justify-center gap-0.5 active:scale-95';
+                    const badge = firstBtn.querySelector('.slot-badge');
+                    if (badge) {
+                        badge.className = 'slot-badge text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-white shadow-sm flex items-center gap-0.5';
+                        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-white"></span>เลือกแล้ว';
+                    }
+                }
+            } else {
+                selectedTimeText = "";
+            }
+        }
+        updateSummary();
+    };
+
+    window.selectTime = function(timeStr, btn) {
+        const container = document.getElementById('time-container');
+        if (container) {
+            container.querySelectorAll('.time-btn').forEach(b => {
+                b.className = 'time-btn py-2.5 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface font-semibold hover:border-primary hover:text-primary transition-all flex flex-col items-center justify-center gap-0.5 active:scale-95';
+                const badge = b.querySelector('.slot-badge');
+                if (badge) {
+                    badge.className = 'slot-badge text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 flex items-center gap-0.5';
+                    badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>ว่าง';
+                }
+            });
+        }
+
+        if (btn) {
+            btn.className = 'time-btn active-time py-2.5 px-2 rounded-xl border-2 border-primary bg-primary-container/20 text-primary font-bold shadow-[0_0_15px_rgba(37,99,235,0.2)] transition-all flex flex-col items-center justify-center gap-0.5 active:scale-95';
+            const badge = btn.querySelector('.slot-badge');
+            if (badge) {
+                badge.className = 'slot-badge text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-white shadow-sm flex items-center gap-0.5';
+                badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-white"></span>เลือกแล้ว';
+            }
+        }
+
+        selectedTimeText = timeStr;
+        updateSummary();
+    };
 
     document.addEventListener('DOMContentLoaded', () => {
         // --- 1. Calendar Logic ---
         const dateContainer = document.getElementById('date-container');
         const monthYearLabel = document.getElementById('month-year-label');
         let currentDate = new Date();
-        let selectedDate = new Date();
-        const monthsThai = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-        const monthsThaiShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+        selectedDate = new Date();
 
         function renderCalendar(date) {
             dateContainer.innerHTML = '';
@@ -761,12 +1009,28 @@
             cells.forEach(cell => {
                 const div = document.createElement('div');
                 const isPast = cell.date < today;
-                const isSelected = selectedDate.getTime() === cell.date.getTime();
+                const isSelected = selectedDate.getFullYear() === cell.date.getFullYear() &&
+                                   selectedDate.getMonth() === cell.date.getMonth() &&
+                                   selectedDate.getDate() === cell.date.getDate();
+                const closedCheck = isShopClosedOnDate(cell.date);
                 
                 div.innerText = cell.date.getDate();
                 
                 if (!cell.isCurrent || isPast) {
-                    div.className = 'py-2 rounded-full text-on-surface-variant/30 cursor-not-allowed';
+                    div.className = 'py-2 rounded-full text-on-surface-variant/30 cursor-not-allowed select-none';
+                } else if (closedCheck.closed) {
+                    div.className = 'py-2 rounded-full text-error/50 hover:bg-error/10 cursor-pointer date-btn transition-colors relative flex flex-col items-center justify-center';
+                    div.title = `ร้านปิด: ${closedCheck.reason}`;
+                    const dot = document.createElement('span');
+                    dot.className = 'w-1 h-1 rounded-full bg-error absolute bottom-1';
+                    div.appendChild(dot);
+                    div.addEventListener('click', () => {
+                        selectedDate = cell.date;
+                        selectedDateText = `${cell.date.getDate()} ${monthsThaiShort[cell.date.getMonth()]} ${cell.date.getFullYear() + 543}`;
+                        renderCalendar(currentDate);
+                        renderTimeSlots(selectedDate);
+                        updateSummary();
+                    });
                 } else {
                     if (isSelected) {
                         div.className = 'py-2 rounded-full bg-primary-container text-white font-bold shadow-[0_0_10px_rgba(37,99,235,0.4)] cursor-pointer date-btn transition-all';
@@ -777,7 +1041,9 @@
                     
                     div.addEventListener('click', () => {
                         selectedDate = cell.date;
-                        renderCalendar(currentDate); // Re-render to update selected state
+                        selectedDateText = `${cell.date.getDate()} ${monthsThaiShort[cell.date.getMonth()]} ${cell.date.getFullYear() + 543}`;
+                        renderCalendar(currentDate);
+                        renderTimeSlots(selectedDate);
                         updateSummary();
                     });
                 }
@@ -785,8 +1051,11 @@
             });
         }
         
+        // Initial Calendar & Time Slots
+        selectedDateText = `${selectedDate.getDate()} ${monthsThaiShort[selectedDate.getMonth()]} ${selectedDate.getFullYear() + 543}`;
         renderCalendar(currentDate);
-        updateSummary(); // Initial load
+        renderTimeSlots(selectedDate);
+        updateSummary();
         
         document.getElementById('prev-month').addEventListener('click', () => {
             currentDate.setMonth(currentDate.getMonth() - 1);
@@ -796,19 +1065,6 @@
             currentDate.setMonth(currentDate.getMonth() + 1);
             renderCalendar(currentDate);
         });
-
-        // --- 2. Time Logic ---
-        const times = document.querySelectorAll('.time-btn');
-        times.forEach(time => {
-            time.addEventListener('click', () => {
-                times.forEach(t => {
-                    t.className = 'time-btn py-3 px-2 rounded-xl border border-outline-variant/50 bg-surface-container text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all';
-                });
-                time.className = 'time-btn active-time py-3 px-2 rounded-xl border-2 border-primary bg-primary-container/20 text-primary font-bold shadow-[0_0_15px_rgba(37,99,235,0.2)] transition-all';
-                selectedTimeText = time.innerText.trim();
-                updateSummary();
-            });
-        });
     });
 
     // --- Update Summary Texts ---
@@ -817,7 +1073,7 @@
         if (paymentRadio) {
             document.querySelectorAll('.summary-payment-text').forEach(el => el.innerText = paymentRadio.value);
             
-            // Adjust "ยอดชำระที่ร้าน" text logic based on payment method
+            // Adjust deposit amount
             const amountEl = document.querySelector('.text-3xl.font-black.text-white');
             if(amountEl) {
                 amountEl.innerText = '฿50';
@@ -827,7 +1083,7 @@
 
     window.updateSummary = function() {
         const carRadio = document.querySelector('input[name="selected_car"]:checked');
-        const carName = carRadio ? `${carRadio.value} (${carRadio.dataset.plate})` : '';
+        const carName = carRadio ? `${carRadio.value} (${carRadio.dataset.plate})` : 'ยังไม่ได้เลือกรถ';
 
         document.querySelectorAll('.summary-car-text').forEach(el => el.innerText = carName);
         
@@ -836,6 +1092,8 @@
         }
         if (selectedTimeText) {
             document.querySelectorAll('.summary-time-text').forEach(el => el.innerText = selectedTimeText);
+        } else {
+            document.querySelectorAll('.summary-time-text').forEach(el => el.innerText = 'กรุณาเลือกเวลา');
         }
         
         updatePaymentSummary();
@@ -1043,6 +1301,30 @@
     let paymentTimerInterval = null;
 
     window.confirmBooking = function(btn) {
+        // 1. Vehicle Selection Validation
+        const checkedCar = document.querySelector('input[name="selected_car"]:checked');
+        const cars = getCars();
+        if (!checkedCar || cars.length === 0) {
+            alert("⚠️ กรุณาเลือกหรือเพิ่มข้อมูลรถยนต์ของคุณก่อนทำการจอง");
+            openAddCarModal();
+            return;
+        }
+
+        // 2. Date & Time Selection Validation
+        if (!selectedTimeText || selectedTimeText.trim() === '' || selectedTimeText === 'กรุณาเลือกเวลา') {
+            alert("⚠️ กรุณาเลือกช่วงเวลาที่ต้องการรับบริการในขั้นตอนที่ 3");
+            const timeSec = document.getElementById('time-container');
+            if (timeSec) timeSec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        // 3. Shop Closed Check
+        const closedCheck = isShopClosedOnDate(selectedDate);
+        if (closedCheck.closed) {
+            alert(`⚠️ ร้านปิดให้บริการในวันที่คุณเลือก (${closedCheck.reason})\nกรุณาเลือกวันอื่นในปฏิทิน`);
+            return;
+        }
+
         // Generate random simulated booking ID
         const randomNum = Math.floor(1000 + Math.random() * 9000);
         currentBookingId = `#BK-${randomNum}`;
@@ -1061,7 +1343,7 @@
         if (payBookingId) payBookingId.innerText = currentBookingId;
 
         // Load Shop QR Code if uploaded by the car wash shop owner
-        const shopQr = localStorage.getItem('ownerQrCode') || localStorage.getItem('shopPromptPayQr');
+        const shopQr = currentShop?.promptpay_qr || localStorage.getItem('ownerQrCode') || localStorage.getItem('shopPromptPayQr');
         const qrImgEl = document.getElementById('shop-qr-image');
         const defaultQrSvg = document.getElementById('default-qr-svg');
         if (shopQr && qrImgEl) {
@@ -1073,18 +1355,18 @@
             if (defaultQrSvg) defaultQrSvg.classList.remove('hidden');
         }
 
-        // Load Shop PromptPay number if customized
-        const savedPromptPay = localStorage.getItem('ownerPromptPay') || localStorage.getItem('shopPromptPay');
+        // Load Shop PromptPay number from current shop or customized
+        const shopPhone = currentShop?.promptpay || currentShop?.phone || localStorage.getItem('ownerPromptPay') || localStorage.getItem('shopPromptPay') || '080-000-0000';
         const promptPayEl = document.getElementById('promptpay-number');
-        if (savedPromptPay && promptPayEl) {
-            promptPayEl.innerText = savedPromptPay;
+        if (promptPayEl) {
+            promptPayEl.innerText = shopPhone;
         }
 
-        // Load Shop Name if customized
-        const savedAccountName = localStorage.getItem('ownerAccountName') || localStorage.getItem('shopAccountName');
+        // Load Shop Name from current shop
+        const shopName = currentShop?.name || localStorage.getItem('ownerAccountName') || localStorage.getItem('shopAccountName') || 'ร้านคาร์แคร์';
         const accountNameEl = document.getElementById('shop-account-name');
-        if (savedAccountName && accountNameEl) {
-            accountNameEl.innerText = savedAccountName;
+        if (accountNameEl) {
+            accountNameEl.innerText = shopName;
         }
 
         const modal = document.getElementById('payment-modal');
@@ -1161,7 +1443,9 @@
     }
 
     window.copyPromptPayNumber = function() {
-        const number = "0891234567";
+        const promptPayEl = document.getElementById('promptpay-number');
+        const rawNum = promptPayEl ? promptPayEl.innerText.trim() : (currentShop?.promptpay || currentShop?.phone || '0800000000');
+        const number = rawNum.replace(/[^0-9]/g, '');
         navigator.clipboard.writeText(number).then(() => {
             const copyText = document.getElementById('copy-text');
             const copyIcon = document.getElementById('copy-icon');
@@ -1390,6 +1674,8 @@
                 carPlate: carPlate,
                 carSize: carSize,
                 carName: `${carBrand} (${carPlate})`,
+                bookingDate: getSelectedDateIso(),
+                bookingTime: selectedTimeText,
                 dateTime: `${selectedDateText || 'วันนี้'}, ${selectedTimeText || '10:00 น.'}`,
                 depositAmount: '฿50.00',
                 totalAmount: `฿${selectedServicePrice || '450'}`,
@@ -1409,6 +1695,11 @@
                 list.unshift(activeBooking);
                 localStorage.setItem('appBookingsList', JSON.stringify(list));
             } catch(e) {}
+
+            // Re-render time slots so that newly booked slot shows as ติดจอง immediately
+            if (typeof renderTimeSlots === 'function') {
+                renderTimeSlots(selectedDate);
+            }
 
             // Sync to Supabase bookings table via safeSupabaseRest
             (async () => {
@@ -1441,7 +1732,7 @@
                             customer_id: userId,
                             shop_id: validShopId,
                             status: 'PENDING',
-                            booking_date: new Date().toISOString().split('T')[0],
+                            booking_date: getSelectedDateIso(),
                             booking_time: cleanTime,
                             vehicle_info: `${carBrand} (${carPlate}) - ${carSize}`,
                             total_price: parseFloat(selectedServicePrice) || 450,
@@ -1461,6 +1752,16 @@
                                 activeBooking.id = inserted[0].id;
                                 activeBooking.bookingId = '#' + inserted[0].id.slice(0, 8).toUpperCase();
                                 localStorage.setItem('activeCustomerBooking', JSON.stringify(activeBooking));
+                                // Also update in appBookingsList
+                                try {
+                                    let l = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
+                                    const idx = l.findIndex(b => b.bookingId === currentBookingId);
+                                    if (idx !== -1) {
+                                        l[idx].id = inserted[0].id;
+                                        l[idx].bookingId = activeBooking.bookingId;
+                                        localStorage.setItem('appBookingsList', JSON.stringify(l));
+                                    }
+                                } catch (_) {}
                             }
                         }
                     }
@@ -1642,15 +1943,28 @@
             currentShopId = shop.id;
             localStorage.setItem('selectedShopId', currentShopId);
 
+            // Load shop operating hours and special holidays from cache
+            try {
+                const cachedHours = localStorage.getItem('cachedShopOperatingHours_' + shop.id) || localStorage.getItem('ownerOperatingHours');
+                if (cachedHours) shopOperatingHours = JSON.parse(cachedHours);
+            } catch (_) {}
+            try {
+                const cachedHolidays = localStorage.getItem('ownerSpecialHolidays');
+                if (cachedHolidays) shopSpecialHolidays = JSON.parse(cachedHolidays);
+            } catch (_) {}
+
             const paramService = urlParams.get('service');
             const paramPrice = urlParams.get('price');
             if (paramService) {
                 selectedServiceName = paramService;
-                selectedServicePrice = paramPrice || (currentShop.services[0]?.price || '450');
+                selectedServicePrice = paramPrice || (currentShop.services && currentShop.services[0]?.price ? currentShop.services[0].price.toString() : '200');
             } else if (currentShop.services && currentShop.services.length > 0) {
                 const pop = currentShop.services.find(s => s.popular) || currentShop.services[0];
                 selectedServiceName = pop.name;
-                selectedServicePrice = pop.price.toString();
+                selectedServicePrice = (pop.price || 200).toString();
+            } else {
+                selectedServiceName = 'บริการล้างรถมาตรฐาน';
+                selectedServicePrice = '200';
             }
 
             // Update UI Elements for Selected Shop & Service
@@ -1680,6 +1994,14 @@
 
             const promptPayEl = document.getElementById('promptpay-number');
             if (promptPayEl) promptPayEl.innerText = currentShop.promptpay || currentShop.phone || '080-000-0000';
+
+            const accountNameEl = document.getElementById('shop-account-name');
+            if (accountNameEl) accountNameEl.innerText = currentShop.name || 'ร้านคาร์แคร์';
+
+            // Refresh slots with current shop data
+            if (typeof renderTimeSlots === 'function') {
+                renderTimeSlots(selectedDate);
+            }
         }
 
         if (cachedShop) {
@@ -1772,6 +2094,17 @@
                 if (dbShop) {
                     const dbServices = await fetcher(`services?shop_id=eq.${dbShop.id}&order=created_at.asc`);
                     
+                    // Also fetch live operating hours for this shop
+                    try {
+                        const dbHours = await fetcher(`shop_operating_hours?shop_id=eq.${dbShop.id}&order=day_of_week.asc&select=*`);
+                        if (Array.isArray(dbHours) && dbHours.length > 0) {
+                            shopOperatingHours = dbHours;
+                            localStorage.setItem('cachedShopOperatingHours_' + dbShop.id, JSON.stringify(dbHours));
+                        }
+                    } catch (hErr) {
+                        console.warn('Operating hours fetch notice:', hErr);
+                    }
+
                     // Read existing cached details so we don't wipe out rating, reviews, images, items, etc.
                     let existingCached = {};
                     try {
