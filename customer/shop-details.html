@@ -808,9 +808,13 @@
         if (rateEl) {
             const rawRating = currentShop.rating;
             const rawReviews = currentShop.reviews;
-            const validRating = (rawRating && rawRating !== 'undefined' && rawRating !== 'null') ? rawRating : '5.0';
-            const validReviews = (rawReviews && rawReviews !== 'undefined' && rawReviews !== 'null') ? rawReviews : '0 รีวิว';
-            rateEl.textContent = `${validRating} (${validReviews})`;
+            const validRating = (rawRating && rawRating !== 'undefined' && rawRating !== 'null') ? rawRating : 'ใหม่';
+            const validReviews = (rawReviews && rawReviews !== 'undefined' && rawReviews !== 'null') ? rawReviews : 'ยังไม่มีรีวิว';
+            if (validRating === 'ใหม่' || validReviews === '0 รีวิว' || validReviews === 'ยังไม่มีรีวิว') {
+                rateEl.textContent = `ใหม่ (ยังไม่มีรีวิว)`;
+            } else {
+                rateEl.textContent = `${validRating} (${validReviews})`;
+            }
         }
         const phoneLink = document.getElementById('shop-phone-link');
         const phoneText = document.getElementById('shop-phone-text');

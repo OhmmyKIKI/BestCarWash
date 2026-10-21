@@ -1004,14 +1004,21 @@ tailwind.config = {
                     }
 
                     // Sync rating from local cached reviews if available
+                    let hasReviews = false;
                     try {
                         const cRev = JSON.parse(localStorage.getItem('cachedShopReviews_' + s.id) || '[]');
                         if (Array.isArray(cRev) && cRev.length > 0) {
                             const totalScore = cRev.reduce((sum, r) => sum + (parseFloat(r.rating) || 5), 0);
                             s.rating = (totalScore / cRev.length).toFixed(1);
                             s.reviews = `${cRev.length} รีวิว`;
+                            hasReviews = true;
                         }
                     } catch (_) {}
+
+                    if (!hasReviews && (s.reviews === 'ใหม่' || s.reviews === 'ยังไม่มีรีวิว' || !s.reviews || s.reviews === '0 รีวิว' || s.rating === '5.0' || s.rating === 5)) {
+                        s.rating = 'ใหม่';
+                        s.reviews = 'ยังไม่มีรีวิว';
+                    }
                 });
 
                 shops = [...cached];
@@ -1118,14 +1125,14 @@ tailwind.config = {
                             } catch (_) {}
                         }
 
-                        // Fallback to db column if present, or "ใหม่"
+                        // If no reviews in database, mark shop as "ใหม่" / "ยังไม่มีรีวิว" (do not fake 5.0)
                         if (!realRating) {
                             if (db.rating !== null && db.rating !== undefined && !isNaN(Number(db.rating)) && Number(db.rating) > 0) {
                                 realRating = Number(db.rating).toFixed(1);
                                 realReviewText = db.review_count ? `${db.review_count} รีวิว` : 'ใหม่';
                             } else {
-                                realRating = '5.0';
-                                realReviewText = 'ใหม่';
+                                realRating = 'ใหม่';
+                                realReviewText = 'ยังไม่มีรีวิว';
                             }
                         }
 
