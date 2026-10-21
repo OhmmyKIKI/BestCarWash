@@ -164,20 +164,47 @@
             
             <div class="space-y-4">
                 <!-- LINE Notification -->
-                <label class="flex items-center justify-between cursor-pointer group/toggle">
-                    <div class="flex flex-col">
-                        <div class="flex items-center gap-2">
-                            <span class="text-sm font-semibold text-on-surface">แจ้งเตือนผ่าน LINE (LINE Official / Notify)</span>
-                            <span class="text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30">แนะนำ</span>
+                <div class="border-b border-outline-variant/20 pb-4">
+                    <label class="flex items-center justify-between cursor-pointer group/toggle">
+                        <div class="flex items-start gap-3 flex-1 pr-3">
+                            <div class="w-8 h-8 rounded-full bg-[#06C755] flex items-center justify-center text-white font-black text-xs shrink-0 mt-0.5 shadow-md shadow-[#06C755]/30">
+                                LINE
+                            </div>
+                            <div class="flex flex-col">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-semibold text-on-surface">แจ้งเตือนผ่าน LINE Official</span>
+                                    <span class="text-[10px] font-bold text-[#06C755] bg-[#06C755]/15 px-2 py-0.5 rounded border border-[#06C755]/30">แนะนำ</span>
+                                </div>
+                                <span class="text-xs text-on-surface-variant">รับข้อความแจ้งเตือนคิวใหม่และสลิปเข้ากลุ่ม LINE ของร้านทันที</span>
+                            </div>
                         </div>
-                        <span class="text-xs text-on-surface-variant">รับข้อความแจ้งเตือนคิวใหม่และสลิปเข้ากลุ่ม LINE ของร้านทันที</span>
+                        <div class="relative inline-block w-11 h-6 align-middle select-none transition duration-200 ease-in flex-shrink-0">
+                            <input type="checkbox" id="notifyLine" checked class="peer absolute opacity-0 w-0 h-0" onchange="toggleLineView()"/>
+                            <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/50 transition-colors duration-200 ease-in-out peer-checked:bg-[#06C755] peer-checked:border-[#06C755]"></span>
+                            <span class="absolute left-1 top-1 bg-outline-variant w-4 h-4 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-white"></span>
+                        </div>
+                    </label>
+
+                    <!-- Add Line Friend Box -->
+                    <div id="line-connect-box" class="mt-3 ml-11 p-3.5 rounded-2xl bg-[#06C755]/10 border border-[#06C755]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-7 h-7 rounded-full bg-[#06C755] text-white flex items-center justify-center text-[12px] font-bold shadow-sm shrink-0">
+                                <span class="material-symbols-outlined text-[16px]">person_add</span>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                                    <span>LINE Official:</span>
+                                    <span class="font-mono text-[#06C755] font-extrabold">@bestcarwash</span>
+                                </span>
+                                <span class="text-[11px] text-on-surface-variant">แอดเพื่อนเพื่อเปิดระบบรับแจ้งเตือนสำหรับเจ้าของร้าน</span>
+                            </div>
+                        </div>
+                        <button type="button" onclick="openConnectModal()" class="w-full sm:w-auto px-3.5 py-1.5 bg-[#06C755] hover:bg-[#05b34c] text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-95 shrink-0">
+                            <span class="material-symbols-outlined text-[16px]">qr_code_scanner</span>
+                            <span>แอดเพื่อน LINE</span>
+                        </button>
                     </div>
-                    <div class="relative inline-block w-11 h-6 align-middle select-none transition duration-200 ease-in flex-shrink-0">
-                        <input type="checkbox" id="notifyLine" checked class="peer absolute opacity-0 w-0 h-0"/>
-                        <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/50 transition-colors duration-200 ease-in-out peer-checked:bg-secondary peer-checked:border-secondary"></span>
-                        <span class="absolute left-1 top-1 bg-outline-variant w-4 h-4 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-on-secondary-container"></span>
-                    </div>
-                </label>
+                </div>
 
                 <!-- Push Notification -->
                 <label class="flex items-center justify-between cursor-pointer group/toggle">
@@ -212,6 +239,62 @@
     </button>
 </div>
 
+<!-- LINE Connect Modal -->
+<div id="connect-modal" class="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4">
+    <div class="bg-surface-container border border-outline-variant/40 rounded-3xl p-6 max-w-sm w-full flex flex-col items-center text-center shadow-2xl scale-95 transition-transform duration-300 relative" id="connect-modal-content">
+        <button type="button" onclick="closeConnectModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-surface-variant text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors">
+            <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
+
+        <div class="w-12 h-12 rounded-2xl bg-[#06C755] flex items-center justify-center text-white font-black text-lg mb-3 shadow-lg shadow-[#06C755]/30">
+            LINE
+        </div>
+
+        <h3 class="text-lg font-bold text-on-surface">แอดเพื่อน LINE Official</h3>
+        <p class="text-xs text-on-surface-variant mt-1 mb-4">สแกน QR Code หรือเพิ่มเพื่อนเพื่อรับการแจ้งเตือนคิวและสลิปสำหรับร้านค้า</p>
+
+        <!-- QR Code Frame -->
+        <div class="p-3 bg-white rounded-2xl shadow-inner border-2 border-[#06C755]/40 mb-3 flex flex-col items-center">
+            <svg class="w-36 h-36" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100" height="100" fill="white"/>
+                <rect x="10" y="10" width="24" height="24" fill="#0b1326" rx="3"/>
+                <rect x="14" y="14" width="16" height="16" fill="white" rx="2"/>
+                <rect x="18" y="18" width="8" height="8" fill="#06C755" rx="1"/>
+                <rect x="66" y="10" width="24" height="24" fill="#0b1326" rx="3"/>
+                <rect x="70" y="14" width="16" height="16" fill="white" rx="2"/>
+                <rect x="74" y="18" width="8" height="8" fill="#06C755" rx="1"/>
+                <rect x="10" y="66" width="24" height="24" fill="#0b1326" rx="3"/>
+                <rect x="14" y="70" width="16" height="16" fill="white" rx="2"/>
+                <rect x="18" y="74" width="8" height="8" fill="#06C755" rx="1"/>
+                <rect x="42" y="12" width="6" height="6" fill="#0b1326"/>
+                <rect x="52" y="18" width="6" height="6" fill="#0b1326"/>
+                <rect x="40" y="28" width="6" height="6" fill="#0b1326"/>
+                <rect x="14" y="44" width="6" height="6" fill="#0b1326"/>
+                <rect x="24" y="50" width="6" height="6" fill="#0b1326"/>
+                <rect x="44" y="44" width="12" height="12" fill="#06C755" rx="2"/>
+                <rect x="64" y="42" width="6" height="6" fill="#0b1326"/>
+                <rect x="78" y="48" width="6" height="6" fill="#0b1326"/>
+                <rect x="40" y="66" width="6" height="6" fill="#0b1326"/>
+                <rect x="54" y="74" width="6" height="6" fill="#0b1326"/>
+                <rect x="68" y="68" width="6" height="6" fill="#0b1326"/>
+                <rect x="80" y="78" width="6" height="6" fill="#0b1326"/>
+                <rect x="70" y="82" width="6" height="6" fill="#0b1326"/>
+            </svg>
+            <span class="text-[11px] font-mono font-bold text-gray-800 mt-1">LINE ID: @bestcarwash</span>
+        </div>
+
+        <div class="w-full flex flex-col gap-2 mt-2">
+            <a href="https://line.me/ti/p/@bestcarwash" target="_blank" class="w-full py-2.5 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-xs rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">person_add</span>
+                <span>เปิดแอป LINE เพื่อเพิ่มเพื่อน</span>
+            </a>
+            <button type="button" onclick="confirmConnectLine()" class="w-full py-2 bg-surface-container-highest hover:bg-surface-variant text-on-surface text-xs font-semibold rounded-xl border border-outline-variant/40 transition-colors">
+                ยืนยันการเพิ่มเพื่อนแล้ว
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Toast Notification -->
 <div id="toast" class="fixed bottom-24 md:bottom-8 left-1/2 transform -translate-x-1/2 bg-secondary-container text-on-secondary-container px-6 py-3 rounded-full shadow-lg border border-secondary/30 flex items-center gap-2 z-50 opacity-0 translate-y-10 pointer-events-none transition-all duration-300">
     <span class="material-symbols-outlined">check_circle</span>
@@ -222,9 +305,79 @@
     let currentUserId = null;
     let currentUser = null;
 
+    function openConnectModal() {
+        const modal = document.getElementById('connect-modal');
+        const content = document.getElementById('connect-modal-content');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.classList.add('opacity-100');
+            if (content) {
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }
+        }, 10);
+    }
+
+    function closeConnectModal() {
+        const modal = document.getElementById('connect-modal');
+        const content = document.getElementById('connect-modal-content');
+        if (!modal) return;
+        modal.classList.remove('opacity-100');
+        modal.classList.add('opacity-0');
+        if (content) {
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+        }
+        setTimeout(() => {
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }, 300);
+    }
+
+    function confirmConnectLine() {
+        closeConnectModal();
+        const toast = document.getElementById('toast');
+        if (toast) {
+            const toastText = toast.querySelector('span:last-child');
+            if (toastText) toastText.textContent = 'เชื่อมต่อและแอดเพื่อน LINE เรียบร้อยแล้ว!';
+            toast.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none');
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                if (toastText) toastText.textContent = 'บันทึกการตั้งค่าเรียบร้อยแล้ว!';
+            }, 2500);
+        }
+    }
+
+    function toggleLineView() {
+        const lineCheck = document.getElementById('notifyLine');
+        const box = document.getElementById('line-connect-box');
+        if (!box) return;
+        if (lineCheck && lineCheck.checked) {
+            box.classList.remove('hidden');
+        } else {
+            box.classList.add('hidden');
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
         const form = document.getElementById('notificationsForm');
         const toast = document.getElementById('toast');
+
+        // Modal backdrop click listener
+        const connectModal = document.getElementById('connect-modal');
+        if (connectModal) {
+            connectModal.addEventListener('click', (e) => {
+                if (e.target === connectModal) closeConnectModal();
+            });
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeConnectModal();
+        });
 
         // Target all save buttons for loading state
         const saveBtns = [
@@ -242,6 +395,7 @@
                     el.checked = settings[id];
                 }
             });
+            toggleLineView();
         };
 
         // 1. Immediately resolve current user ID from local storage cache
