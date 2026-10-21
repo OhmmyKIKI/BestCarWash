@@ -1,7 +1,21 @@
 // supabase-client.js (customer local copy)
 // Supabase Configuration & Resilient Client
-var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+var SUPABASE_DIRECT_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
 var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+
+function getPreferredSupabaseUrl() {
+    try {
+        if (typeof window !== 'undefined' && window.location) {
+            const host = window.location.hostname;
+            if (host && (host.endsWith('vercel.app') || host.includes('bestcarwash'))) {
+                return window.location.origin + '/api/supabase';
+            }
+        }
+    } catch (_) {}
+    return SUPABASE_DIRECT_URL;
+}
+
+var SUPABASE_URL = getPreferredSupabaseUrl();
 
 function getSupabaseClient() {
     if (window.supabaseClient) return window.supabaseClient;
@@ -22,6 +36,7 @@ var supabaseClient = getSupabaseClient();
 var supabase = supabaseClient;
 window.supabaseClient = supabaseClient;
 window.getSupabaseClient = getSupabaseClient;
+window.SUPABASE_DIRECT_URL = SUPABASE_DIRECT_URL;
 window.SUPABASE_URL = SUPABASE_URL;
 window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
 
@@ -104,9 +119,18 @@ function formatRestResponse(parsed, error = null) {
 
 async function safeSupabaseRest(endpoint, options = {}) {
     const method = (options.method || 'GET').toUpperCase();
-    const url = endpoint.startsWith('http') 
-        ? endpoint 
-        : `${SUPABASE_URL}/rest/v1/${endpoint.replace(/^\/+/, '')}`;
+    const cleanEndpoint = endpoint.replace(/^\/+/, '');
+
+    const candidateBases = [];
+    if (typeof window !== 'undefined' && window.location.origin && window.location.hostname.includes('vercel.app')) {
+        candidateBases.push(window.location.origin + '/api/supabase');
+        candidateBases.push(SUPABASE_DIRECT_URL);
+    } else {
+        candidateBases.push(SUPABASE_URL || SUPABASE_DIRECT_URL);
+        if (typeof window !== 'undefined' && window.location.origin) {
+            candidateBases.push(window.location.origin + '/api/supabase');
+        }
+    }
 
     const token = await getValidAuthToken();
     const authHeader = token ? `Bearer ${token}` : `Bearer ${SUPABASE_ANON_KEY}`;
@@ -130,54 +154,56 @@ async function safeSupabaseRest(endpoint, options = {}) {
         fetchOpts.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
     }
 
-    try {
-        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-        let timeoutId = null;
-        if (controller) {
-            timeoutId = setTimeout(() => controller.abort(), 12000);
-            fetchOpts.signal = controller.signal;
-        }
+    let lastErr = null;
+    for (let i = 0; i < candidateBases.length; i++) {
+        const base = candidateBases[i];
+        const url = endpoint.startsWith('http') ? endpoint : `${base}/rest/v1/${cleanEndpoint}`;
 
-        let res = await fetch(url, fetchOpts);
-        if (timeoutId) clearTimeout(timeoutId);
-
-        if (!res.ok && (res.status === 401 || res.status === 403) && authHeader !== `Bearer ${SUPABASE_ANON_KEY}`) {
-            headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
-            fetchOpts.headers = headers;
-            const resAnon = await fetch(url, fetchOpts);
-            if (resAnon.ok) {
-                const txt = await resAnon.text();
-                const parsed = txt ? JSON.parse(txt) : true;
-                return formatRestResponse(parsed);
+        try {
+            const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+            let timeoutId = null;
+            if (controller) {
+                timeoutId = setTimeout(() => controller.abort(), 12000);
+                fetchOpts.signal = controller.signal;
             }
-        }
 
-        if (res.ok) {
-            const text = await res.text();
-            const parsed = text ? JSON.parse(text) : true;
-            return formatRestResponse(parsed);
-        } else {
-            const errTxt = await res.text().catch(() => '');
-            console.warn(`Supabase REST [${method} ${endpoint}] returned ${res.status}:`, errTxt);
-            return formatRestResponse(null, new Error(errTxt || `HTTP ${res.status}`));
-        }
-    } catch (err) {
-        if (method === 'GET') {
-            try {
+            let res = await fetch(url, fetchOpts);
+            if (timeoutId) clearTimeout(timeoutId);
+
+            // If 401/403 with user token, retry once with anon key
+            if (!res.ok && (res.status === 401 || res.status === 403) && authHeader !== `Bearer ${SUPABASE_ANON_KEY}`) {
                 headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
                 fetchOpts.headers = headers;
-                delete fetchOpts.signal;
-                const fallbackRes = await fetch(url, fetchOpts);
-                if (fallbackRes.ok) {
-                    const txt = await fallbackRes.text();
+                const resAnon = await fetch(url, fetchOpts);
+                if (resAnon.ok) {
+                    const txt = await resAnon.text();
                     const parsed = txt ? JSON.parse(txt) : true;
                     return formatRestResponse(parsed);
                 }
-            } catch (_) {}
+            }
+
+            if (res.ok) {
+                const text = await res.text();
+                const parsed = text ? JSON.parse(text) : true;
+                return formatRestResponse(parsed);
+            } else {
+                const errTxt = await res.text().catch(() => '');
+                lastErr = new Error(errTxt || `HTTP ${res.status}`);
+                // If it's a client 4xx error (not network error), return immediately unless 404
+                if (res.status >= 400 && res.status < 500 && res.status !== 404) {
+                    console.warn(`Supabase REST [${method} ${cleanEndpoint}] returned ${res.status}:`, errTxt);
+                    return formatRestResponse(null, lastErr);
+                }
+            }
+        } catch (fetchErr) {
+            lastErr = fetchErr;
+            console.warn(`Supabase tunnel [${base}] notice on ${cleanEndpoint}:`, fetchErr.message || fetchErr);
         }
-        console.warn(`Supabase REST connection notice on ${endpoint}:`, err.message || err);
-        return formatRestResponse(null, err);
+
+        if (endpoint.startsWith('http')) break;
     }
+
+    return formatRestResponse(null, lastErr || new Error('Connection failed'));
 }
 
 window.safeSupabaseRest = safeSupabaseRest;

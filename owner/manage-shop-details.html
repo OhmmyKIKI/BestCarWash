@@ -1225,25 +1225,25 @@
                     }
                 }
 
-                // B. Fallback to direct REST call
+                // B. Fallback to direct REST call with dual-tunnel failover
                 if (!shopUpdated) {
-                    try {
-                        const token = (typeof getValidAuthToken === 'function') ? await getValidAuthToken() : null;
-                        const authHeader = token ? `Bearer ${token}` : `Bearer ${SUPABASE_ANON_KEY}`;
-                        let res = await fetch(`${SUPABASE_URL}/rest/v1/shops?id=eq.${targetShopId}`, {
-                            method: 'PATCH',
-                            headers: {
-                                'apikey': SUPABASE_ANON_KEY,
-                                'Authorization': authHeader,
-                                'Content-Type': 'application/json',
-                                'Prefer': 'return=representation'
-                            },
-                            body: JSON.stringify(validShopCols)
-                        });
+                    const candidateBases = [];
+                    if (typeof window !== 'undefined' && window.location.origin && window.location.hostname.includes('vercel.app')) {
+                        candidateBases.push(window.location.origin + '/api/supabase');
+                        candidateBases.push(window.SUPABASE_DIRECT_URL || 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co');
+                    } else {
+                        candidateBases.push(window.SUPABASE_URL || 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co');
+                        if (typeof window !== 'undefined' && window.location.origin) {
+                            candidateBases.push(window.location.origin + '/api/supabase');
+                        }
+                    }
 
-                        if (!res.ok && res.status === 400 && validShopCols.map_link) {
-                            delete validShopCols.map_link;
-                            res = await fetch(`${SUPABASE_URL}/rest/v1/shops?id=eq.${targetShopId}`, {
+                    for (const baseUrl of candidateBases) {
+                        if (shopUpdated) break;
+                        try {
+                            const token = (typeof getValidAuthToken === 'function') ? await getValidAuthToken() : null;
+                            const authHeader = token ? `Bearer ${token}` : `Bearer ${SUPABASE_ANON_KEY}`;
+                            let res = await fetch(`${baseUrl}/rest/v1/shops?id=eq.${targetShopId}`, {
                                 method: 'PATCH',
                                 headers: {
                                     'apikey': SUPABASE_ANON_KEY,
@@ -1253,21 +1253,37 @@
                                 },
                                 body: JSON.stringify(validShopCols)
                             });
-                        }
 
-                        if (res.ok) {
-                            const resData = await res.json().catch(() => null);
-                            if (Array.isArray(resData) && resData.length > 0) {
-                                shopUpdated = true;
-                                console.log('✅ Shop table updated via direct REST:', resData[0]);
+                            if (!res.ok && res.status === 400 && validShopCols.map_link) {
+                                const retryCols = { ...validShopCols };
+                                delete retryCols.map_link;
+                                res = await fetch(`${baseUrl}/rest/v1/shops?id=eq.${targetShopId}`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                        'apikey': SUPABASE_ANON_KEY,
+                                        'Authorization': authHeader,
+                                        'Content-Type': 'application/json',
+                                        'Prefer': 'return=representation'
+                                    },
+                                    body: JSON.stringify(retryCols)
+                                });
                             }
-                        } else {
-                            const errTxt = await res.text().catch(() => '');
-                            lastUpdateError = errTxt || `HTTP ${res.status}`;
+
+                            if (res.ok) {
+                                const resData = await res.json().catch(() => null);
+                                if (Array.isArray(resData) && resData.length > 0) {
+                                    shopUpdated = true;
+                                    console.log(`✅ Shop table updated via direct REST (${baseUrl}):`, resData[0]);
+                                    break;
+                                }
+                            } else {
+                                const errTxt = await res.text().catch(() => '');
+                                lastUpdateError = errTxt || `HTTP ${res.status}`;
+                            }
+                        } catch (restE) {
+                            lastUpdateError = restE.message || String(restE);
+                            console.warn(`REST shop update notice via ${baseUrl}:`, restE);
                         }
-                    } catch (restE) {
-                        lastUpdateError = restE.message || String(restE);
-                        console.warn('REST shop update notice:', restE);
                     }
                 }
             } else if (userId) {
@@ -1311,7 +1327,12 @@
 
             // 4. CHECK RESULTS AND GIVE USER TRUTHFUL IMMEDIATE FEEDBACK
             if (!shopUpdated) {
-                alert('⚠️ ไม่สามารถบันทึกลงฐานข้อมูล Supabase ได้:\n' + (lastUpdateError || 'กรุณาลองตรวจสอบการเชื่อมต่ออินเทอร์เน็ตหรือเข้าสู่ระบบใหม่อีกครั้ง'));
+                const isFailedToFetch = lastUpdateError && (lastUpdateError.includes('Failed to fetch') || lastUpdateError.includes('Load failed'));
+                let userMsg = lastUpdateError || 'กรุณาลองตรวจสอบการเชื่อมต่ออินเทอร์เน็ตหรือเข้าสู่ระบบใหม่อีกครั้ง';
+                if (isFailedToFetch) {
+                    userMsg += '\n\n💡 คำแนะนำสำหรับ Opera GX / Ad Blocker:\n- หากเปิด Ad Blocker หรือ Shield อยู่ ให้คลิกที่ไอคอนรูปโล่ตรงแถบ URL แล้วเลือกปิดการบล็อกสำหรับ bestcarwash.vercel.app\n- หากเปิด Opera VPN อยู่ ให้ทดลองปิด VPN ชั่วคราว หรือทดสอบผ่าน Google Chrome / Microsoft Edge';
+                }
+                alert('⚠️ ไม่สามารถบันทึกลงฐานข้อมูล Supabase ได้:\n' + userMsg);
                 if (saveBtn) {
                     saveBtn.disabled = false;
                     saveBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> บันทึกข้อมูลร้านค้า';
