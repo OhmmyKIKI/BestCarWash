@@ -1121,6 +1121,7 @@ tailwind.config = {
                             price: '฿' + minPrice,
                             image: coverImg,        // แสดงเป็นรูปปกหลัก (Cover image, NOT avatar)
                             cover_image: coverImg,  // Explicit cover image reference
+                            images: (isCurrentOwnerShop && localGallery && localGallery.length > 0) ? localGallery : [coverImg],
                             logo: logo,             // Logo/avatar retained separately
                             lat: Number(lat.toFixed(6)),
                             lng: Number(lng.toFixed(6)),

@@ -182,6 +182,20 @@
                 </div>
             </div>
 
+            <!-- Mobile Photo Gallery Preview Strip -->
+            <section class="md:hidden">
+                <div class="flex items-center justify-between mb-2.5">
+                    <h3 class="text-base font-bold text-on-surface flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[18px] text-primary">photo_library</span> รูปภาพของร้าน (<span id="mobile-gallery-count">0</span>)
+                    </h3>
+                    <button type="button" onclick="openGallery(0)" class="text-xs text-primary font-bold hover:underline flex items-center gap-0.5">
+                        ดูทั้งหมด <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                    </button>
+                </div>
+                <div id="mobile-gallery-strip" class="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 hide-scrollbar snap-x">
+                    <!-- Populated dynamically by JS -->
+                </div>
+            </section>
 
             <!-- About -->
             <section>
@@ -328,7 +342,7 @@
 <div id="image-gallery-modal" class="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl hidden flex-col transition-opacity duration-300 opacity-0" onclick="closeGallery()">
     <!-- Top Bar -->
     <div class="flex justify-between items-center p-4">
-        <div class="text-white font-medium bg-black/50 px-3 py-1 rounded-full border border-white/10"><span id="current-slide-index">1</span> / 5</div>
+        <div class="text-white font-medium bg-black/50 px-3 py-1 rounded-full border border-white/10"><span id="current-slide-index">1</span> / <span id="total-slides-count">5</span></div>
         <button onclick="closeGallery()" class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
             <span class="material-symbols-outlined">close</span>
         </button>
@@ -415,12 +429,44 @@
     let galleryImages = [];
     let currentSlide = 0;
 
+    const DEFAULT_SHOP_PHOTOS = [
+        'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80',
+        'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80',
+        'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=1200&q=80',
+        'https://images.unsplash.com/photo-1580274455191-1c62238fa333?w=1200&q=80',
+        'https://images.unsplash.com/photo-1507136566006-cfc505b114fc?w=1200&q=80'
+    ];
+
+    function buildFullGallery(cover, rawGallery) {
+        let list = [];
+        if (Array.isArray(rawGallery)) {
+            list = rawGallery.filter(img => typeof img === 'string' && img.trim() && img !== 'undefined' && img !== 'null');
+        }
+        if (cover && typeof cover === 'string' && cover.trim() && cover !== 'undefined' && cover !== 'null') {
+            list = [cover, ...list.filter(img => img !== cover)];
+        }
+        if (list.length < 4) {
+            DEFAULT_SHOP_PHOTOS.forEach(dp => {
+                if (list.length < 5 && !list.includes(dp)) {
+                    list.push(dp);
+                }
+            });
+        }
+        return list;
+    }
+
     // IndexedDB Media Helper (for reading owner shop photos & covers)
     async function getIDBMedia(key) {
         if (typeof indexedDB === 'undefined') return null;
         return new Promise((resolve) => {
             try {
                 const req = indexedDB.open('BestCarWashMedia', 1);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('shop_media')) {
+                        db.createObjectStore('shop_media');
+                    }
+                };
                 req.onsuccess = (e) => {
                     const db = e.target.result;
                     if (!db || !db.objectStoreNames || !db.objectStoreNames.contains('shop_media')) return resolve(null);
@@ -759,11 +805,7 @@
             .filter(img => typeof img === 'string' && img.trim() && img !== 'undefined' && img !== 'null');
         
         if (galleryImages.length === 0) {
-            galleryImages = [
-                'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80',
-                'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80',
-                'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=1200&q=80'
-            ];
+            galleryImages = [...DEFAULT_SHOP_PHOTOS];
         }
 
         const heroImg = document.querySelector('.md\\:hidden img[alt="Shop"]');
@@ -783,6 +825,9 @@
         if (mobBadge && galleryImages.length > 0) {
             mobBadge.innerHTML = `<span class="material-symbols-outlined text-[14px]">photo_library</span> ${galleryImages.length} รูป`;
         }
+
+        // Render Mobile Gallery Strip
+        renderMobileGalleryStrip();
 
         // Render Packages
         renderPackages();
@@ -882,7 +927,13 @@
             // Check direct shop details cache
             const directCached = localStorage.getItem('cachedShopDetails_' + paramId);
             if (directCached) {
-                try { initialShopData = JSON.parse(directCached); } catch(_) {}
+                try {
+                    const parsedCached = JSON.parse(directCached);
+                    if (parsedCached) {
+                        parsedCached.images = buildFullGallery(parsedCached.images?.[0] || localStorage.getItem('ownerCoverImage'), parsedCached.images);
+                        initialShopData = parsedCached;
+                    }
+                } catch(_) {}
             }
             // Fallback: check cachedDiscoveryShops
             if (!initialShopData) {
@@ -890,15 +941,21 @@
                     const disc = JSON.parse(localStorage.getItem('cachedDiscoveryShops') || '[]');
                     const found = disc.find(s => s.id === paramId);
                     if (found) {
-                        const isOwner = (localStorage.getItem('currentShopId') === paramId) || (localStorage.getItem('ownerShopName') === found.name);
-                        const localCover = isOwner ? localStorage.getItem('ownerCoverImage') : null;
+                        let localCover = localStorage.getItem('ownerCoverImage_' + paramId) || localStorage.getItem('ownerCoverImage') || found.image;
                         let localGallery = null;
-                        try { localGallery = isOwner ? JSON.parse(localStorage.getItem('ownerShopGallery') || 'null') : null; } catch(_) {}
+                        try {
+                            localGallery = JSON.parse(localStorage.getItem('ownerShopGallery_' + paramId) || 'null');
+                        } catch(_) {}
+                        if (!localGallery || !localGallery.length) {
+                            try {
+                                localGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null');
+                            } catch(_) {}
+                        }
+                        if (!localGallery || !localGallery.length) {
+                            if (Array.isArray(found.images) && found.images.length > 0) localGallery = found.images;
+                        }
 
-                        let initialImages = [];
-                        if (Array.isArray(localGallery) && localGallery.length > 0) initialImages = [...localGallery];
-                        if (localCover && !initialImages.includes(localCover)) initialImages.unshift(localCover);
-                        if (initialImages.length === 0 && found.image && found.image !== 'undefined') initialImages.push(found.image);
+                        const initialImages = buildFullGallery(localCover, localGallery);
 
                         initialShopData = {
                             id: found.id,
@@ -913,10 +970,7 @@
                             lat: found.lat || 18.7938,
                             lng: found.lng || 98.9898,
                             map_link: found.map_link || '',
-                            images: initialImages.length > 0 ? initialImages : [
-                                'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80',
-                                'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80'
-                            ],
+                            images: initialImages,
                             services: (found.services && found.services.length > 0) ? found.services : [
                                 { id: 'srv1', name: 'บริการล้างรถมาตรฐาน', price: 200, duration: '45 นาที', popular: true, items: ['ล้างสี ดูดฝุ่น เช็ดแห้ง'] }
                             ]
@@ -938,19 +992,10 @@
             const localPhone = localStorage.getItem('ownerShopPhone') || '080-000-0000';
             const localAbout = localStorage.getItem('ownerShopAbout') || '';
             const localCover = localStorage.getItem('ownerCoverImage');
-            let localGallery = [];
-            try { localGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || '[]'); } catch(_) {}
-            if (localCover && (!Array.isArray(localGallery) || localGallery.length === 0)) {
-                localGallery = [localCover];
-            } else if (localCover && Array.isArray(localGallery) && !localGallery.includes(localCover)) {
-                localGallery.unshift(localCover);
-            }
-            if (!Array.isArray(localGallery) || localGallery.length === 0) {
-                localGallery = [
-                    'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80',
-                    'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80'
-                ];
-            }
+            let localGallery = null;
+            try { localGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null'); } catch(_) {}
+            const initialImages = buildFullGallery(localCover, localGallery);
+
             initialShopData = {
                 id: paramId || 'cached-shop',
                 name: localName,
@@ -964,7 +1009,7 @@
                 lat: parseFloat(localStorage.getItem('ownerShopLat')) || 18.7938,
                 lng: parseFloat(localStorage.getItem('ownerShopLng')) || 98.9898,
                 map_link: localStorage.getItem('ownerShopMapLink') || '',
-                images: localGallery,
+                images: initialImages,
                 services: [
                     { id: 'srv1', name: 'บริการล้างรถมาตรฐาน', price: 200, duration: '45 นาที', popular: true, items: ['ล้างสี ดูดฝุ่น เช็ดแห้ง'] }
                 ]
@@ -1062,22 +1107,42 @@
                         : 'ใหม่';
 
                     // Resolve Shop Images with IndexedDB + LocalStorage + Supabase support
-                    const currentShopId = localStorage.getItem('currentShopId');
-                    const currentUserId = localStorage.getItem('lastLoggedInUserId');
-                    const ownerShopName = localStorage.getItem('ownerShopName');
-                    const isCurrentOwnerShop = (currentShopId && dbShop.id === currentShopId) ||
-                                               (currentUserId && dbShop.owner_id === currentUserId) ||
-                                               (ownerShopName && dbShop.name === ownerShopName);
-
-                    let localCover = isCurrentOwnerShop ? localStorage.getItem('ownerCoverImage') : null;
-                    let idbCover = isCurrentOwnerShop ? (await getIDBMedia('ownerCoverImage').catch(() => null)) : null;
+                    // 1. Resolve custom gallery photos from IndexedDB & LocalStorage
                     let localGallery = null;
-                    if (isCurrentOwnerShop) {
-                        try { localGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null'); } catch(_) {}
-                        if (!localGallery || !localGallery.length) {
-                            try { localGallery = await getIDBMedia('ownerShopGallery').catch(() => null); } catch(_) {}
-                        }
+                    try {
+                        localGallery = JSON.parse(localStorage.getItem('ownerShopGallery_' + dbShop.id) || 'null');
+                    } catch (_) {}
+                    if (!localGallery || !localGallery.length) {
+                        localGallery = await getIDBMedia('ownerShopGallery_' + dbShop.id).catch(() => null);
                     }
+                    if (!localGallery || !localGallery.length) {
+                        try {
+                            localGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null');
+                        } catch (_) {}
+                    }
+                    const idbGallery = await getIDBMedia('ownerShopGallery').catch(() => null);
+                    if (Array.isArray(idbGallery) && idbGallery.length > (localGallery?.length || 0)) {
+                        localGallery = idbGallery;
+                    }
+
+                    // 2. Resolve database gallery if Supabase columns exist
+                    let dbGallery = null;
+                    if (Array.isArray(dbShop.shop_images) && dbShop.shop_images.length > 0) {
+                        dbGallery = dbShop.shop_images;
+                    } else if (Array.isArray(dbShop.photos) && dbShop.photos.length > 0) {
+                        dbGallery = dbShop.photos;
+                    } else if (Array.isArray(dbShop.gallery) && dbShop.gallery.length > 0) {
+                        dbGallery = dbShop.gallery;
+                    } else if (Array.isArray(dbShop.images) && dbShop.images.length > 0) {
+                        dbGallery = dbShop.images;
+                    }
+
+                    // 3. Resolve Cover Image
+                    const idbCover = await getIDBMedia('ownerCoverImage_' + dbShop.id).catch(() => null) ||
+                                     await getIDBMedia('ownerCoverImage').catch(() => null);
+                    const localCover = localStorage.getItem('ownerCoverImage_' + dbShop.id) ||
+                                       localStorage.getItem('ownerCoverImage') ||
+                                       idbCover;
 
                     // Check discovery cached shop image
                     let discoveryShopImg = null;
@@ -1089,32 +1154,13 @@
                         }
                     } catch (_) {}
 
-                    let resolvedCover = dbShop.cover_image_url || dbShop.cover_image || dbShop.cover_url || localCover || idbCover || discoveryShopImg || null;
+                    const resolvedCover = dbShop.cover_image_url || dbShop.cover_image || dbShop.cover_url || localCover || discoveryShopImg || null;
 
-                    let resolvedGallery = [];
-                    if (Array.isArray(localGallery) && localGallery.length > 0) {
-                        resolvedGallery = [...localGallery];
-                    } else if (Array.isArray(dbShop.photos) && dbShop.photos.length > 0) {
-                        resolvedGallery = [...dbShop.photos];
-                    } else if (Array.isArray(dbShop.gallery) && dbShop.gallery.length > 0) {
-                        resolvedGallery = [...dbShop.gallery];
-                    }
+                    const candidateGallery = (Array.isArray(localGallery) && localGallery.length > 0)
+                        ? localGallery
+                        : (Array.isArray(dbGallery) && dbGallery.length > 0 ? dbGallery : []);
 
-                    // Prepend the resolved cover if not already at the front
-                    if (resolvedCover) {
-                        resolvedGallery = [resolvedCover, ...resolvedGallery.filter(img => img !== resolvedCover)];
-                    }
-
-                    // Filter out invalid/undefined values
-                    resolvedGallery = resolvedGallery.filter(img => typeof img === 'string' && img.trim() && img !== 'undefined' && img !== 'null');
-
-                    if (resolvedGallery.length === 0) {
-                        resolvedGallery = [
-                            resolvedCover || 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80',
-                            shopLogo || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80',
-                            "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=1200&q=80"
-                        ].filter(Boolean);
-                    }
+                    const resolvedGallery = buildFullGallery(resolvedCover, candidateGallery);
 
                     const liveShopObj = {
                         id: dbShop.id,
@@ -1268,9 +1314,25 @@
         }
     }
 
+    // --- Mobile Gallery Strip Render ---
+    function renderMobileGalleryStrip() {
+        const strip = document.getElementById('mobile-gallery-strip');
+        const countEl = document.getElementById('mobile-gallery-count');
+        if (!strip) return;
+        if (countEl) countEl.textContent = galleryImages.length;
+
+        strip.innerHTML = galleryImages.map((img, idx) => `
+            <div onclick="openGallery(${idx})" class="relative shrink-0 w-28 h-20 rounded-xl overflow-hidden border border-outline-variant/40 bg-surface-container cursor-pointer snap-start active:scale-95 transition-transform shadow-sm">
+                <img src="${img}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80';" class="w-full h-full object-cover" loading="lazy" alt="รูปภาพร้าน ${idx + 1}" />
+                ${idx === 0 ? '<span class="absolute bottom-1 left-1 bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded font-bold backdrop-blur-sm">หน้าปก</span>' : ''}
+            </div>
+        `).join('');
+    }
+
     // --- Image Gallery Logic ---
     function openGallery(index = 0) {
-        currentSlide = index;
+        if (!galleryImages || galleryImages.length === 0) return;
+        currentSlide = Math.max(0, Math.min(index, galleryImages.length - 1));
         const modal = document.getElementById('image-gallery-modal');
         updateGalleryUI();
         modal.classList.remove('hidden');
@@ -1293,12 +1355,14 @@
 
     function nextSlide(e) {
         if(e) e.stopPropagation();
+        if (!galleryImages.length) return;
         currentSlide = (currentSlide + 1) % galleryImages.length;
         updateGalleryUI();
     }
 
     function prevSlide(e) {
         if(e) e.stopPropagation();
+        if (!galleryImages.length) return;
         currentSlide = (currentSlide - 1 + galleryImages.length) % galleryImages.length;
         updateGalleryUI();
     }
@@ -1306,6 +1370,7 @@
     function updateGalleryUI() {
         const mainImg = document.getElementById('gallery-main-img');
         const indexText = document.getElementById('current-slide-index');
+        const totalText = document.getElementById('total-slides-count');
         const thumbsContainer = document.getElementById('gallery-thumbnails');
         
         const validSlideImg = (galleryImages && galleryImages[currentSlide]) || (galleryImages && galleryImages[0]) || '';
@@ -1316,13 +1381,14 @@
         }, 150);
         
         indexText.textContent = currentSlide + 1;
+        if (totalText) totalText.textContent = galleryImages.length;
         
         thumbsContainer.innerHTML = '';
         (galleryImages || []).filter(img => typeof img === 'string' && img.trim() && img !== 'undefined').forEach((img, idx) => {
             const isActive = idx === currentSlide;
             thumbsContainer.innerHTML += `
                 <div onclick="openGallery(${idx})" class="w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden cursor-pointer shrink-0 transition-all duration-300 ${isActive ? 'border-2 border-primary scale-110 shadow-[0_0_15px_rgba(37,99,235,0.5)]' : 'border border-white/20 opacity-40 hover:opacity-100'}">
-                    <img src="${img}" class="w-full h-full object-cover" />
+                    <img src="${img}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80';" class="w-full h-full object-cover" />
                 </div>
             `;
         });

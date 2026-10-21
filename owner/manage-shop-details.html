@@ -753,7 +753,7 @@
 
             const idbGallery = await getMediaFromIDB('ownerShopGallery');
             const idbCover = await getMediaFromIDB('ownerCoverImage');
-            if (Array.isArray(idbGallery) && idbGallery.length > 0 && shopPhotos.length === 0) {
+            if (Array.isArray(idbGallery) && idbGallery.length > shopPhotos.length) {
                 shopPhotos = sanitizeGalleryUrls(idbGallery);
                 if (coverImg && shopPhotos.length > 0) {
                     coverImg.src = shopPhotos[0];
@@ -1009,6 +1009,11 @@
 
                     if (!rawGallery || !Array.isArray(rawGallery) || rawGallery.length === 0) {
                         rawGallery = await getMediaFromIDB('ownerShopGallery');
+                    } else {
+                        const idbG = await getMediaFromIDB('ownerShopGallery');
+                        if (Array.isArray(idbG) && idbG.length > rawGallery.length) {
+                            rawGallery = idbG;
+                        }
                     }
 
                     let savedGallery = sanitizeGalleryUrls(rawGallery);
@@ -1276,7 +1281,17 @@
 
             if (targetShopId) {
                 currentShopId = targetShopId;
-                try { localStorage.setItem('currentShopId', targetShopId); } catch (_) {}
+                try {
+                    localStorage.setItem('currentShopId', targetShopId);
+                    if (mainCoverPhoto) {
+                        safeLocalStorageSet('ownerCoverImage_' + targetShopId, mainCoverPhoto);
+                        saveMediaToIDB('ownerCoverImage_' + targetShopId, mainCoverPhoto);
+                    }
+                    if (shopPhotos && shopPhotos.length > 0) {
+                        safeLocalStorageSet('ownerShopGallery_' + targetShopId, JSON.stringify(shopPhotos));
+                        saveMediaToIDB('ownerShopGallery_' + targetShopId, shopPhotos);
+                    }
+                } catch (_) {}
             }
 
             // Database columns for shops table
