@@ -1113,6 +1113,9 @@
                     validShopCols.latitude = lat;
                     validShopCols.longitude = lng;
                 }
+                if (mapLink) {
+                    validShopCols.map_link = mapLink;
+                }
 
                 const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
                 const promises = [];
@@ -1124,7 +1127,14 @@
                         // A. Try SDK first (Official Supabase Client with active JWT session)
                         if (client && client.from) {
                             try {
-                                const { data: sdkData, error: sdkErr } = await client.from('shops').update(validShopCols).eq('id', targetShopId).select();
+                                let { data: sdkData, error: sdkErr } = await client.from('shops').update(validShopCols).eq('id', targetShopId).select();
+                                // If map_link column doesn't exist in Supabase table yet, gracefully retry without it
+                                if (sdkErr && (sdkErr.message?.includes('map_link') || sdkErr.code === 'PGRST204')) {
+                                    delete validShopCols.map_link;
+                                    const retry = await client.from('shops').update(validShopCols).eq('id', targetShopId).select();
+                                    sdkData = retry.data;
+                                    sdkErr = retry.error;
+                                }
                                 if (!sdkErr && sdkData && sdkData.length > 0) {
                                     shopUpdated = true;
                                     console.log('✅ Shop table updated via Supabase SDK:', sdkData[0]);
@@ -1138,11 +1148,19 @@
                         // B. Fallback to safeSupabaseRest
                         if (!shopUpdated && fetcher) {
                             try {
-                                const restRes = await fetcher(`shops?id=eq.${targetShopId}`, {
+                                let restRes = await fetcher(`shops?id=eq.${targetShopId}`, {
                                     method: 'PATCH',
                                     headers: { 'Prefer': 'return=representation' },
                                     body: validShopCols
                                 });
+                                if (restRes?.error && (String(restRes.error).includes('map_link') || String(restRes.error).includes('PGRST204'))) {
+                                    delete validShopCols.map_link;
+                                    restRes = await fetcher(`shops?id=eq.${targetShopId}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Prefer': 'return=representation' },
+                                        body: validShopCols
+                                    });
+                                }
                                 if (Array.isArray(restRes) && restRes.length > 0) {
                                     shopUpdated = true;
                                     console.log('✅ Shop table updated via REST:', restRes[0]);
