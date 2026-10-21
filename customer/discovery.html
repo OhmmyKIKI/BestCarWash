@@ -284,7 +284,7 @@ tailwind.config = {
     </div>
 
     <!-- Floating Action Buttons (Mobile: Zoom Controls + My Location) -->
-    <div id="mobile-my-location-container" class="md:hidden absolute right-3.5 bottom-[240px] z-40 flex flex-col items-center gap-2.5 pointer-events-auto transition-all duration-300">
+    <div id="mobile-my-location-container" class="md:hidden absolute right-3.5 bottom-[240px] z-40 flex flex-col items-end gap-2.5 pointer-events-auto transition-all duration-300">
         <!-- Zoom Controls Pill -->
         <div class="flex flex-col rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200 shadow-[0_4px_15px_rgba(15,23,42,0.1)] overflow-hidden">
             <button onclick="if(map) map.zoomIn()" class="w-12 h-11 flex items-center justify-center text-primary active:scale-95 transition-all hover:bg-slate-100" title="ซูมเข้า (+)">
@@ -296,15 +296,19 @@ tailwind.config = {
             </button>
         </div>
 
-        <!-- My Location Button -->
-        <button id="mobile-my-location" class="w-12 h-12 bg-white/95 backdrop-blur-md rounded-full border border-slate-200 flex items-center justify-center text-primary shadow-[0_4px_15px_rgba(15,23,42,0.1)] active:scale-95 transition-transform hover:bg-slate-100" title="ตำแหน่งปัจจุบัน">
-            <span class="material-symbols-outlined text-[24px]">my_location</span>
+        <!-- My Location Button (Mobile Pill) -->
+        <button id="mobile-my-location" class="h-11 px-3 bg-white/95 backdrop-blur-md rounded-full border border-slate-200 flex items-center gap-1.5 text-primary shadow-[0_4px_15px_rgba(15,23,42,0.12)] active:scale-95 transition-all hover:bg-slate-50 group" title="กดเพื่อระบุตำแหน่งของฉัน">
+            <span class="material-symbols-outlined text-[19px] shrink-0 group-hover:rotate-45 transition-transform">my_location</span>
+            <span class="text-xs font-bold text-slate-800 whitespace-nowrap">ตำแหน่งฉัน</span>
         </button>
     </div>
 
-    <!-- Desktop My Location -->
-    <button id="desktop-my-location" class="hidden md:flex absolute bottom-8 right-8 z-40 w-14 h-14 bg-white rounded-full border border-slate-200 flex items-center justify-center text-primary shadow-xl hover:scale-105 active:scale-95 transition-transform hover:bg-slate-50">
-        <span class="material-symbols-outlined text-[28px]">my_location</span>
+    <!-- Desktop My Location (Capsule Pill) -->
+    <button id="desktop-my-location" class="hidden md:flex absolute bottom-8 right-8 z-40 h-12 px-4.5 bg-white/95 backdrop-blur-md rounded-full border border-slate-200 items-center gap-2.5 text-primary shadow-xl hover:shadow-2xl hover:border-primary/40 hover:scale-105 active:scale-95 transition-all hover:bg-white group" title="คลิกเพื่อปรับมุมมองมาที่ตำแหน่งปัจจุบันของคุณ">
+        <div class="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shrink-0">
+            <span class="material-symbols-outlined text-[18px]">my_location</span>
+        </div>
+        <span class="text-sm font-bold text-slate-800 group-hover:text-primary transition-colors whitespace-nowrap">ตำแหน่งปัจจุบัน</span>
     </button>
 
     <!-- Mobile Bottom Cards (Moved up from bottom nav with breathing room) -->
