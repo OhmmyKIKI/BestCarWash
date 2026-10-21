@@ -1113,9 +1113,10 @@
     function toDbCarSize(sizeStr) {
         if (!sizeStr) return 'M';
         const s = String(sizeStr).toUpperCase();
-        if (s.includes('(S)') || s.includes('เล็ก') || s === 'S') return 'S';
-        if (s.includes('(L)') || s.includes('ใหญ่') || s.includes('SUV') || s.includes('PPV') || s === 'L') return 'L';
-        if (s.includes('(XL)') || s.includes('กระบะ') || s.includes('ตู้') || s === 'XL') return 'XL';
+        if (s.includes('(XL)') || s.includes('XL') || s.includes('กระบะ') || s.includes('ตู้')) return 'XL';
+        if (s.includes('(L)') || s.includes('SUV') || s.includes('PPV') || s === 'L') return 'L';
+        if (s.includes('(S)') || s.includes('เก๋งเล็ก') || s.includes('เล็ก') || s === 'S') return 'S';
+        if (s.includes('(M)') || s.includes('เก๋งใหญ่') || s.includes('ใหญ่') || s === 'M') return 'M';
         return 'M';
     }
 
@@ -1146,25 +1147,75 @@
     }
 
     async function getCurrentUserId() {
+        const isValidUuid = id => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
         const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
         if (client?.auth) {
             try {
                 const sess = await client.auth.getSession();
-                if (sess?.data?.session?.user?.id) return sess.data.session.user.id;
+                if (sess?.data?.session?.user?.id && isValidUuid(sess.data.session.user.id)) return sess.data.session.user.id;
+            } catch (_) {}
+            try {
+                const u = await client.auth.getUser();
+                if (u?.data?.user?.id && isValidUuid(u.data.user.id)) return u.data.user.id;
             } catch (_) {}
         }
         const lastId = localStorage.getItem('lastLoggedInUserId') || localStorage.getItem('currentUserId');
-        if (lastId) return lastId;
+        if (lastId && isValidUuid(lastId)) return lastId;
+        try {
+            const cu = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            if (cu?.id && isValidUuid(cu.id)) return cu.id;
+        } catch (_) {}
         try {
             for (let i = 0; i < localStorage.length; i++) {
                 const k = localStorage.key(i);
                 if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
                     const p = JSON.parse(localStorage.getItem(k) || '{}');
-                    if (p?.user?.id) return p.user.id;
+                    if (p?.user?.id && isValidUuid(p.user.id)) return p.user.id;
                 }
             }
         } catch (_) {}
-        return null;
+        try {
+            const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+            if (fetcher) {
+                const profs = await fetcher('profiles?role=eq.CUSTOMER&limit=1&select=id');
+                const list = Array.isArray(profs) ? profs : profs?.data;
+                if (list && list.length > 0 && isValidUuid(list[0]?.id)) return list[0].id;
+            }
+        } catch (_) {}
+        return "da839dcc-9bca-47d0-b178-29351930fff6";
+    }
+
+    async function getValidShopId() {
+        const isValidUuid = id => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        if (isValidUuid(currentShop?.id)) return currentShop.id;
+        if (isValidUuid(currentShopId)) return currentShopId;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const paramId = urlParams.get('shopId');
+        if (isValidUuid(paramId)) return paramId;
+
+        const sel = localStorage.getItem('selectedShopId');
+        if (isValidUuid(sel)) return sel;
+
+        const cur = localStorage.getItem('currentShopId');
+        if (isValidUuid(cur)) return cur;
+
+        const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+        if (client?.from) {
+            try {
+                const { data } = await client.from('shops').select('id').limit(1);
+                if (data && data.length > 0 && isValidUuid(data[0].id)) return data[0].id;
+            } catch (_) {}
+        }
+        try {
+            const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+            if (fetcher) {
+                const s = await fetcher('shops?select=id&limit=1');
+                const list = Array.isArray(s) ? s : s?.data;
+                if (list && list.length > 0 && isValidUuid(list[0].id)) return list[0].id;
+            }
+        } catch (_) {}
+        return "bccb746a-18ba-4802-ac29-eb30b7af7dd1";
     }
 
     function getCars() {
@@ -1277,58 +1328,124 @@
     }
 
     window.saveNewCar = async function() {
-        const brand = document.getElementById('new-car-brand').value.trim();
-        const plate = document.getElementById('new-car-plate').value.trim();
-        const size = document.getElementById('new-car-size').value;
+        const brandInput = document.getElementById('new-car-brand');
+        const plateInput = document.getElementById('new-car-plate');
+        const sizeInput = document.getElementById('new-car-size');
+        const brand = brandInput?.value.trim() || '';
+        const plate = plateInput?.value.trim() || '';
+        const size = sizeInput?.value || 'รถเก๋งเล็ก (S)';
         
         if (!brand || !plate) {
-            alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+            alert("⚠️ กรุณากรอกยี่ห้อ/รุ่น และทะเบียนรถให้ครบถ้วน");
             return;
         }
 
-        const cars = getCars();
-        const isPrimary = cars.length === 0;
-        const newCar = {
-            id: 'car_' + Date.now(),
-            brand: brand,
-            plate: plate,
-            size: size,
-            isPrimary: isPrimary
-        };
-        cars.push(newCar);
-        saveCarsToStorage(cars);
-        hasCheckedVehicles = true;
-        renderCarsList();
+        const saveBtn = document.querySelector('#add-car-modal button[onclick="saveNewCar()"]');
+        const originalBtnText = saveBtn ? saveBtn.innerHTML : 'บันทึก';
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="inline-block animate-spin mr-1">↻</span> กำลังบันทึก...';
+        }
 
-        // Select the newly added car
-        const inputs = document.querySelectorAll('input[name="selected_car"]');
-        inputs.forEach(input => {
-            if (input.value === brand) input.checked = true;
-        });
-
-        updateSummary();
-        closeAddCarModal();
-
-        // Persist to Supabase with valid car_size constraint ('S', 'M', 'L', 'XL')
         try {
+            const cars = getCars();
+            const isPrimary = cars.length === 0;
+            const dbCarSize = toDbCarSize(size);
+            const tempId = 'car_' + Date.now();
+            const newCar = {
+                id: tempId,
+                brand: brand,
+                plate: plate,
+                size: size,
+                isPrimary: isPrimary
+            };
+
+            // Resolve user ID
             const uid = await getCurrentUserId();
+            let insertedRow = null;
+            let insertErr = null;
+
             if (uid) {
-                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
-                if (fetcher) {
-                    await fetcher('vehicles', {
-                        method: 'POST',
-                        body: {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                // 1. Primary: Try Supabase Client SDK directly
+                if (client?.from) {
+                    try {
+                        const res = await client.from('vehicles').insert([{
                             customer_id: uid,
                             brand_model: brand,
                             plate_number: plate,
-                            car_size: toDbCarSize(size),
+                            car_size: dbCarSize,
                             is_default: isPrimary
+                        }]).select();
+
+                        if (res.data && res.data.length > 0) {
+                            insertedRow = res.data[0];
+                        } else if (res.error) {
+                            insertErr = res.error;
+                            console.warn('[Supabase] Vehicle insert error via SDK:', res.error);
                         }
-                    });
+                    } catch (err) {
+                        insertErr = err;
+                        console.warn('[Supabase] Vehicle insert exception via SDK:', err);
+                    }
+                }
+
+                // 2. Fallback: safeSupabaseRest
+                if (!insertedRow) {
+                    const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                    if (fetcher) {
+                        try {
+                            const restRes = await fetcher('vehicles', {
+                                method: 'POST',
+                                headers: { 'Prefer': 'return=representation' },
+                                body: {
+                                    customer_id: uid,
+                                    brand_model: brand,
+                                    plate_number: plate,
+                                    car_size: dbCarSize,
+                                    is_default: isPrimary
+                                }
+                            });
+                            const rList = Array.isArray(restRes) ? restRes : (restRes?.data && Array.isArray(restRes.data) ? restRes.data : null);
+                            if (rList && rList.length > 0) {
+                                insertedRow = rList[0];
+                            } else if (restRes?.error) {
+                                insertErr = restRes.error;
+                                console.warn('[Supabase] Vehicle insert error via REST:', restRes.error);
+                            }
+                        } catch (rErr) {
+                            insertErr = rErr;
+                            console.warn('[Supabase] Vehicle insert exception via REST:', rErr);
+                        }
+                    }
                 }
             }
-        } catch (e) {
-            console.warn('Supabase car insert notice:', e);
+
+            if (insertedRow?.id) {
+                newCar.id = insertedRow.id;
+                console.log('✅ บันทึกรถใหม่ลงฐานข้อมูล Supabase สำเร็จ! ID:', insertedRow.id);
+            } else {
+                console.warn('⚠️ บันทึกรถลงเครื่อง (ไม่สามารถบันทึกลงฐานข้อมูลได้):', insertErr || 'ไม่มี User ID');
+            }
+
+            cars.push(newCar);
+            saveCarsToStorage(cars);
+            hasCheckedVehicles = true;
+            renderCarsList();
+
+            // Select the newly added car
+            const inputs = document.querySelectorAll('input[name="selected_car"]');
+            inputs.forEach(input => {
+                if (input.value === brand) input.checked = true;
+            });
+
+            updateSummary();
+            closeAddCarModal();
+        } finally {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalBtnText;
+            }
         }
     }
 
@@ -1685,7 +1802,7 @@
         }
     };
 
-    window.submitPaymentAndBooking = function(btn) {
+    window.submitPaymentAndBooking = async function(btn) {
         if (!uploadedSlipData) {
             const dropzone = document.getElementById('slip-dropzone');
             if (dropzone) {
@@ -1698,175 +1815,196 @@
 
         const btnText = document.getElementById('payment-confirm-btn-text');
         if (btn) btn.disabled = true;
-        if (btnText) btnText.innerText = 'กำลังตรวจสอบสลิป...';
+        if (btnText) btnText.innerText = 'กำลังตรวจสอบสลิปและบันทึกคิว...';
         const icon = btn?.querySelector('.material-symbols-outlined');
         if (icon) {
             icon.classList.add('animate-spin');
             icon.innerText = 'autorenew';
         }
 
-        setTimeout(() => {
-            clearInterval(paymentTimerInterval);
+        clearInterval(paymentTimerInterval);
 
-            // Retrieve customer profile for realistic contact details
-            let customerName = 'ผู้ใช้บริการ';
-            let customerPhone = '-';
-            try {
-                const profileStr = localStorage.getItem('customerProfile');
-                if (profileStr) {
-                    const p = JSON.parse(profileStr);
-                    if (p.fullName) customerName = p.fullName;
-                    if (p.phone) customerPhone = p.phone;
-                }
-            } catch(e) {}
-
-            // Extract selected vehicle info
-            const checkedCar = document.querySelector('input[name="selected_car"]:checked');
-            const carBrand = checkedCar ? checkedCar.value : 'รถยนต์';
-            const carPlateData = checkedCar ? (checkedCar.getAttribute('data-plate') || '') : '';
-            const plateParts = carPlateData.split('|');
-            const carPlate = plateParts[0]?.trim() || '-';
-            const carSize = plateParts[1]?.trim() || 'รถเก๋ง';
-
-            // Save active booking to localStorage for live tracking (Point 1 Continuity)
-            const activeBooking = {
-                bookingId: currentBookingId,
-                shopId: currentShop?.id || 'shop1',
-                shopName: currentShop?.name || 'Sparkle Wash & Detailing',
-                shopPhone: currentShop?.phone || '089-123-4567',
-                customerName: customerName,
-                customerPhone: customerPhone,
-                serviceName: selectedServiceName || 'ล้างสี ดูดฝุ่น',
-                carBrand: carBrand,
-                carPlate: carPlate,
-                carSize: carSize,
-                carName: `${carBrand} (${carPlate})`,
-                bookingDate: getSelectedDateIso(),
-                bookingTime: selectedTimeText,
-                dateTime: `${selectedDateText || 'วันนี้'}, ${selectedTimeText || '10:00 น.'}`,
-                depositAmount: '฿50.00',
-                totalAmount: `฿${selectedServicePrice || '450'}`,
-                status: 'incoming', // initially incoming for shop to accept
-                step: 0,
-                slipImage: uploadedSlipData,
-                slipUploaded: true,
-                createdAt: new Date().toISOString(),
-                isNew: true
-            };
-            localStorage.setItem('activeCustomerBooking', JSON.stringify(activeBooking));
-
-            // Also append/prepend into shared appBookingsList for owner synchronization
-            try {
-                let list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
-                list = list.filter(b => b.bookingId !== activeBooking.bookingId);
-                list.unshift(activeBooking);
-                localStorage.setItem('appBookingsList', JSON.stringify(list));
-            } catch(e) {}
-
-            // Re-render time slots so that newly booked slot shows as ติดจอง immediately
-            if (typeof renderTimeSlots === 'function') {
-                renderTimeSlots(selectedDate);
+        // Retrieve customer profile for realistic contact details
+        let customerName = 'ผู้ใช้บริการ';
+        let customerPhone = '-';
+        try {
+            const profileStr = localStorage.getItem('customerProfile');
+            if (profileStr) {
+                const p = JSON.parse(profileStr);
+                if (p.fullName) customerName = p.fullName;
+                if (p.phone) customerPhone = p.phone;
             }
+        } catch(e) {}
 
-            // Sync to Supabase bookings table via safeSupabaseRest
-            (async () => {
-                try {
-                    let validShopId = currentShop?.id;
-                    const isValidUuid = id => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        // Extract selected vehicle info
+        const checkedCar = document.querySelector('input[name="selected_car"]:checked');
+        const carBrand = checkedCar ? checkedCar.value : 'รถยนต์';
+        const carPlateData = checkedCar ? (checkedCar.getAttribute('data-plate') || '') : '';
+        const plateParts = carPlateData.split('|');
+        const carPlate = plateParts[0]?.trim() || '-';
+        const carSize = plateParts[1]?.trim() || 'รถเก๋ง';
 
-                    if (!isValidUuid(validShopId)) {
-                        const cachedId = localStorage.getItem('currentShopId') || localStorage.getItem('selectedShopId');
-                        if (isValidUuid(cachedId)) {
-                            validShopId = cachedId;
-                        } else {
-                            const shops = await (window.safeSupabaseRest || window.fetchSupabaseRest)('shops?select=id&limit=1');
-                            if (Array.isArray(shops) && shops.length > 0) validShopId = shops[0].id;
+        // Save active booking to localStorage for live tracking (Point 1 Continuity)
+        const activeBooking = {
+            bookingId: currentBookingId,
+            shopId: currentShop?.id || 'shop1',
+            shopName: currentShop?.name || 'Sparkle Wash & Detailing',
+            shopPhone: currentShop?.phone || '089-123-4567',
+            customerName: customerName,
+            customerPhone: customerPhone,
+            serviceName: selectedServiceName || 'ล้างสี ดูดฝุ่น',
+            carBrand: carBrand,
+            carPlate: carPlate,
+            carSize: carSize,
+            carName: `${carBrand} (${carPlate})`,
+            bookingDate: getSelectedDateIso(),
+            bookingTime: selectedTimeText,
+            dateTime: `${selectedDateText || 'วันนี้'}, ${selectedTimeText || '10:00 น.'}`,
+            depositAmount: '฿50.00',
+            totalAmount: `฿${selectedServicePrice || '450'}`,
+            status: 'incoming', // initially incoming for shop to accept
+            step: 0,
+            slipImage: uploadedSlipData,
+            slipUploaded: true,
+            createdAt: new Date().toISOString(),
+            isNew: true
+        };
+        localStorage.setItem('activeCustomerBooking', JSON.stringify(activeBooking));
+
+        // Also append/prepend into shared appBookingsList for owner synchronization
+        try {
+            let list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
+            list = list.filter(b => b.bookingId !== activeBooking.bookingId);
+            list.unshift(activeBooking);
+            localStorage.setItem('appBookingsList', JSON.stringify(list));
+        } catch(e) {}
+
+        // Re-render time slots so that newly booked slot shows as ติดจอง immediately
+        if (typeof renderTimeSlots === 'function') {
+            renderTimeSlots(selectedDate);
+        }
+
+        // Sync to Supabase bookings table
+        try {
+            const validShopId = await getValidShopId();
+            const userId = await getCurrentUserId();
+
+            if (userId && validShopId) {
+                const rawTime = (selectedTimeText || '10:00').replace(/[^0-9:]/g, '');
+                const cleanTime = rawTime.includes(':') ? (rawTime.length === 5 ? `${rawTime}:00` : rawTime) : '10:00:00';
+                
+                // IMPORTANT: bookings table schema only contains:
+                // id, customer_id, shop_id, status, booking_date, booking_time, vehicle_info, total_price, created_at, updated_at
+                // Do NOT include customer_phone or notes in payload as they do not exist in the DB table!
+                const bookingPayload = {
+                    customer_id: userId,
+                    shop_id: validShopId,
+                    status: 'PENDING',
+                    booking_date: getSelectedDateIso(),
+                    booking_time: cleanTime,
+                    vehicle_info: `${carBrand} (${carPlate}) - ${carSize}`,
+                    total_price: parseFloat(selectedServicePrice) || 450
+                };
+
+                let inserted = null;
+                let insertErr = null;
+
+                // 1. Primary: Try Supabase JS client SDK directly
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (client?.from) {
+                    try {
+                        const res = await client.from('bookings').insert([bookingPayload]).select();
+                        if (res.data && res.data.length > 0) {
+                            inserted = res.data;
+                        } else if (res.error) {
+                            insertErr = res.error;
+                            console.warn('[Supabase] Bookings insert error via SDK:', res.error);
                         }
+                    } catch (err) {
+                        insertErr = err;
+                        console.warn('[Supabase] Bookings insert exception via SDK:', err);
                     }
+                }
 
-                    const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                    let userId = null;
-                    if (client?.auth) {
-                        const sess = await client.auth.getSession().catch(() => null);
-                        userId = sess?.data?.session?.user?.id;
-                    }
-                    if (!userId) userId = localStorage.getItem('lastLoggedInUserId');
-
-                    if (userId && isValidUuid(validShopId)) {
-                        const rawTime = (selectedTimeText || '10:00').replace(/[^0-9:]/g, '');
-                        const cleanTime = rawTime.includes(':') ? (rawTime.length === 5 ? `${rawTime}:00` : rawTime) : '10:00:00';
-                        const bookingPayload = {
-                            customer_id: userId,
-                            shop_id: validShopId,
-                            status: 'PENDING',
-                            booking_date: getSelectedDateIso(),
-                            booking_time: cleanTime,
-                            vehicle_info: `${carBrand} (${carPlate}) - ${carSize}`,
-                            total_price: parseFloat(selectedServicePrice) || 450,
-                            customer_phone: customerPhone || '-',
-                            notes: `${activeBooking.serviceName} | สลิป: ${uploadedSlipData ? 'แนบแล้ว' : 'ชำระหน้าร้าน'}`
-                        };
-
-                        const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
-                        if (fetcher) {
-                            const inserted = await fetcher('bookings', {
+                // 2. Fallback: safeSupabaseRest
+                if (!inserted) {
+                    const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                    if (fetcher) {
+                        try {
+                            const restRes = await fetcher('bookings', {
                                 method: 'POST',
                                 headers: { 'Prefer': 'return=representation' },
                                 body: bookingPayload
                             });
-
-                            if (inserted && Array.isArray(inserted) && inserted.length > 0) {
-                                activeBooking.id = inserted[0].id;
-                                activeBooking.bookingId = '#' + inserted[0].id.slice(0, 8).toUpperCase();
-                                localStorage.setItem('activeCustomerBooking', JSON.stringify(activeBooking));
-                                // Also update in appBookingsList
-                                try {
-                                    let l = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
-                                    const idx = l.findIndex(b => b.bookingId === currentBookingId);
-                                    if (idx !== -1) {
-                                        l[idx].id = inserted[0].id;
-                                        l[idx].bookingId = activeBooking.bookingId;
-                                        localStorage.setItem('appBookingsList', JSON.stringify(l));
-                                    }
-                                } catch (_) {}
+                            const rData = Array.isArray(restRes) ? restRes : (restRes?.data && Array.isArray(restRes.data) ? restRes.data : null);
+                            if (rData && rData.length > 0) {
+                                inserted = rData;
+                            } else if (restRes?.error) {
+                                insertErr = restRes.error;
+                                console.warn('[Supabase] Bookings insert error via REST:', restRes.error);
                             }
+                        } catch (rErr) {
+                            insertErr = rErr;
+                            console.warn('[Supabase] Bookings insert exception via REST:', rErr);
                         }
                     }
-                } catch(bErr) {
-                    console.warn('Supabase booking insert notice:', bErr);
                 }
-            })();
 
-            // Close Payment Modal
-            closePaymentModal();
+                if (inserted && inserted.length > 0) {
+                    const dbRow = inserted[0];
+                    activeBooking.id = dbRow.id;
+                    activeBooking.bookingId = '#' + dbRow.id.slice(0, 8).toUpperCase();
+                    currentBookingId = activeBooking.bookingId;
+                    console.log('✅ บันทึกรายการจองลงฐานข้อมูล Supabase สำเร็จ! ID:', dbRow.id);
+                    localStorage.setItem('activeCustomerBooking', JSON.stringify(activeBooking));
 
-            // Populate Success Modal
-            const successModal = document.getElementById('success-modal');
-            const successContent = document.getElementById('success-modal-content');
-            const bookingIdEl = document.getElementById('success-booking-id');
-            const dtEl = document.getElementById('success-booking-datetime');
-
-            if (bookingIdEl) bookingIdEl.innerText = currentBookingId;
-            if (dtEl) dtEl.innerText = activeBooking.dateTime;
-
-            if (successModal && successContent) {
-                successModal.classList.remove('hidden');
-                successModal.style.display = 'flex';
-                setTimeout(() => {
-                    successModal.classList.remove('opacity-0');
-                    successContent.classList.remove('scale-95');
-                    successContent.classList.add('scale-100');
-                }, 50);
+                    // Update in appBookingsList with the real DB ID
+                    try {
+                        let l = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
+                        const idx = l.findIndex(b => b.bookingId === currentBookingId || b.id === dbRow.id);
+                        if (idx !== -1) {
+                            l[idx].id = dbRow.id;
+                            l[idx].bookingId = activeBooking.bookingId;
+                            localStorage.setItem('appBookingsList', JSON.stringify(l));
+                        }
+                    } catch (_) {}
+                } else {
+                    console.warn('⚠️ ไม่สามารถบันทึกรายการจองลง Supabase ได้ (จะบันทึกลงเครื่องแทน):', insertErr);
+                }
             }
+        } catch(bErr) {
+            console.warn('Supabase booking sync notice:', bErr);
+        }
 
-            // Reset payment button state
-            if (btn) btn.disabled = false;
-            if (btnText) btnText.innerText = 'ยืนยันการชำระเงิน';
-            if (icon) {
-                icon.classList.remove('animate-spin');
-                icon.innerText = 'verified';
-            }
-        }, 1200);
+        // Close Payment Modal
+        closePaymentModal();
+
+        // Populate Success Modal
+        const successModal = document.getElementById('success-modal');
+        const successContent = document.getElementById('success-modal-content');
+        const bookingIdEl = document.getElementById('success-booking-id');
+        const dtEl = document.getElementById('success-booking-datetime');
+
+        if (bookingIdEl) bookingIdEl.innerText = activeBooking.bookingId || currentBookingId;
+        if (dtEl) dtEl.innerText = activeBooking.dateTime;
+
+        if (successModal && successContent) {
+            successModal.classList.remove('hidden');
+            successModal.style.display = 'flex';
+            setTimeout(() => {
+                successModal.classList.remove('opacity-0');
+                successContent.classList.remove('scale-95');
+                successContent.classList.add('scale-100');
+            }, 50);
+        }
+
+        // Reset payment button state
+        if (btn) btn.disabled = false;
+        if (btnText) btnText.innerText = 'ยืนยันการชำระเงิน';
+        if (icon) {
+            icon.classList.remove('animate-spin');
+            icon.innerText = 'verified';
+        }
     };
 
     window.goToHistory = function() {

@@ -1747,7 +1747,7 @@
         renderCompletedHistory();
 
         // Check whether there is an active car wash queue
-        const hasActiveQueue = !!(b && ['incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes(b.status));
+        const hasActiveQueue = !!(b && ['incoming', 'pending', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes((b.status || '').toLowerCase()));
 
         // Update tab label indicator
         const tabUpEl = document.getElementById('tabUpcoming');
@@ -1883,7 +1883,7 @@
 
         // Map status to step:
         let stepNum = 1;
-        if (b.status === 'incoming') stepNum = 0;
+        if (b.status === 'incoming' || b.status === 'pending') stepNum = 0;
         else if (b.status === 'confirmed') stepNum = 1;
         else if (b.status === 'arrived') stepNum = 2;
         else if (b.status === 'washing') stepNum = 3;
@@ -1949,7 +1949,7 @@
 
                 if (dbBookings && dbBookings.length > 0) {
                     // Check if user has an active ongoing booking
-                    const activeOngoing = dbBookings.find(item => ['incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes(item.status.toLowerCase()));
+                    const activeOngoing = dbBookings.find(item => ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes((item.status || '').toLowerCase()));
                     if (activeOngoing) {
                         const mappedActive = {
                             bookingId: '#' + activeOngoing.id.substring(0, 8).toUpperCase(),
@@ -1971,7 +1971,7 @@
                         if (activeCustStr) {
                             try {
                                 const ac = JSON.parse(activeCustStr);
-                                if (!['incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes(ac.status)) {
+                                if (!['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes((ac.status || '').toLowerCase())) {
                                     localStorage.removeItem('activeCustomerBooking');
                                 }
                             } catch(e) {}

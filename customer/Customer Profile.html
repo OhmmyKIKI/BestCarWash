@@ -320,9 +320,10 @@
     function toDbCarSize(sizeStr) {
         if (!sizeStr) return 'M';
         const s = String(sizeStr).toUpperCase();
-        if (s.includes('(S)') || s.includes('เล็ก') || s === 'S') return 'S';
-        if (s.includes('(L)') || s.includes('ใหญ่') || s.includes('SUV') || s.includes('PPV') || s === 'L') return 'L';
-        if (s.includes('(XL)') || s.includes('กระบะ') || s.includes('ตู้') || s === 'XL') return 'XL';
+        if (s.includes('(XL)') || s.includes('XL') || s.includes('กระบะ') || s.includes('ตู้')) return 'XL';
+        if (s.includes('(L)') || s.includes('SUV') || s.includes('PPV') || s === 'L') return 'L';
+        if (s.includes('(S)') || s.includes('เก๋งเล็ก') || s.includes('เล็ก') || s === 'S') return 'S';
+        if (s.includes('(M)') || s.includes('เก๋งใหญ่') || s.includes('ใหญ่') || s === 'M') return 'M';
         return 'M';
     }
 
@@ -632,27 +633,45 @@
 
             // Background sync to Supabase with valid car_size constraint
             const uid = currentUser?.id || localStorage.getItem('lastLoggedInUserId');
-            const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
-            if (uid && fetcher) {
-                fetcher('vehicles', {
-                    method: 'POST',
-                    headers: { 'Prefer': 'return=representation' },
-                    body: {
-                        customer_id: uid,
-                        brand_model: brand,
-                        plate_number: plate,
-                        car_size: toDbCarSize(size),
-                        is_default: isPrimary || cars.length === 0
+            if (uid) {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                const dbCarSize = toDbCarSize(size);
+                const vehiclePayload = {
+                    customer_id: uid,
+                    brand_model: brand,
+                    plate_number: plate,
+                    car_size: dbCarSize,
+                    is_default: isPrimary || cars.length === 0
+                };
+
+                (async () => {
+                    let insertedRow = null;
+                    if (client?.from) {
+                        try {
+                            const res = await client.from('vehicles').insert([vehiclePayload]).select();
+                            if (res.data && res.data.length > 0) insertedRow = res.data[0];
+                        } catch (_) {}
                     }
-                }).then(newV => {
-                    const insertedRow = Array.isArray(newV) && newV.length > 0 ? newV[0] : newV;
+                    if (!insertedRow) {
+                        const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                        if (fetcher) {
+                            try {
+                                const newV = await fetcher('vehicles', {
+                                    method: 'POST',
+                                    headers: { 'Prefer': 'return=representation' },
+                                    body: vehiclePayload
+                                });
+                                insertedRow = Array.isArray(newV) && newV.length > 0 ? newV[0] : (newV?.data && Array.isArray(newV.data) ? newV.data[0] : newV);
+                            } catch (_) {}
+                        }
+                    }
                     if (insertedRow?.id) {
                         let curCars = getCars();
                         curCars = curCars.map(c => c.id === tempId ? { ...c, id: insertedRow.id } : c);
                         saveCarsToStorage(curCars);
                         renderCars();
                     }
-                }).catch(e => console.warn('Background add car notice:', e));
+                })();
             }
         }
 
