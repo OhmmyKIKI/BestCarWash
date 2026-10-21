@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>BestCarWash - เงื่อนไขการให้บริการสำหรับพาร์ทเนอร์ร้านค้า</title>
+    <title>BestCarWash - เงื่อนไขการให้บริการสำหรับพาร์ทเนอร์</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
@@ -13,27 +13,35 @@
             theme: {
                 extend: {
                     colors: {
-                        background: "#f8fafc",
-                        "on-background": "#0f172a",
-                        primary: "#0284c7",
-                        secondary: "#059669",
-                        surface: "#ffffff",
-                        "on-surface": "#0f172a",
-                        "surface-container": "#ffffff",
-                        "surface-container-low": "#f8fafc",
-                        "surface-container-highest": "#f1f5f9",
+                        background: "#f8fafc",           // Slate 50 (Clean Pearl White)
+                        "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                        primary: "#0284c7",              // Ocean Blue / Sky 600
+                        secondary: "#059669",            // Emerald 600
+                        surface: "#ffffff",              // Pure White
+                        "on-surface": "#0f172a",           // Slate 900
+                        "surface-container": "#ffffff",    // Card Pure White
+                        "surface-container-low": "#f8fafc",// Slate 50
+                        "surface-container-highest": "#f1f5f9", // Slate 100
                         "surface-bright": "#ffffff",
                         "surface-variant": "#f1f5f9",
-                        "on-surface-variant": "#475569",
-                        outline: "#94a3b8",
-                        "outline-variant": "#e2e8f0",
-                        "primary-container": "#0284c7",
-                        "on-primary-container": "#ffffff",
-                        "secondary-container": "#ecfdf5",
-                        "on-secondary-container": "#065f46",
-                        error: "#e11d48",
+                        "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                        outline: "#94a3b8",              // Slate 400
+                        "outline-variant": "#e2e8f0",      // Slate 200 border
+                        "primary-container": "#0284c7",    // Ocean Blue
+                        "on-primary-container": "#ffffff", // Pure White
+                        "secondary-container": "#ecfdf5",  // Mint 50
+                        "on-secondary-container": "#065f46", // Mint 900
+                        error: "#e11d48",                // Rose 600
                         "error-container": "#ffe4e6",
                         "secondary-fixed": "#10b981",
+                    },
+                    spacing: {
+                        "margin-mobile": "1rem",
+                        gutter: "1rem",
+                        "touch-target-min": "3rem",
+                        "stack-sm": "0.5rem",
+                        "stack-md": "1rem",
+                        "stack-lg": "1.5rem"
                     },
                     fontFamily: {
                         sans: ["Prompt", "Inter", "sans-serif"]
@@ -95,49 +103,42 @@
         }
     </style>
 </head>
-<body class="antialiased flex flex-col min-h-screen bg-background text-on-background pb-16">
+<body class="antialiased flex flex-col min-h-screen bg-background text-on-background pb-16 font-sans">
 
-<!-- Top Header (App Bar) -->
-<header class="sticky top-0 w-full z-40 bg-surface/90 backdrop-blur-md border-b border-outline-variant/60 shadow-xs">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between">
-        <!-- Left: Back Button & Page Title -->
-        <div class="flex items-center gap-3">
-            <button type="button" onclick="goBack()" class="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/60 transition-all active:scale-95 group" title="ย้อนกลับ">
-                <span class="material-symbols-outlined text-[20px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
-            </button>
-            <div class="flex flex-col">
-                <h1 class="text-base sm:text-lg font-bold text-on-surface tracking-tight flex items-center gap-2">
-                    <span class="material-symbols-outlined text-secondary text-[22px]">gavel</span>
-                    <span>เงื่อนไขการให้บริการพาร์ทเนอร์</span>
-                </h1>
-                <span class="text-[11px] text-on-surface-variant">BestCarWash Merchant Terms of Service</span>
-            </div>
+<!-- Top Header (App Bar) - Standard across Owner pages -->
+<header class="sticky top-0 w-full z-50 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md">
+    <div class="w-full px-4 md:px-8 lg:px-10 h-20 flex items-center justify-between">
+        <!-- Left: Back Button & Page Identification -->
+        <div class="flex items-center gap-3.5">
+            <a href="../owner/Owner%20Profile.html" onclick="if(window.history.length > 1){ event.preventDefault(); window.history.back(); }" class="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/40 transition-all active:scale-95 group" title="กลับไปโปรไฟล์">
+                <span class="material-symbols-outlined text-[22px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+            </a>
+            <h1 class="text-lg md:text-xl font-bold text-on-surface tracking-tight flex items-center gap-2.5">
+                <span class="material-symbols-outlined text-secondary text-[26px]">gavel</span>
+                <span>เงื่อนไขการให้บริการสำหรับพาร์ทเนอร์</span>
+            </h1>
         </div>
 
-        <!-- Right: Print & Version Badge -->
-        <div class="flex items-center gap-2 sm:gap-3">
-            <button type="button" onclick="window.print()" class="h-9 px-3 rounded-xl bg-surface-variant hover:bg-outline-variant/50 text-on-surface-variant hover:text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-colors" title="พิมพ์หรือบันทึกเป็น PDF">
-                <span class="material-symbols-outlined text-[16px]">print</span>
+        <!-- Right: Action Buttons -->
+        <div class="flex items-center gap-2.5 sm:gap-3">
+            <button type="button" onclick="window.print()" class="h-11 sm:h-12 px-3.5 sm:px-5 rounded-xl bg-surface-container hover:bg-surface-variant border border-outline-variant/40 text-on-surface text-sm sm:text-base font-semibold flex items-center gap-2 transition-all hover:border-secondary/40 active:scale-95" title="พิมพ์หรือบันทึกเป็น PDF">
+                <span class="material-symbols-outlined text-[20px] text-secondary">print</span>
                 <span class="hidden sm:inline">พิมพ์เอกสาร</span>
             </button>
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>มีผลบังคับใช้ 2026</span>
-            </span>
         </div>
     </div>
 </header>
 
 <!-- Sticky Quick Navigation / Table of Contents -->
-<div id="quickNav" class="sticky top-18 z-30 w-full bg-surface/95 backdrop-blur-md border-b border-outline-variant/50 shadow-xs py-2 px-4 sm:px-6">
+<div id="quickNav" class="sticky top-20 z-30 w-full bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-xs py-2 px-4 md:px-8 lg:px-10">
     <div class="max-w-4xl mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar text-xs">
         <span class="text-on-surface-variant font-bold shrink-0 hidden md:inline">หัวข้อด่วน:</span>
-        <a href="#section-1" class="toc-pill shrink-0 px-3 py-1.5 rounded-lg bg-surface-variant/80 hover:bg-emerald-50 text-on-surface-variant hover:text-emerald-700 transition-colors border border-outline-variant/40">1. บัญชี & มาตรฐานร้าน</a>
-        <a href="#section-2" class="toc-pill shrink-0 px-3 py-1.5 rounded-lg bg-surface-variant/80 hover:bg-emerald-50 text-on-surface-variant hover:text-emerald-700 transition-colors border border-outline-variant/40">2. คอมมิชชัน & เบิกจ่าย</a>
-        <a href="#section-3" class="toc-pill shrink-0 px-3 py-1.5 rounded-lg bg-surface-variant/80 hover:bg-emerald-50 text-on-surface-variant hover:text-emerald-700 transition-colors border border-outline-variant/40">3. คิว & ตรวจสลิป</a>
-        <a href="#section-4" class="toc-pill shrink-0 px-3 py-1.5 rounded-lg bg-surface-variant/80 hover:bg-emerald-50 text-on-surface-variant hover:text-emerald-700 transition-colors border border-outline-variant/40">4. คุณภาพ & ความรับผิดชอบ</a>
-        <a href="#section-5" class="toc-pill shrink-0 px-3 py-1.5 rounded-lg bg-surface-variant/80 hover:bg-emerald-50 text-on-surface-variant hover:text-emerald-700 transition-colors border border-outline-variant/40">5. การระงับ & ปิดบัญชี</a>
-        <a href="#section-6" class="toc-pill shrink-0 px-3 py-1.5 rounded-lg bg-surface-variant/80 hover:bg-emerald-50 text-on-surface-variant hover:text-emerald-700 transition-colors border border-outline-variant/40">6. ข้อมูลส่วนบุคคล (PDPA)</a>
+        <a href="#section-1" class="toc-pill shrink-0 px-3 py-1.5 rounded-lg bg-surface border border-outline-variant/40 hover:bg-emerald-50 text-on-surface-variant hover:text-emerald-700 transition-colors">1. บัญชี & มาตรฐานร้าน</a>
+        <a href="#section-2" class="toc-pill shrink-0 px-3 py-1.5 rounded-lg bg-surface border border-outline-variant/40 hover:bg-emerald-50 text-on-surface-variant hover:text-emerald-700 transition-colors">2. คอมมิชชัน & เบิกจ่าย</a>
+        <a href="#section-3" class="toc-pill shrink-0 px-3 py-1.5 rounded-lg bg-surface border border-outline-variant/40 hover:bg-emerald-50 text-on-surface-variant hover:text-emerald-700 transition-colors">3. คิว & ตรวจสลิป</a>
+        <a href="#section-4" class="toc-pill shrink-0 px-3 py-1.5 rounded-lg bg-surface border border-outline-variant/40 hover:bg-emerald-50 text-on-surface-variant hover:text-emerald-700 transition-colors">4. คุณภาพ & ความรับผิดชอบ</a>
+        <a href="#section-5" class="toc-pill shrink-0 px-3 py-1.5 rounded-lg bg-surface border border-outline-variant/40 hover:bg-emerald-50 text-on-surface-variant hover:text-emerald-700 transition-colors">5. การระงับ & ปิดบัญชี</a>
+        <a href="#section-6" class="toc-pill shrink-0 px-3 py-1.5 rounded-lg bg-surface border border-outline-variant/40 hover:bg-emerald-50 text-on-surface-variant hover:text-emerald-700 transition-colors">6. ข้อมูลส่วนบุคคล (PDPA)</a>
     </div>
 </div>
 
@@ -346,14 +347,6 @@
 </main>
 
 <script>
-    function goBack() {
-        if (window.history.length > 1) {
-            window.history.back();
-        } else {
-            window.location.href = '../owner/Owner Profile.html';
-        }
-    }
-
     function confirmAndReturn() {
         try {
             localStorage.setItem('merchantTermsAccepted', new Date().toISOString());

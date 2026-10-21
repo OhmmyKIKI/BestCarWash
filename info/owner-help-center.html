@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>BestCarWash - ศูนย์ช่วยเหลือสำหรับพาร์ทเนอร์ร้านค้า</title>
+    <title>BestCarWash - ศูนย์ช่วยเหลือสำหรับเจ้าของร้าน</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
@@ -13,27 +13,35 @@
             theme: {
                 extend: {
                     colors: {
-                        background: "#f8fafc",
-                        "on-background": "#0f172a",
-                        primary: "#0284c7",
-                        secondary: "#059669",
-                        surface: "#ffffff",
-                        "on-surface": "#0f172a",
-                        "surface-container": "#ffffff",
-                        "surface-container-low": "#f8fafc",
-                        "surface-container-highest": "#f1f5f9",
+                        background: "#f8fafc",           // Slate 50 (Clean Pearl White)
+                        "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
+                        primary: "#0284c7",              // Ocean Blue / Sky 600
+                        secondary: "#059669",            // Emerald 600
+                        surface: "#ffffff",              // Pure White
+                        "on-surface": "#0f172a",           // Slate 900
+                        "surface-container": "#ffffff",    // Card Pure White
+                        "surface-container-low": "#f8fafc",// Slate 50
+                        "surface-container-highest": "#f1f5f9", // Slate 100
                         "surface-bright": "#ffffff",
                         "surface-variant": "#f1f5f9",
-                        "on-surface-variant": "#475569",
-                        outline: "#94a3b8",
-                        "outline-variant": "#e2e8f0",
-                        "primary-container": "#0284c7",
-                        "on-primary-container": "#ffffff",
-                        "secondary-container": "#ecfdf5",
-                        "on-secondary-container": "#065f46",
-                        error: "#e11d48",
+                        "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
+                        outline: "#94a3b8",              // Slate 400
+                        "outline-variant": "#e2e8f0",      // Slate 200 border
+                        "primary-container": "#0284c7",    // Ocean Blue
+                        "on-primary-container": "#ffffff", // Pure White
+                        "secondary-container": "#ecfdf5",  // Mint 50
+                        "on-secondary-container": "#065f46", // Mint 900
+                        error: "#e11d48",                // Rose 600
                         "error-container": "#ffe4e6",
                         "secondary-fixed": "#10b981",
+                    },
+                    spacing: {
+                        "margin-mobile": "1rem",
+                        gutter: "1rem",
+                        "touch-target-min": "3rem",
+                        "stack-sm": "0.5rem",
+                        "stack-md": "1rem",
+                        "stack-lg": "1.5rem"
                     },
                     fontFamily: {
                         sans: ["Prompt", "Inter", "sans-serif"]
@@ -49,7 +57,7 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Accordion transition using max-height */
+        /* Accordion transition */
         .faq-answer {
             max-height: 0;
             overflow: hidden;
@@ -73,40 +81,29 @@
             border-color: #059669;
             box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
         }
-
-        /* Highlighting searched text */
-        mark.search-highlight {
-            background-color: #fef08a;
-            color: #854d0e;
-            padding: 0 2px;
-            border-radius: 2px;
-        }
     </style>
 </head>
-<body class="antialiased flex flex-col min-h-screen bg-background text-on-background pb-16">
+<body class="antialiased flex flex-col min-h-screen bg-background text-on-background pb-16 font-sans">
 
-<!-- Top Header (App Bar) -->
-<header class="sticky top-0 w-full z-40 bg-surface/90 backdrop-blur-md border-b border-outline-variant/60 shadow-xs">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between">
-        <!-- Left: Back Button & Page Title -->
-        <div class="flex items-center gap-3">
-            <button type="button" onclick="goBack()" class="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/60 transition-all active:scale-95 group" title="ย้อนกลับ">
-                <span class="material-symbols-outlined text-[20px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
-            </button>
-            <div class="flex flex-col">
-                <h1 class="text-base sm:text-lg font-bold text-on-surface tracking-tight flex items-center gap-2">
-                    <span class="material-symbols-outlined text-secondary text-[22px]">help_center</span>
-                    <span>ศูนย์ช่วยเหลือพาร์ทเนอร์</span>
-                </h1>
-                <span class="text-[11px] text-on-surface-variant">BestCarWash Partner Help Center</span>
-            </div>
+<!-- Top Header (App Bar) - Standard across Owner pages -->
+<header class="sticky top-0 w-full z-50 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md">
+    <div class="w-full px-4 md:px-8 lg:px-10 h-20 flex items-center justify-between">
+        <!-- Left: Back Button & Page Identification -->
+        <div class="flex items-center gap-3.5">
+            <a href="../owner/Owner%20Profile.html" onclick="if(window.history.length > 1){ event.preventDefault(); window.history.back(); }" class="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/40 transition-all active:scale-95 group" title="กลับไปโปรไฟล์">
+                <span class="material-symbols-outlined text-[22px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+            </a>
+            <h1 class="text-lg md:text-xl font-bold text-on-surface tracking-tight flex items-center gap-2.5">
+                <span class="material-symbols-outlined text-secondary text-[26px]">help_center</span>
+                <span>ศูนย์ช่วยเหลือพาร์ทเนอร์</span>
+            </h1>
         </div>
 
         <!-- Right: Action Buttons -->
-        <div class="flex items-center gap-2">
-            <button type="button" onclick="openContactModal()" class="h-10 px-3.5 sm:px-4 rounded-xl bg-secondary-container hover:bg-secondary/15 text-secondary border border-secondary/30 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all active:scale-95 shadow-xs">
-                <span class="material-symbols-outlined text-[18px]">support_agent</span>
-                <span>ติดต่อเจ้าหน้าที่</span>
+        <div class="flex items-center gap-2.5 sm:gap-3">
+            <button type="button" onclick="openConnectModal()" class="h-11 sm:h-12 px-3.5 sm:px-5 rounded-xl bg-surface-container hover:bg-surface-variant border border-outline-variant/40 text-on-surface text-sm sm:text-base font-semibold flex items-center gap-2 transition-all hover:border-secondary/40 active:scale-95" title="ติดต่อฝ่ายบริการลูกค้า">
+                <span class="material-symbols-outlined text-[20px] text-secondary">support_agent</span>
+                <span class="hidden sm:inline">ติดต่อเจ้าหน้าที่</span>
             </button>
         </div>
     </div>
@@ -169,7 +166,7 @@
                 <span class="material-symbols-outlined text-[15px]">chat</span> LINE & แจ้งเตือน
             </button>
             <button type="button" onclick="filterCategory('account', this)" class="filter-chip shrink-0 px-3.5 py-2 rounded-xl bg-surface border border-outline-variant/60 font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-all flex items-center gap-1.5">
-                <span class="material-symbols-outlined text-[15px]">badge</span> บัญชี & ภาษี
+                <span class="material-symbols-outlined text-[15px]">badge</span> บัญชี & นิติบุคคล
             </button>
         </div>
     </div>
@@ -386,7 +383,7 @@
             </button>
             <div class="faq-answer">
                 <div class="px-4 sm:px-5 pb-5 pt-1 text-xs sm:text-sm text-on-surface-variant leading-relaxed border-t border-outline-variant/40 bg-surface-container-low/50">
-                    หากร้านของคุณจดทะเบียนภาษีมูลค่าเพิ่มหรือเปลี่ยนชื่อนิติบุคคล กรุณาส่งสำเนาเอกสาร ภ.พ.20 หรือหนังสือรับรองบริษัท มายังอีเมล <a href="mailto:partner-billing@bestcarwash.com" class="font-mono font-bold text-secondary hover:underline">partner-billing@bestcarwash.com</a> เจ้าหน้าที่จะทำการตรวจสอบและอัปเดตระบบบัญชีหลังบ้านให้ภายใน 1-2 วันทำการ
+                    หากร้านของคุณจดทะเบียนภาษีมูลค่าเพิ่มหรือเปลี่ยนชื่อนิติบุคคล กรุณาส่งสำเนาเอกสาร ภ.พ.20 หรือหนังสือรับรองบริษัท มายังช่องทาง <strong>LINE Official: @bestcarwash</strong> หรือติดต่อสายด่วนพาร์ทเนอร์ 02-123-4567 เจ้าหน้าที่จะทำการตรวจสอบและอัปเดตระบบบัญชีหลังบ้านให้ภายใน 1-2 วันทำการ
                 </div>
             </div>
         </div>
@@ -424,68 +421,54 @@
             <button type="button" onclick="clearSearch()" class="px-4 py-2 bg-surface-variant text-on-surface text-xs font-semibold rounded-xl hover:bg-outline-variant transition-colors">
                 ล้างการค้นหา
             </button>
-            <button type="button" onclick="openContactModal()" class="px-4 py-2 bg-secondary text-white text-xs font-semibold rounded-xl hover:bg-secondary/90 transition-colors shadow-xs">
+            <button type="button" onclick="openConnectModal()" class="px-4 py-2 bg-secondary text-white text-xs font-semibold rounded-xl hover:bg-secondary/90 transition-colors shadow-xs">
                 ติดต่อเจ้าหน้าที่
             </button>
         </div>
     </div>
 
-    <!-- Quick Contact Cards (3 Channels) -->
+    <!-- Quick Contact Cards (2 Channels: LINE & Phone Hotline) -->
     <div class="space-y-3 pt-4 border-t border-outline-variant/50">
         <div class="flex items-center justify-between px-1">
             <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">ช่องทางติดต่อทีมงานพาร์ทเนอร์</span>
             <span class="text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">เวลาทำการ 08:30 - 18:00 น.</span>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <!-- LINE Partner -->
-            <a href="https://line.me/ti/p/@bestcarwash" target="_blank" class="p-4 rounded-2xl bg-surface border border-outline-variant/60 hover:border-[#06C755] hover:shadow-md transition-all group flex flex-col justify-between gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <!-- LINE Partner (Opens LINE Connect Modal with QR Code like in notification-settings.html) -->
+            <button type="button" onclick="openConnectModal()" class="w-full text-left p-4 rounded-2xl bg-surface border border-outline-variant/60 hover:border-[#06C755] hover:shadow-md transition-all group flex flex-col justify-between gap-3 active:scale-[0.99]">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl bg-[#06C755] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-sm shadow-[#06C755]/20">
                         LINE
                     </div>
                     <div>
-                        <div class="text-xs font-bold text-on-surface">LINE Official</div>
-                        <div class="text-[11px] font-mono text-[#06C755] font-semibold">@bestcarwash</div>
+                        <div class="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                            <span>LINE Official</span>
+                            <span class="text-[10px] font-bold text-[#06C755] bg-[#06C755]/15 px-1.5 py-0.5 rounded">แนะนำ</span>
+                        </div>
+                        <div class="text-[11px] font-mono text-[#06C755] font-extrabold">@bestcarwash</div>
                     </div>
                 </div>
                 <div class="text-[11px] text-on-surface-variant flex items-center justify-between">
-                    <span>ตอบกลับไวใน 5-10 นาที</span>
-                    <span class="material-symbols-outlined text-[16px] text-outline group-hover:text-[#06C755] group-hover:translate-x-1 transition-all">chevron_right</span>
+                    <span>สแกน QR Code หรือแอดเพื่อน</span>
+                    <span class="material-symbols-outlined text-[18px] text-outline group-hover:text-[#06C755] group-hover:translate-x-1 transition-all">qr_code_scanner</span>
                 </div>
-            </a>
+            </button>
 
             <!-- Phone Hotline -->
-            <a href="tel:021234567" class="p-4 rounded-2xl bg-surface border border-outline-variant/60 hover:border-secondary hover:shadow-md transition-all group flex flex-col justify-between gap-3">
+            <a href="tel:021234567" class="p-4 rounded-2xl bg-surface border border-outline-variant/60 hover:border-secondary hover:shadow-md transition-all group flex flex-col justify-between gap-3 active:scale-[0.99]">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl bg-emerald-50 text-secondary border border-emerald-200 flex items-center justify-center shrink-0">
                         <span class="material-symbols-outlined text-[20px]">call</span>
                     </div>
                     <div>
                         <div class="text-xs font-bold text-on-surface">สายด่วนพาร์ทเนอร์</div>
-                        <div class="text-[11px] font-mono text-secondary font-semibold">02-123-4567</div>
+                        <div class="text-[11px] font-mono text-secondary font-bold">02-123-4567</div>
                     </div>
                 </div>
                 <div class="text-[11px] text-on-surface-variant flex items-center justify-between">
-                    <span>โทรฟรีในเวลาทำการ</span>
+                    <span>โทรปรึกษาเจ้าหน้าที่ในเวลาทำการ</span>
                     <span class="material-symbols-outlined text-[16px] text-outline group-hover:text-secondary group-hover:translate-x-1 transition-all">chevron_right</span>
-                </div>
-            </a>
-
-            <!-- Email Support -->
-            <a href="mailto:partner-support@bestcarwash.com?subject=ขอความช่วยเหลือพาร์ทเนอร์ร้านค้า%20BestCarWash" class="p-4 rounded-2xl bg-surface border border-outline-variant/60 hover:border-sky-500 hover:shadow-md transition-all group flex flex-col justify-between gap-3">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-sky-50 text-primary border border-sky-200 flex items-center justify-center shrink-0">
-                        <span class="material-symbols-outlined text-[20px]">mail</span>
-                    </div>
-                    <div>
-                        <div class="text-xs font-bold text-on-surface">อีเมลฝ่ายสนับสนุน</div>
-                        <div class="text-[11px] font-mono text-primary font-semibold truncate max-w-[150px]">partner-support@...</div>
-                    </div>
-                </div>
-                <div class="text-[11px] text-on-surface-variant flex items-center justify-between">
-                    <span>ตอบกลับภายใน 24 ชม.</span>
-                    <span class="material-symbols-outlined text-[16px] text-outline group-hover:text-primary group-hover:translate-x-1 transition-all">chevron_right</span>
                 </div>
             </a>
         </div>
@@ -505,87 +488,75 @@
 
 </main>
 
-<!-- Contact Modal / Bottom Sheet -->
-<div id="contact-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4">
-    <div id="contact-modal-content" class="bg-surface border border-outline-variant/60 rounded-3xl p-6 max-w-sm w-full flex flex-col items-center text-center shadow-2xl scale-95 transition-transform duration-300 relative">
-        <button type="button" onclick="closeContactModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-surface-variant text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors">
+<!-- LINE Connect Modal (Identical to notification-settings.html) -->
+<div id="connect-modal" class="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4">
+    <div class="bg-surface-container border border-outline-variant/40 rounded-3xl p-6 max-w-sm w-full flex flex-col items-center text-center shadow-2xl scale-95 transition-transform duration-300 relative" id="connect-modal-content">
+        <button type="button" onclick="closeConnectModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-surface-variant text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors">
             <span class="material-symbols-outlined text-[18px]">close</span>
         </button>
 
-        <div class="w-14 h-14 rounded-2xl bg-secondary-container text-secondary flex items-center justify-center mb-3 shadow-md shadow-secondary/15">
-            <span class="material-symbols-outlined text-[30px]">support_agent</span>
+        <div class="w-12 h-12 rounded-2xl bg-[#06C755] flex items-center justify-center text-white font-black text-lg mb-3 shadow-lg shadow-[#06C755]/30">
+            LINE
         </div>
 
-        <h3 class="text-lg font-bold text-on-surface">ติดต่อทีมดูแลพาร์ทเนอร์</h3>
-        <p class="text-xs text-on-surface-variant mt-1 mb-4 leading-relaxed">
-            ทีมงาน BestCarWash พร้อมดูแลและแก้ไขปัญหาให้ร้านค้าของคุณในทุกขั้นตอน
-        </p>
+        <h3 class="text-lg font-bold text-on-surface">แอดเพื่อน LINE Official</h3>
+        <p class="text-xs text-on-surface-variant mt-1 mb-4">สแกน QR Code หรือเพิ่มเพื่อนเพื่อติดต่อทีมสนับสนุนและรับแจ้งเตือนสำหรับร้านค้า</p>
 
-        <div class="w-full space-y-2.5 text-left text-xs">
-            <!-- LINE Option -->
-            <a href="https://line.me/ti/p/@bestcarwash" target="_blank" class="p-3 rounded-xl bg-[#06C755]/10 border border-[#06C755]/30 hover:bg-[#06C755]/20 flex items-center justify-between transition-colors">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-[#06C755] text-white flex items-center justify-center font-black text-xs shrink-0">
-                        LINE
-                    </div>
-                    <div>
-                        <div class="font-bold text-on-surface">LINE: @bestcarwash</div>
-                        <div class="text-[10px] text-on-surface-variant">ตอบกลับไวที่สุดในเวลาทำการ</div>
-                    </div>
-                </div>
-                <span class="material-symbols-outlined text-[18px] text-[#06C755]">open_in_new</span>
-            </a>
-
-            <!-- Phone Option -->
-            <a href="tel:021234567" class="p-3 rounded-xl bg-surface-variant/80 border border-outline-variant/60 hover:bg-surface-variant flex items-center justify-between transition-colors">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-secondary flex items-center justify-center shrink-0">
-                        <span class="material-symbols-outlined text-[18px]">call</span>
-                    </div>
-                    <div>
-                        <div class="font-bold text-on-surface">โทร 02-123-4567</div>
-                        <div class="text-[10px] text-on-surface-variant">จันทร์ - ศุกร์ (08:30 - 18:00 น.)</div>
-                    </div>
-                </div>
-                <span class="material-symbols-outlined text-[18px] text-secondary">call</span>
-            </a>
-
-            <!-- Email Option -->
-            <a href="mailto:partner-support@bestcarwash.com" class="p-3 rounded-xl bg-surface-variant/80 border border-outline-variant/60 hover:bg-surface-variant flex items-center justify-between transition-colors">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-sky-100 text-primary flex items-center justify-center shrink-0">
-                        <span class="material-symbols-outlined text-[18px]">mail</span>
-                    </div>
-                    <div>
-                        <div class="font-bold text-on-surface truncate max-w-[170px]">partner-support@bestcarwash.com</div>
-                        <div class="text-[10px] text-on-surface-variant">สำหรับข้อสงสัยและเรื่องบัญชี</div>
-                    </div>
-                </div>
-                <span class="material-symbols-outlined text-[18px] text-primary">send</span>
-            </a>
+        <!-- QR Code Frame -->
+        <div class="p-3 bg-white rounded-2xl shadow-inner border-2 border-[#06C755]/40 mb-3 flex flex-col items-center">
+            <svg class="w-36 h-36" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100" height="100" fill="white"/>
+                <rect x="10" y="10" width="24" height="24" fill="#0b1326" rx="3"/>
+                <rect x="14" y="14" width="16" height="16" fill="white" rx="2"/>
+                <rect x="18" y="18" width="8" height="8" fill="#06C755" rx="1"/>
+                <rect x="66" y="10" width="24" height="24" fill="#0b1326" rx="3"/>
+                <rect x="70" y="14" width="16" height="16" fill="white" rx="2"/>
+                <rect x="74" y="18" width="8" height="8" fill="#06C755" rx="1"/>
+                <rect x="10" y="66" width="24" height="24" fill="#0b1326" rx="3"/>
+                <rect x="14" y="70" width="16" height="16" fill="white" rx="2"/>
+                <rect x="18" y="74" width="8" height="8" fill="#06C755" rx="1"/>
+                <rect x="42" y="12" width="6" height="6" fill="#0b1326"/>
+                <rect x="52" y="18" width="6" height="6" fill="#0b1326"/>
+                <rect x="40" y="28" width="6" height="6" fill="#0b1326"/>
+                <rect x="14" y="44" width="6" height="6" fill="#0b1326"/>
+                <rect x="24" y="50" width="6" height="6" fill="#0b1326"/>
+                <rect x="44" y="44" width="12" height="12" fill="#06C755" rx="2"/>
+                <rect x="64" y="42" width="6" height="6" fill="#0b1326"/>
+                <rect x="78" y="48" width="6" height="6" fill="#0b1326"/>
+                <rect x="40" y="66" width="6" height="6" fill="#0b1326"/>
+                <rect x="54" y="74" width="6" height="6" fill="#0b1326"/>
+                <rect x="68" y="68" width="6" height="6" fill="#0b1326"/>
+                <rect x="80" y="78" width="6" height="6" fill="#0b1326"/>
+                <rect x="70" y="82" width="6" height="6" fill="#0b1326"/>
+            </svg>
+            <span class="text-[11px] font-mono font-bold text-gray-800 mt-1">LINE ID: @bestcarwash</span>
         </div>
 
-        <button type="button" onclick="closeContactModal()" class="w-full mt-4 py-2.5 bg-surface-variant hover:bg-outline-variant/40 text-on-surface text-xs font-semibold rounded-xl transition-colors">
-            ปิดหน้าต่าง
-        </button>
+        <div class="w-full flex flex-col gap-2 mt-2">
+            <a href="https://line.me/ti/p/@bestcarwash" target="_blank" class="w-full py-2.5 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-xs rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">person_add</span>
+                <span>เปิดแอป LINE เพื่อเพิ่มเพื่อน</span>
+            </a>
+            <button type="button" onclick="confirmConnectLine()" class="w-full py-2 bg-surface-container-highest hover:bg-surface-variant text-on-surface text-xs font-semibold rounded-xl border border-outline-variant/40 transition-colors">
+                ยืนยันการเพิ่มเพื่อนแล้ว
+            </button>
+        </div>
     </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed bottom-24 md:bottom-8 left-1/2 transform -translate-x-1/2 bg-secondary-container text-on-secondary-container px-6 py-3 rounded-full shadow-lg border border-secondary/30 flex items-center gap-2 z-50 opacity-0 translate-y-10 pointer-events-none transition-all duration-300">
+    <span class="material-symbols-outlined">check_circle</span>
+    <span class="font-medium text-sm">เชื่อมต่อและแอดเพื่อน LINE เรียบร้อยแล้ว!</span>
 </div>
 
 <script>
     let currentCategory = 'all';
 
-    function goBack() {
-        if (window.history.length > 1) {
-            window.history.back();
-        } else {
-            window.location.href = '../owner/Owner Profile.html';
-        }
-    }
-
-    // Modal Handlers
-    function openContactModal() {
-        const modal = document.getElementById('contact-modal');
-        const content = document.getElementById('contact-modal-content');
+    // LINE Modal Handlers (same as notification-settings.html)
+    function openConnectModal() {
+        const modal = document.getElementById('connect-modal');
+        const content = document.getElementById('connect-modal-content');
         if (!modal) return;
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -599,9 +570,9 @@
         }, 10);
     }
 
-    function closeContactModal() {
-        const modal = document.getElementById('contact-modal');
-        const content = document.getElementById('contact-modal-content');
+    function closeConnectModal() {
+        const modal = document.getElementById('connect-modal');
+        const content = document.getElementById('connect-modal-content');
         if (!modal) return;
         modal.classList.remove('opacity-100');
         modal.classList.add('opacity-0');
@@ -613,6 +584,19 @@
             modal.classList.remove('flex');
             modal.classList.add('hidden');
         }, 300);
+    }
+
+    function confirmConnectLine() {
+        closeConnectModal();
+        const toast = document.getElementById('toast');
+        if (toast) {
+            toast.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none');
+                toast.classList.remove('opacity-100', 'translate-y-0');
+            }, 2500);
+        }
     }
 
     // Category Filter
@@ -732,21 +716,21 @@
             });
         });
 
-        // Search input listener with debounce
+        // Search input listener
         const searchInput = document.getElementById('faqSearchInput');
         if (searchInput) {
             searchInput.addEventListener('input', applyFilters);
         }
 
         // Modal backdrop and ESC listeners
-        const modal = document.getElementById('contact-modal');
+        const modal = document.getElementById('connect-modal');
         if (modal) {
             modal.addEventListener('click', (e) => {
-                if (e.target === modal) closeContactModal();
+                if (e.target === modal) closeConnectModal();
             });
         }
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeContactModal();
+            if (e.key === 'Escape') closeConnectModal();
         });
     });
 </script>
