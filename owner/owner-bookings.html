@@ -669,10 +669,13 @@
     function renderAllBookings() {
         const list = getBookingsList();
 
-        // 1. Incoming Bookings (status: 'incoming')
+        // 1. Incoming Bookings (status: 'incoming' or 'pending')
         const incomingContainer = document.getElementById('incomingBookingsList');
         const incomingCountBadge = document.getElementById('incomingCountBadge');
-        const incomingBookings = list.filter(b => b.status === 'incoming');
+        const incomingBookings = list.filter(b => {
+            const s = (b.status || '').toLowerCase();
+            return s === 'incoming' || s === 'pending';
+        });
 
         if (incomingCountBadge) incomingCountBadge.innerText = incomingBookings.length;
 
@@ -726,7 +729,7 @@
         // 2. Refund Requests (status: 'refund_requested')
         const refundContainer = document.getElementById('refundRequestsList');
         const refundCountBadge = document.getElementById('refundCountBadge');
-        const refundBookings = list.filter(b => b.status === 'refund_requested');
+        const refundBookings = list.filter(b => (b.status || '').toLowerCase() === 'refund_requested');
 
         if (refundCountBadge) refundCountBadge.innerText = refundBookings.length + ' คำขอ';
 
@@ -775,7 +778,7 @@
 
         // 3. Active Pipeline Bookings (status: 'confirmed', 'arrived', 'washing', 'ready')
         const acceptedContainer = document.getElementById('acceptedBookingsList');
-        const activeBookings = list.filter(b => ['confirmed', 'arrived', 'washing', 'ready'].includes(b.status));
+        const activeBookings = list.filter(b => ['confirmed', 'arrived', 'washing', 'ready'].includes((b.status || '').toLowerCase()));
 
         if (acceptedContainer) {
             if (activeBookings.length === 0) {
@@ -1303,6 +1306,10 @@
                     let list = getBookingsList();
                     dbBookings.forEach(db => {
                         const existing = list.find(item => normId(item.bookingId) === normId(db.id) || normId(item.dbId) === normId(db.id) || normId(item.id) === normId(db.id));
+                        const rawStatus = (db.status || 'incoming').toLowerCase();
+                        const mappedStatus = (rawStatus === 'pending') ? 'incoming' : rawStatus;
+                        const slip = db.slip_url || db.slip_image || db.payment_slip || '';
+
                         if (!existing) {
                             list.push({
                                 bookingId: '#' + (db.id.slice(0, 8)),
@@ -1317,13 +1324,15 @@
                                 dateTime: db.booking_date || 'วันนี้',
                                 depositAmount: '฿' + (db.deposit_amount || '50.00'),
                                 totalAmount: '฿' + (db.total_price || '250.00'),
-                                status: db.status || 'confirmed',
-                                isNew: false
+                                slipImage: slip,
+                                status: mappedStatus,
+                                isNew: mappedStatus === 'incoming'
                             });
                         } else {
                             existing.dbId = db.id;
-                            if (db.status && db.status !== existing.status) {
-                                existing.status = db.status;
+                            if (slip && !existing.slipImage) existing.slipImage = slip;
+                            if (mappedStatus && mappedStatus !== existing.status) {
+                                existing.status = mappedStatus;
                             }
                         }
                     });

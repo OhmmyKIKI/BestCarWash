@@ -290,7 +290,7 @@
             // Status filter
             if (statusVal === 'completed') {
                 if (b.status !== 'completed') return false;
-            } else if (statusVal === 'cancelled') {
+            } else if (statusVal === 'cancelled' || statusVal === 'refunded') {
                 if (!['refunded', 'declined', 'no_show', 'refund_requested'].includes(b.status)) return false;
             }
 
@@ -614,9 +614,15 @@
                     let list = getHistoryBookings();
                     dbBookings.forEach(db => {
                         const existing = list.find(item => normId(item.bookingId) === normId(db.id) || normId(item.dbId) === normId(db.id) || normId(item.id) === normId(db.id));
+                        const normalizedStatus = (db.status || 'completed').toLowerCase();
+                        const slip = db.slip_url || db.slip_image || db.payment_slip || '';
+                        const refund = db.refund_slip || db.refund_slip_url || '';
+
                         if (!existing) {
                             list.push({
                                 bookingId: '#' + (db.id.slice(0, 8)),
+                                dbId: db.id,
+                                id: db.id,
                                 customerName: db.customer_name || 'ลูกค้า',
                                 customerPhone: db.customer_phone || '-',
                                 carBrand: db.vehicle_info || 'รถยนต์',
@@ -627,8 +633,14 @@
                                 completedAt: db.completed_at || db.booking_date,
                                 depositAmount: '฿' + (db.deposit_amount || '50.00'),
                                 totalAmount: '฿' + (db.total_price || '250.00'),
-                                status: db.status
+                                slipImage: slip,
+                                refundSlip: refund,
+                                status: normalizedStatus
                             });
+                        } else {
+                            existing.status = normalizedStatus;
+                            if (slip && !existing.slipImage) existing.slipImage = slip;
+                            if (refund && !existing.refundSlip) existing.refundSlip = refund;
                         }
                     });
                     localStorage.setItem('appBookingsList', JSON.stringify(list));
