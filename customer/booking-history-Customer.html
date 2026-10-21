@@ -1743,6 +1743,20 @@
             } catch(e) {}
         }
 
+        // If no active booking in activeCustomerBooking, check appBookingsList for active queue
+        if (!b && listStr) {
+            try {
+                const list = JSON.parse(listStr);
+                if (Array.isArray(list) && list.length > 0) {
+                    const activeInList = list.find(item => ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes((item.status || '').toLowerCase()));
+                    if (activeInList) {
+                        b = activeInList;
+                        localStorage.setItem('activeCustomerBooking', JSON.stringify(b));
+                    }
+                }
+            } catch(_) {}
+        }
+
         // Render completed history every time loadActiveBooking is invoked
         renderCompletedHistory();
 
@@ -1927,13 +1941,38 @@
                 const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
                 if (!uid || !fetcher) return;
 
-                // Parallel fetch profile and bookings via safeSupabaseRest
-                const [profRes, bookingsRes] = await Promise.all([
-                    fetcher(`profiles?id=eq.${uid}&select=avatar_url,full_name&limit=1`),
-                    fetcher(`bookings?customer_id=eq.${uid}&select=*,shops(name,phone_number)&order=created_at.desc`)
-                ]);
+                let profile = null;
+                let dbBookings = [];
 
-                const profile = Array.isArray(profRes) && profRes.length > 0 ? profRes[0] : null;
+                // 1. Fetch from Supabase client SDK directly (natively authenticated)
+                if (client?.from && uid) {
+                    try {
+                        const [pRes, bRes] = await Promise.all([
+                            client.from('profiles').select('avatar_url, full_name').eq('id', uid).limit(1),
+                            client.from('bookings').select('*, shops(name, phone_number)').eq('customer_id', uid).order('created_at', { ascending: false })
+                        ]);
+                        if (pRes.data && pRes.data.length > 0) profile = pRes.data[0];
+                        if (bRes.data && Array.isArray(bRes.data) && bRes.data.length > 0) dbBookings = bRes.data;
+                    } catch (sdkErr) {
+                        console.warn('[Supabase SDK bookings fetch notice]:', sdkErr);
+                    }
+                }
+
+                // 2. Fallback to safeSupabaseRest if client didn't return
+                if (dbBookings.length === 0 && fetcher && uid) {
+                    try {
+                        const [profRes, bookingsRes] = await Promise.all([
+                            !profile ? fetcher(`profiles?id=eq.${uid}&select=avatar_url,full_name&limit=1`) : null,
+                            fetcher(`bookings?customer_id=eq.${uid}&select=*,shops(name,phone_number)&order=created_at.desc`)
+                        ]);
+                        if (!profile && Array.isArray(profRes) && profRes.length > 0) profile = profRes[0];
+                        if (Array.isArray(bookingsRes) && bookingsRes.length > 0) dbBookings = bookingsRes;
+                        else if (bookingsRes?.data && Array.isArray(bookingsRes.data) && bookingsRes.data.length > 0) dbBookings = bookingsRes.data;
+                    } catch (restErr) {
+                        console.warn('[Supabase REST bookings fetch notice]:', restErr);
+                    }
+                }
+
                 if (profile) {
                     if (profile.avatar_url) {
                         const avatar = document.getElementById('customer-header-avatar');
@@ -1944,8 +1983,6 @@
                         if (nameEl) nameEl.innerText = profile.full_name;
                     }
                 }
-
-                const dbBookings = Array.isArray(bookingsRes) ? bookingsRes : [];
 
                 if (dbBookings && dbBookings.length > 0) {
                     // Check if user has an active ongoing booking
@@ -1966,7 +2003,7 @@
                         };
                         localStorage.setItem('activeCustomerBooking', JSON.stringify(mappedActive));
                     } else {
-                        // User has no active ongoing booking
+                        // User has no active ongoing booking in DB, check if they have one locally
                         const activeCustStr = localStorage.getItem('activeCustomerBooking');
                         if (activeCustStr) {
                             try {
@@ -1992,10 +2029,34 @@
                     renderCompletedHistory(mappedList);
                     loadActiveBooking();
                 } else {
-                    // Real user has no bookings at all in DB
-                    localStorage.removeItem('activeCustomerBooking');
-                    localStorage.removeItem('cachedCustomerCompletedHistory');
-                    renderCompletedHistory([]);
+                    // DB query returned 0 rows or error - PRESERVE active local booking if present!
+                    const activeCustStr = localStorage.getItem('activeCustomerBooking');
+                    let hasLocalActive = false;
+                    if (activeCustStr) {
+                        try {
+                            const ac = JSON.parse(activeCustStr);
+                            if (ac && ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes((ac.status || '').toLowerCase())) {
+                                hasLocalActive = true;
+                            }
+                        } catch(e) {}
+                    }
+                    if (!hasLocalActive) {
+                        const listStr = localStorage.getItem('appBookingsList');
+                        if (listStr) {
+                            try {
+                                const l = JSON.parse(listStr);
+                                if (Array.isArray(l) && l.some(item => ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes((item.status || '').toLowerCase()))) {
+                                    hasLocalActive = true;
+                                }
+                            } catch(_) {}
+                        }
+                    }
+
+                    if (!hasLocalActive) {
+                        localStorage.removeItem('activeCustomerBooking');
+                        localStorage.removeItem('cachedCustomerCompletedHistory');
+                        renderCompletedHistory([]);
+                    }
                     loadActiveBooking();
                 }
             } catch (err) {

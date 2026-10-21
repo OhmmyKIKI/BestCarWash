@@ -80,13 +80,12 @@ async function getValidAuthToken() {
         } catch (_) {}
     }
 
-    // Critical Guard: Prevent HTTP 494 REQUEST_HEADER_TOO_LARGE
-    // Normal JWT tokens are ~800 to 1,500 chars. If > 2,500 chars, it's bloated with base64 data
-    // which exceeds Vercel / Nginx request header buffers (8KB).
+    // Critical Guard: Prevent HTTP 494 REQUEST_HEADER_TOO_LARGE on proxies
+    // Normal JWT tokens are ~800 to 1,500 chars. If > 2,500 chars, it contains bloated base64 metadata.
+    // We trigger automatic cleanup while still providing the token for direct Supabase requests (supports up to 32KB).
     if (token && token.length > 2500) {
-        console.warn(`[Supabase] Auth token bloated (${token.length} chars). Suppressing to prevent HTTP 494. Triggering metadata purge.`);
-        triggerUserMetadataCleanup();
-        return null;
+        triggerUserMetadataCleanup().catch(() => {});
+        return token;
     }
 
     return token;
@@ -105,15 +104,15 @@ async function triggerUserMetadataCleanup() {
                 const k = localStorage.key(i);
                 if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
                     const raw = localStorage.getItem(k);
-                    if (raw && (raw.includes('data:image') || raw.length > 300000)) {
+                    if (raw && (raw.includes('data:image') || raw.length > 10000)) {
                         const parsed = JSON.parse(raw);
                         if (parsed.user?.user_metadata) {
                             let modified = false;
                             for (const [mKey, mVal] of Object.entries(parsed.user.user_metadata)) {
-                                if (typeof mVal === 'string' && (mVal.startsWith('data:') || mVal.length > 1000)) {
+                                if (typeof mVal === 'string' && (mVal.startsWith('data:') || mVal.length > 500)) {
                                     delete parsed.user.user_metadata[mKey];
                                     modified = true;
-                                } else if (Array.isArray(mVal) && mVal.some(x => typeof x === 'string' && (x.startsWith('data:') || x.length > 1000))) {
+                                } else if (Array.isArray(mVal) && mVal.some(x => typeof x === 'string' && (x.startsWith('data:') || x.length > 500))) {
                                     delete parsed.user.user_metadata[mKey];
                                     modified = true;
                                 }
@@ -132,30 +131,28 @@ async function triggerUserMetadataCleanup() {
         if (!client || !client.auth) return;
         const { data } = await client.auth.getSession().catch(() => ({ data: null }));
         const user = data?.session?.user;
-        const token = data?.session?.access_token;
         if (!user || !user.user_metadata) return;
 
-        // Only invoke updateUser if token is within safe header limits (< 2500 chars)
-        // because sending a 1MB token in Authorization header causes HTTP 494
-        if (token && token.length <= 2500) {
-            const meta = user.user_metadata;
-            const purgedMeta = {};
-            let foundBloat = false;
+        // Clean bloated base64 keys directly from Supabase Auth
+        const meta = user.user_metadata;
+        const purgedMeta = {};
+        let foundBloat = false;
 
-            for (const [key, val] of Object.entries(meta)) {
-                if (typeof val === 'string' && (val.startsWith('data:') || val.length > 1000)) {
-                    foundBloat = true;
-                    purgedMeta[key] = null;
-                } else if (Array.isArray(val) && (val.length > 20 || val.some(item => typeof item === 'string' && (item.startsWith('data:') || item.length > 1000)))) {
-                    foundBloat = true;
-                    purgedMeta[key] = null;
-                }
+        for (const [key, val] of Object.entries(meta)) {
+            if (typeof val === 'string' && (val.startsWith('data:') || val.length > 500)) {
+                foundBloat = true;
+                purgedMeta[key] = null;
+            } else if (Array.isArray(val) && (val.length > 20 || val.some(item => typeof item === 'string' && (item.startsWith('data:') || item.length > 500)))) {
+                foundBloat = true;
+                purgedMeta[key] = null;
             }
+        }
 
-            if (foundBloat) {
-                await client.auth.updateUser({ data: purgedMeta }).catch(() => {});
-                await client.auth.refreshSession().catch(() => null);
-            }
+        if (foundBloat) {
+            console.log('[Supabase] Purging bloated metadata keys:', Object.keys(purgedMeta));
+            await client.auth.updateUser({ data: purgedMeta }).catch(e => console.warn('[Supabase] updateUser cleanup notice:', e));
+            await client.auth.refreshSession().catch(() => null);
+            console.log('[Supabase] Auth session refreshed with clean compact token');
         }
     } catch (e) {
         // Silent catch to prevent console noise
@@ -216,8 +213,14 @@ async function safeSupabaseRest(endpoint, options = {}) {
     const method = (options.method || 'GET').toUpperCase();
     const cleanEndpoint = endpoint.replace(/^\/+/, '');
 
+    const token = await getValidAuthToken();
+    const isTokenLarge = token && token.length > 2500;
+
     const candidateBases = [];
-    if (typeof window !== 'undefined' && window.location.origin && window.location.hostname.includes('vercel.app')) {
+    if (isTokenLarge) {
+        // Route large tokens directly to Supabase to bypass proxy header limits
+        candidateBases.push(SUPABASE_DIRECT_URL);
+    } else if (typeof window !== 'undefined' && window.location.origin && window.location.hostname.includes('vercel.app')) {
         candidateBases.push(window.location.origin + '/api/supabase');
         candidateBases.push(SUPABASE_DIRECT_URL);
     } else {
@@ -227,9 +230,7 @@ async function safeSupabaseRest(endpoint, options = {}) {
         }
     }
 
-    const token = await getValidAuthToken();
-    const isTokenSafe = token && token.length <= 2500;
-    const authHeader = isTokenSafe ? `Bearer ${token}` : `Bearer ${SUPABASE_ANON_KEY}`;
+    const authHeader = token ? `Bearer ${token}` : `Bearer ${SUPABASE_ANON_KEY}`;
 
     let headers = {
         'apikey': SUPABASE_ANON_KEY,
