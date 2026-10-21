@@ -10,7 +10,6 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-client.js"></script>
 <script src="../supabase-client.js"></script>
 <script>
     tailwind.config = {
@@ -213,12 +212,12 @@
             <section>
                 <div class="flex justify-between items-center mb-3">
                     <h3 class="text-xl font-bold text-on-surface">ที่ตั้ง</h3>
-                    <a href="https://www.google.com/maps/dir/?api=1&destination=18.7950,98.9800" target="_blank" class="text-primary text-sm font-semibold hover:underline flex items-center gap-1">
+                    <a id="map-directions-link" href="https://www.google.com/maps/dir/?api=1&destination=18.7950,98.9800" target="_blank" class="text-primary text-sm font-semibold hover:underline flex items-center gap-1">
                         ขอเส้นทาง <span class="material-symbols-outlined text-[14px]">directions</span>
                     </a>
                 </div>
                 <div class="w-full h-48 bg-surface-container-highest rounded-2xl overflow-hidden border border-outline-variant/50 relative z-0" id="mini-map"></div>
-                <a href="https://www.google.com/maps/search/?api=1&query=18.7950,98.9800" target="_blank" class="block text-xs text-on-surface-variant mt-2 text-right hover:text-primary transition-colors">
+                <a id="map-search-link" href="https://www.google.com/maps/search/?api=1&query=18.7950,98.9800" target="_blank" class="block text-xs text-on-surface-variant mt-2 text-right hover:text-primary transition-colors">
                     เปิดใน Google Maps <span class="material-symbols-outlined text-[12px] align-middle">open_in_new</span>
                 </a>
             </section>
@@ -415,6 +414,27 @@
     let currentShop = null;
     let galleryImages = [];
     let currentSlide = 0;
+
+    // IndexedDB Media Helper (for reading owner shop photos & covers)
+    async function getIDBMedia(key) {
+        if (typeof indexedDB === 'undefined') return null;
+        return new Promise((resolve) => {
+            try {
+                const req = indexedDB.open('BestCarWashMedia', 1);
+                req.onsuccess = (e) => {
+                    const db = e.target.result;
+                    if (!db || !db.objectStoreNames || !db.objectStoreNames.contains('shop_media')) return resolve(null);
+                    const tx = db.transaction('shop_media', 'readonly');
+                    const gReq = tx.objectStore('shop_media').get(key);
+                    gReq.onsuccess = () => resolve(gReq.result || null);
+                    gReq.onerror = () => resolve(null);
+                };
+                req.onerror = () => resolve(null);
+            } catch (_) {
+                resolve(null);
+            }
+        });
+    }
 
     // --- Favorites Synchronization ---
     function getFavoriteShopIds() {
@@ -733,8 +753,19 @@
         const aboutEl = document.getElementById('shop-about');
         if (aboutEl && currentShop.about) aboutEl.textContent = currentShop.about;
 
-        // Update Gallery images
-        galleryImages = currentShop.images || [];
+        // Update Gallery images safely
+        const rawImages = currentShop.images || [];
+        galleryImages = (Array.isArray(rawImages) ? rawImages : [rawImages])
+            .filter(img => typeof img === 'string' && img.trim() && img !== 'undefined' && img !== 'null');
+        
+        if (galleryImages.length === 0) {
+            galleryImages = [
+                'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80',
+                'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80',
+                'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=1200&q=80'
+            ];
+        }
+
         const heroImg = document.querySelector('.md\\:hidden img[alt="Shop"]');
         if (heroImg && galleryImages[0]) heroImg.src = galleryImages[0];
         
@@ -859,6 +890,16 @@
                     const disc = JSON.parse(localStorage.getItem('cachedDiscoveryShops') || '[]');
                     const found = disc.find(s => s.id === paramId);
                     if (found) {
+                        const isOwner = (localStorage.getItem('currentShopId') === paramId) || (localStorage.getItem('ownerShopName') === found.name);
+                        const localCover = isOwner ? localStorage.getItem('ownerCoverImage') : null;
+                        let localGallery = null;
+                        try { localGallery = isOwner ? JSON.parse(localStorage.getItem('ownerShopGallery') || 'null') : null; } catch(_) {}
+
+                        let initialImages = [];
+                        if (Array.isArray(localGallery) && localGallery.length > 0) initialImages = [...localGallery];
+                        if (localCover && !initialImages.includes(localCover)) initialImages.unshift(localCover);
+                        if (initialImages.length === 0 && found.image && found.image !== 'undefined') initialImages.push(found.image);
+
                         initialShopData = {
                             id: found.id,
                             name: found.name || 'ร้านคาร์แคร์',
@@ -872,7 +913,7 @@
                             lat: found.lat || 18.7938,
                             lng: found.lng || 98.9898,
                             map_link: found.map_link || '',
-                            images: found.image ? [found.image] : [
+                            images: initialImages.length > 0 ? initialImages : [
                                 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80',
                                 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80'
                             ],
@@ -896,8 +937,14 @@
             const localAddress = localStorage.getItem('ownerShopAddress') || '';
             const localPhone = localStorage.getItem('ownerShopPhone') || '080-000-0000';
             const localAbout = localStorage.getItem('ownerShopAbout') || '';
+            const localCover = localStorage.getItem('ownerCoverImage');
             let localGallery = [];
             try { localGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || '[]'); } catch(_) {}
+            if (localCover && (!Array.isArray(localGallery) || localGallery.length === 0)) {
+                localGallery = [localCover];
+            } else if (localCover && Array.isArray(localGallery) && !localGallery.includes(localCover)) {
+                localGallery.unshift(localCover);
+            }
             if (!Array.isArray(localGallery) || localGallery.length === 0) {
                 localGallery = [
                     'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80',
@@ -960,6 +1007,7 @@
 
         window.addEventListener('storage', (e) => {
             if (e.key === 'ownerOperatingHours' || e.key === 'ownerSpecialHolidays') {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
                 renderCustomerOperatingHours(currentShopId, client);
             }
         });
@@ -968,6 +1016,7 @@
         // LAYER 2: SILENT FAST-TRACK BACKGROUND SYNC WITH SUPABASE
         // ========================================================
         (async () => {
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
             const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
             if (!fetcher) return;
 
@@ -1007,11 +1056,65 @@
                     let dbServices = Array.isArray(servRes) ? servRes : [];
                     const liveReviews = Array.isArray(revRes) ? revRes : [];
 
-                    const shopLogo = dbShop.logo_url || ownerProf?.avatar_url || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80';
-                    const coverImg = dbShop.cover_image_url || 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80';
+                    const shopLogo = dbShop.logo_url || ownerProf?.avatar_url || null;
                     const avgRating = (liveReviews && liveReviews.length > 0)
                         ? (liveReviews.reduce((sum, r) => sum + (parseFloat(r.rating) || 5), 0) / liveReviews.length).toFixed(1)
                         : 'ใหม่';
+
+                    // Resolve Shop Images with IndexedDB + LocalStorage + Supabase support
+                    const currentShopId = localStorage.getItem('currentShopId');
+                    const currentUserId = localStorage.getItem('lastLoggedInUserId');
+                    const ownerShopName = localStorage.getItem('ownerShopName');
+                    const isCurrentOwnerShop = (currentShopId && dbShop.id === currentShopId) ||
+                                               (currentUserId && dbShop.owner_id === currentUserId) ||
+                                               (ownerShopName && dbShop.name === ownerShopName);
+
+                    let localCover = isCurrentOwnerShop ? localStorage.getItem('ownerCoverImage') : null;
+                    let idbCover = isCurrentOwnerShop ? (await getIDBMedia('ownerCoverImage').catch(() => null)) : null;
+                    let localGallery = null;
+                    if (isCurrentOwnerShop) {
+                        try { localGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null'); } catch(_) {}
+                        if (!localGallery || !localGallery.length) {
+                            try { localGallery = await getIDBMedia('ownerShopGallery').catch(() => null); } catch(_) {}
+                        }
+                    }
+
+                    // Check discovery cached shop image
+                    let discoveryShopImg = null;
+                    try {
+                        const discShops = JSON.parse(localStorage.getItem('cachedDiscoveryShops') || '[]');
+                        const discItem = discShops.find(s => s.id === dbShop.id);
+                        if (discItem && discItem.image && discItem.image !== 'undefined' && !discItem.image.includes('avatar')) {
+                            discoveryShopImg = discItem.image;
+                        }
+                    } catch (_) {}
+
+                    let resolvedCover = dbShop.cover_image_url || dbShop.cover_image || dbShop.cover_url || localCover || idbCover || discoveryShopImg || null;
+
+                    let resolvedGallery = [];
+                    if (Array.isArray(localGallery) && localGallery.length > 0) {
+                        resolvedGallery = [...localGallery];
+                    } else if (Array.isArray(dbShop.photos) && dbShop.photos.length > 0) {
+                        resolvedGallery = [...dbShop.photos];
+                    } else if (Array.isArray(dbShop.gallery) && dbShop.gallery.length > 0) {
+                        resolvedGallery = [...dbShop.gallery];
+                    }
+
+                    // Prepend the resolved cover if not already at the front
+                    if (resolvedCover) {
+                        resolvedGallery = [resolvedCover, ...resolvedGallery.filter(img => img !== resolvedCover)];
+                    }
+
+                    // Filter out invalid/undefined values
+                    resolvedGallery = resolvedGallery.filter(img => typeof img === 'string' && img.trim() && img !== 'undefined' && img !== 'null');
+
+                    if (resolvedGallery.length === 0) {
+                        resolvedGallery = [
+                            resolvedCover || 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80',
+                            shopLogo || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80',
+                            "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=1200&q=80"
+                        ].filter(Boolean);
+                    }
 
                     const liveShopObj = {
                         id: dbShop.id,
@@ -1026,16 +1129,7 @@
                         lat: dbShop.latitude || 18.7938,
                         lng: dbShop.longitude || 98.9898,
                         map_link: dbShop.map_link || '',
-                        images: (() => {
-                            let gallery = null;
-                            try { gallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null'); } catch(_) {}
-                            if (gallery && Array.isArray(gallery) && gallery.length > 0) return gallery;
-                            return [
-                                coverImg,
-                                shopLogo,
-                                "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=1200&q=80"
-                            ];
-                        })(),
+                        images: resolvedGallery,
                         services: (dbServices && dbServices.length > 0) ? dbServices.map((s, idx) => ({
                             id: s.id,
                             name: s.name,
@@ -1123,7 +1217,7 @@
 
         const buildCard = (r) => {
             const custName = r.customer?.full_name || 'ลูกค้าผู้ใช้บริการ';
-            const custAvatar = r.customer?.avatar_url;
+            const custAvatar = (r.customer?.avatar_url && r.customer.avatar_url !== 'undefined' && r.customer.avatar_url.trim()) ? r.customer.avatar_url : null;
             const ratingNum = Math.min(5, Math.max(1, Math.round(parseFloat(r.rating) || 5)));
             let starsHtml = '';
             for (let i = 1; i <= 5; i++) {
@@ -1214,16 +1308,17 @@
         const indexText = document.getElementById('current-slide-index');
         const thumbsContainer = document.getElementById('gallery-thumbnails');
         
+        const validSlideImg = (galleryImages && galleryImages[currentSlide]) || (galleryImages && galleryImages[0]) || '';
         mainImg.style.opacity = '0.3';
         setTimeout(() => {
-            mainImg.src = galleryImages[currentSlide];
+            if (validSlideImg) mainImg.src = validSlideImg;
             mainImg.style.opacity = '1';
         }, 150);
         
         indexText.textContent = currentSlide + 1;
         
         thumbsContainer.innerHTML = '';
-        galleryImages.forEach((img, idx) => {
+        (galleryImages || []).filter(img => typeof img === 'string' && img.trim() && img !== 'undefined').forEach((img, idx) => {
             const isActive = idx === currentSlide;
             thumbsContainer.innerHTML += `
                 <div onclick="openGallery(${idx})" class="w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden cursor-pointer shrink-0 transition-all duration-300 ${isActive ? 'border-2 border-primary scale-110 shadow-[0_0_15px_rgba(37,99,235,0.5)]' : 'border border-white/20 opacity-40 hover:opacity-100'}">

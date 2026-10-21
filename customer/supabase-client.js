@@ -93,10 +93,11 @@ async function getValidAuthToken() {
 }
 window.getValidAuthToken = getValidAuthToken;
 
-let isSanitizing = false;
+var isSanitizing = window._isSanitizingAuth || false;
 async function triggerUserMetadataCleanup() {
-    if (isSanitizing) return;
+    if (isSanitizing || window._isSanitizingAuth) return;
     isSanitizing = true;
+    window._isSanitizingAuth = true;
     try {
         // 1. Immediately purge bloated base64 from localStorage auth cache to free quota
         try {
@@ -160,6 +161,7 @@ async function triggerUserMetadataCleanup() {
         // Silent catch to prevent console noise
     } finally {
         isSanitizing = false;
+        window._isSanitizingAuth = false;
     }
 }
 window.triggerUserMetadataCleanup = triggerUserMetadataCleanup;
