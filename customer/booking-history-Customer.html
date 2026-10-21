@@ -300,6 +300,8 @@
                         </button>
                     </div>
                 </div>
+            </div>
+
             <!-- Empty State for Upcoming (Hidden by default, shown via JS when empty) -->
             <div id="emptyUpcoming" class="hidden flex-col items-center justify-center py-12 text-center h-[50vh]">
                 <div class="w-24 h-24 bg-surface-container rounded-full flex items-center justify-center mb-4 border border-outline-variant/30 shadow-inner">
@@ -1988,17 +1990,20 @@
                     // Check if user has an active ongoing booking
                     const activeOngoing = dbBookings.find(item => ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes((item.status || '').toLowerCase()));
                     if (activeOngoing) {
+                        let existingLocal = null;
+                        try { existingLocal = JSON.parse(localStorage.getItem('activeCustomerBooking') || '{}'); } catch(e) {}
                         const mappedActive = {
+                            ...(existingLocal || {}),
                             bookingId: '#' + activeOngoing.id.substring(0, 8).toUpperCase(),
                             rawBookingId: activeOngoing.id,
                             shopId: activeOngoing.shop_id,
-                            shopName: activeOngoing.shops?.name || 'ร้านคาร์แคร์',
-                            shopPhone: activeOngoing.shops?.phone_number || '081-234-5678',
-                            serviceName: 'บริการล้างรถ',
-                            carName: activeOngoing.vehicle_info || 'รถยนต์',
+                            shopName: activeOngoing.shops?.name || existingLocal?.shopName || 'ร้านคาร์แคร์',
+                            shopPhone: activeOngoing.shops?.phone_number || existingLocal?.shopPhone || '081-234-5678',
+                            serviceName: existingLocal?.serviceName || 'บริการล้างรถ',
+                            carName: activeOngoing.vehicle_info || existingLocal?.carName || 'รถยนต์',
                             dateTime: `${activeOngoing.booking_date} ${activeOngoing.booking_time}`,
                             totalAmount: `฿ ${activeOngoing.total_price}`,
-                            depositAmount: '฿ 50.00',
+                            depositAmount: existingLocal?.depositAmount || '฿ 50.00',
                             status: activeOngoing.status.toLowerCase()
                         };
                         localStorage.setItem('activeCustomerBooking', JSON.stringify(mappedActive));
