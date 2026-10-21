@@ -9,7 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-client.js?v=1.2"></script>
-    <script src="../supabase-client.js?v=1.2"></script>
     <script id="tailwind-config">
         tailwind.config = {
           darkMode: "class",
@@ -297,13 +296,17 @@
                     <div class="flex gap-2">
                         <div class="relative flex-1">
                             <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">map</span>
-                            <input type="url" id="googleMapLink" name="googleMapLink" placeholder="https://maps.google.com/..." 
+                            <input type="text" id="googleMapLink" name="googleMapLink" placeholder="วางลิงก์ Google Maps หรือพิกัด..." 
                                 class="w-full h-11 pl-10 pr-4 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface placeholder-outline-variant focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors text-sm font-mono">
                         </div>
                         <a id="testMapBtn" href="#" target="_blank" class="px-3.5 h-11 rounded-xl bg-surface-container hover:bg-surface-container-highest border border-outline-variant/40 text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0">
                             <span class="material-symbols-outlined text-[16px] text-secondary">explore</span>
                             ทดสอบเปิด
                         </a>
+                    </div>
+                    <div id="mapCoordsPreview" class="text-xs flex items-center gap-1.5 transition-all text-on-surface-variant pt-1">
+                        <span class="material-symbols-outlined text-[15px] text-outline">info</span>
+                        <span>วางลิงก์จาก Google Maps ในเบราว์เซอร์ หรือใส่พิกัด เช่น 18.895893, 99.0089169</span>
                     </div>
                 </div>
             </div>
@@ -544,23 +547,41 @@
         // Robust coordinate extraction from diverse Google Maps links & inputs
         function extractCoordsFromMapLink(link) {
             if (!link || typeof link !== 'string') return { lat: null, lng: null };
-            const str = link.trim();
+            let str = link.trim();
+            try {
+                str = decodeURIComponent(str);
+            } catch (_) {}
+
+            // 1. Direct coordinates: 18.895893, 99.0089169
             const directMatch = str.match(/^(-?\d+\.\d{3,})\s*,\s*(-?\d+\.\d{3,})$/);
             if (directMatch) {
                 return { lat: parseFloat(directMatch[1]), lng: parseFloat(directMatch[2]) };
             }
+
+            // 2. Google Maps @lat,lng format: @18.895893,99.0089169
             const atMatch = str.match(/@(-?\d+\.\d{3,}),\s*(-?\d+\.\d{3,})/);
             if (atMatch) {
                 return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
             }
-            const queryMatch = str.match(/(?:q|ll|destination|center|point)=(-?\d+\.\d{3,}),\s*(-?\d+\.\d{3,})/);
+
+            // 3. Google Maps data=!3d...!4d... format
+            const data3dMatch = str.match(/!3d(-?\d+\.\d{3,})!4d(-?\d+\.\d{3,})/);
+            if (data3dMatch) {
+                return { lat: parseFloat(data3dMatch[1]), lng: parseFloat(data3dMatch[2]) };
+            }
+
+            // 4. Query params (q, ll, destination, center, point, query)
+            const queryMatch = str.match(/(?:q|ll|destination|center|point|query)=(-?\d+\.\d{3,}),\s*(-?\d+\.\d{3,})/);
             if (queryMatch) {
                 return { lat: parseFloat(queryMatch[1]), lng: parseFloat(queryMatch[2]) };
             }
-            const genericMatch = str.match(/(-?\d+\.\d{4,})\s*,\s*(-?\d+\.\d{4,})/);
+
+            // 5. Generic lat,lng match in text
+            const genericMatch = str.match(/(-?\d{1,2}\.\d{4,})\s*,\s*(-?\d{1,3}\.\d{4,})/);
             if (genericMatch) {
                 return { lat: parseFloat(genericMatch[1]), lng: parseFloat(genericMatch[2]) };
             }
+
             return { lat: null, lng: null };
         }
 
@@ -573,6 +594,28 @@
                 return `https://maps.google.com/?q=${v.replace(/\s+/g, '')}`;
             }
             return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v)}`;
+        }
+
+        // Live coordinate status badge
+        function updateMapPreview(val) {
+            const previewEl = document.getElementById('mapCoordsPreview');
+            if (!previewEl) return;
+            const trimmed = (val || '').trim();
+            if (!trimmed) {
+                previewEl.className = 'text-xs flex items-center gap-1.5 transition-all text-on-surface-variant pt-1';
+                previewEl.innerHTML = '<span class="material-symbols-outlined text-[15px] text-outline">info</span><span>วางลิงก์จาก Google Maps ในเบราว์เซอร์ หรือใส่พิกัด เช่น 18.895893, 99.0089169</span>';
+                if (testMapBtn) testMapBtn.href = 'https://maps.google.com';
+                return;
+            }
+            if (testMapBtn) testMapBtn.href = formatMapUrl(trimmed);
+            const coords = extractCoordsFromMapLink(trimmed);
+            if (coords.lat !== null && coords.lng !== null) {
+                previewEl.className = 'text-xs flex items-center gap-1.5 transition-all text-emerald-600 font-medium pt-1';
+                previewEl.innerHTML = `<span class="material-symbols-outlined text-[16px] text-emerald-500">check_circle</span><span>ตรวจพบพิกัดสำเร็จ: <strong>ละติจูด ${coords.lat}, ลองจิจูด ${coords.lng}</strong> (พร้อมบันทึก)</span>`;
+            } else {
+                previewEl.className = 'text-xs flex items-center gap-1.5 transition-all text-amber-600 pt-1';
+                previewEl.innerHTML = `<span class="material-symbols-outlined text-[16px] text-amber-500">warning</span><span>ไม่พบตัวเลขพิกัดในรูปแบบลิงก์นี้ แต่จะบันทึกตัวลิงก์ลงฐานข้อมูลให้ หรือสามารถใส่พิกัดตัวเลขต่อท้ายได้</span>`;
+            }
         }
 
         // 1. Initial Populate from LocalStorage (Immediate UI response without waiting for network)
@@ -613,9 +656,9 @@
         }
         if (localMap) {
             googleMapLinkInput.value = localMap;
-            testMapBtn.href = formatMapUrl(localMap);
+            updateMapPreview(localMap);
         } else {
-            testMapBtn.href = 'https://maps.google.com';
+            updateMapPreview('');
         }
 
         let localGallery = null;
@@ -767,6 +810,19 @@
                     }
                 }
 
+                // 2.2 Global Fallback if no shop found yet
+                if (!shop) {
+                    try {
+                        if (client && client.from) {
+                            const { data: anyShops } = await client.from('shops').select('*').limit(1);
+                            if (anyShops && anyShops.length > 0) shop = anyShops[0];
+                        } else if (fetcher) {
+                            const anyShops = await fetcher('shops?limit=1');
+                            if (Array.isArray(anyShops) && anyShops.length > 0) shop = anyShops[0];
+                        }
+                    } catch (_) {}
+                }
+
 
                 if (shop) {
                     currentShopId = shop.id;
@@ -891,17 +947,17 @@
                 }
 
                 // Populate Google Maps link
-                let savedMapLink = meta.map_link || localStorage.getItem('ownerShopMapLink') || '';
+                let savedMapLink = shop?.map_link || meta.map_link || localStorage.getItem('ownerShopMapLink') || '';
                 if (!savedMapLink && shop?.latitude && shop?.longitude) {
                     savedMapLink = `https://maps.google.com/?q=${shop.latitude},${shop.longitude}`;
                 }
 
                 if (savedMapLink) {
                     googleMapLinkInput.value = savedMapLink;
-                    testMapBtn.href = formatMapUrl(savedMapLink);
+                    updateMapPreview(savedMapLink);
                     localStorage.setItem('ownerShopMapLink', savedMapLink);
                 } else {
-                    testMapBtn.href = 'https://maps.google.com';
+                    updateMapPreview('');
                 }
 
                 setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
@@ -918,7 +974,7 @@
         });
 
         googleMapLinkInput.addEventListener('input', (e) => {
-            testMapBtn.href = formatMapUrl(e.target.value);
+            updateMapPreview(e.target.value);
         });
 
         // Image file previewers with auto compression
@@ -1003,7 +1059,7 @@
             const saveBtn = document.querySelector('button[form="editShopForm"]') || document.querySelector('button.bg-secondary');
             if (saveBtn) {
                 saveBtn.disabled = true;
-                saveBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> กำลังบันทึก...';
+                saveBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> กำลังบันทึกข้อมูล...';
             }
 
             const name = shopNameInput.value.trim();
@@ -1036,220 +1092,231 @@
 
             const mainCoverPhoto = (shopPhotos && shopPhotos[0]) || newCoverCompressed || (coverImg ? coverImg.src : null);
 
-            // 1. ALWAYS CACHE IN LOCALSTORAGE IMMEDIATELY (Prevents any data loss)
-            localStorage.setItem('ownerShopName', name);
-            localStorage.setItem('ownerShopPhone', phone);
-            localStorage.setItem('ownerShopDesc', rawDesc);
-            localStorage.setItem('shopDescription', rawDesc);
-            localStorage.setItem('ownerShopStreet', street);
-            localStorage.setItem('ownerShopSubDistrict', subDist);
-            localStorage.setItem('ownerShopCity', cty);
-            localStorage.setItem('ownerShopZip', zip);
-            localStorage.setItem('ownerShopAddress', fullAddr);
-            localStorage.setItem('ownerShopMapLink', mapLink);
-            if (lat !== null && lng !== null) {
-                localStorage.setItem('ownerShopLat', lat);
-                localStorage.setItem('ownerShopLng', lng);
-            }
-            if (newLogoCompressed) {
-                localStorage.setItem('ownerProfileAvatar', newLogoCompressed);
-            }
-            if (mainCoverPhoto) {
-                localStorage.setItem('ownerCoverImage', mainCoverPhoto);
-            }
-            if (shopPhotos && shopPhotos.length > 0) {
-                localStorage.setItem('ownerShopGallery', JSON.stringify(shopPhotos));
-            }
-
-            // 2. AWAITED DUAL-ENGINE SYNC TO SUPABASE
+            // 1. SAFELY CACHE IN LOCALSTORAGE (Wrapped in try-catch so quota limit never blocks saving)
             try {
-                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                let userId = currentUserId || localStorage.getItem('lastLoggedInUserId');
-                let userSession = null;
+                localStorage.setItem('ownerShopName', name);
+                localStorage.setItem('ownerShopPhone', phone);
+                localStorage.setItem('ownerShopDesc', rawDesc);
+                localStorage.setItem('shopDescription', rawDesc);
+                localStorage.setItem('ownerShopStreet', street);
+                localStorage.setItem('ownerShopSubDistrict', subDist);
+                localStorage.setItem('ownerShopCity', cty);
+                localStorage.setItem('ownerShopZip', zip);
+                localStorage.setItem('ownerShopAddress', fullAddr);
+                localStorage.setItem('ownerShopMapLink', mapLink);
+                if (lat !== null && lng !== null) {
+                    localStorage.setItem('ownerShopLat', lat);
+                    localStorage.setItem('ownerShopLng', lng);
+                }
+                if (newLogoCompressed) {
+                    localStorage.setItem('ownerProfileAvatar', newLogoCompressed);
+                }
+                if (mainCoverPhoto) {
+                    localStorage.setItem('ownerCoverImage', mainCoverPhoto);
+                }
+                if (shopPhotos && shopPhotos.length > 0) {
+                    localStorage.setItem('ownerShopGallery', JSON.stringify(shopPhotos));
+                }
+            } catch (storageErr) {
+                console.warn('LocalStorage quota notice:', storageErr);
+            }
 
-                if (client?.auth) {
-                    try {
-                        const sessRes = await client.auth.getSession();
-                        userSession = sessRes?.data?.session;
-                        if (userSession?.user?.id) {
-                            userId = userSession.user.id;
-                            currentUserId = userId;
+            // 2. RESOLVE USER & SHOP ID ROBUSTLY
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            let userId = currentUserId || localStorage.getItem('lastLoggedInUserId');
+
+            if (client?.auth) {
+                try {
+                    const sessRes = await client.auth.getSession();
+                    if (sessRes?.data?.session?.user?.id) {
+                        userId = sessRes.data.session.user.id;
+                        currentUserId = userId;
+                    }
+                } catch (_) {}
+            }
+
+            if (!userId) {
+                try {
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const k = localStorage.key(i);
+                        if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+                            const parsed = JSON.parse(localStorage.getItem(k) || '{}');
+                            if (parsed.user?.id) userId = parsed.user.id;
                         }
-                    } catch (_) {}
+                    }
+                } catch (_) {}
+            }
+
+            let targetShopId = currentShopId || localStorage.getItem('currentShopId');
+
+            // Auto-resolve shop ID from Supabase if missing
+            if (!targetShopId && client?.from) {
+                try {
+                    if (userId) {
+                        const { data: sData } = await client.from('shops').select('id').eq('owner_id', userId).limit(1);
+                        if (sData && sData.length > 0) targetShopId = sData[0].id;
+                    }
+                    if (!targetShopId) {
+                        const { data: anyData } = await client.from('shops').select('id').limit(1);
+                        if (anyData && anyData.length > 0) targetShopId = anyData[0].id;
+                    }
+                } catch (_) {}
+            }
+
+            if (!targetShopId && window.safeSupabaseRest) {
+                try {
+                    if (userId) {
+                        const sData = await window.safeSupabaseRest(`shops?owner_id=eq.${userId}&limit=1`);
+                        if (Array.isArray(sData) && sData.length > 0) targetShopId = sData[0].id;
+                    }
+                    if (!targetShopId) {
+                        const anyData = await window.safeSupabaseRest('shops?limit=1');
+                        if (Array.isArray(anyData) && anyData.length > 0) targetShopId = anyData[0].id;
+                    }
+                } catch (_) {}
+            }
+
+            if (targetShopId) {
+                currentShopId = targetShopId;
+                try { localStorage.setItem('currentShopId', targetShopId); } catch (_) {}
+            }
+
+            // Database columns for shops table
+            const validShopCols = {
+                name: name,
+                phone_number: phone,
+                description: rawDesc,
+                address: fullAddr,
+                updated_at: new Date().toISOString()
+            };
+            if (lat !== null && lng !== null) {
+                validShopCols.latitude = lat;
+                validShopCols.longitude = lng;
+            }
+            if (mapLink) {
+                validShopCols.map_link = mapLink;
+            }
+
+            // 3. DIRECT AWAITED SHOP UPDATE (Guaranteed completion without premature navigation)
+            let shopUpdated = false;
+            let lastUpdateError = null;
+
+            if (targetShopId) {
+                // A. Try SDK first
+                if (client && client.from) {
+                    try {
+                        let { data: sdkData, error: sdkErr } = await client.from('shops').update(validShopCols).eq('id', targetShopId).select();
+                        if (sdkErr && (sdkErr.message?.includes('map_link') || sdkErr.code === 'PGRST204')) {
+                            delete validShopCols.map_link;
+                            const retry = await client.from('shops').update(validShopCols).eq('id', targetShopId).select();
+                            sdkData = retry.data;
+                            sdkErr = retry.error;
+                        }
+                        if (!sdkErr && sdkData && sdkData.length > 0) {
+                            shopUpdated = true;
+                            console.log('✅ Shop table updated via Supabase SDK:', sdkData[0]);
+                        } else if (sdkErr) {
+                            lastUpdateError = sdkErr.message || JSON.stringify(sdkErr);
+                            console.warn('SDK update notice:', lastUpdateError);
+                        }
+                    } catch (e) {
+                        lastUpdateError = e.message || String(e);
+                        console.warn('SDK update exception:', e);
+                    }
                 }
 
-                if (!userId) {
-                    // Try to read from sb auth token in localStorage
+                // B. Fallback to direct REST call
+                if (!shopUpdated) {
                     try {
-                        for (let i = 0; i < localStorage.length; i++) {
-                            const k = localStorage.key(i);
-                            if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
-                                const parsed = JSON.parse(localStorage.getItem(k) || '{}');
-                                if (parsed.user?.id) userId = parsed.user.id;
+                        const token = (typeof getValidAuthToken === 'function') ? await getValidAuthToken() : null;
+                        const authHeader = token ? `Bearer ${token}` : `Bearer ${SUPABASE_ANON_KEY}`;
+                        let res = await fetch(`${SUPABASE_URL}/rest/v1/shops?id=eq.${targetShopId}`, {
+                            method: 'PATCH',
+                            headers: {
+                                'apikey': SUPABASE_ANON_KEY,
+                                'Authorization': authHeader,
+                                'Content-Type': 'application/json',
+                                'Prefer': 'return=representation'
+                            },
+                            body: JSON.stringify(validShopCols)
+                        });
+
+                        if (!res.ok && res.status === 400 && validShopCols.map_link) {
+                            delete validShopCols.map_link;
+                            res = await fetch(`${SUPABASE_URL}/rest/v1/shops?id=eq.${targetShopId}`, {
+                                method: 'PATCH',
+                                headers: {
+                                    'apikey': SUPABASE_ANON_KEY,
+                                    'Authorization': authHeader,
+                                    'Content-Type': 'application/json',
+                                    'Prefer': 'return=representation'
+                                },
+                                body: JSON.stringify(validShopCols)
+                            });
+                        }
+
+                        if (res.ok) {
+                            const resData = await res.json().catch(() => null);
+                            if (Array.isArray(resData) && resData.length > 0) {
+                                shopUpdated = true;
+                                console.log('✅ Shop table updated via direct REST:', resData[0]);
                             }
+                        } else {
+                            const errTxt = await res.text().catch(() => '');
+                            lastUpdateError = errTxt || `HTTP ${res.status}`;
                         }
-                    } catch (_) {}
+                    } catch (restE) {
+                        lastUpdateError = restE.message || String(restE);
+                        console.warn('REST shop update notice:', restE);
+                    }
                 }
+            } else if (userId) {
+                try {
+                    if (client && client.from) {
+                        const { data: newShop, error: nErr } = await client.from('shops').insert({ owner_id: userId, ...validShopCols }).select();
+                        if (!nErr && newShop && newShop[0]?.id) {
+                            shopUpdated = true;
+                            currentShopId = newShop[0].id;
+                            try { localStorage.setItem('currentShopId', currentShopId); } catch (_) {}
+                        }
+                    }
+                } catch (_) {}
+            }
 
-                let targetShopId = currentShopId || localStorage.getItem('currentShopId');
-
-                // If not logged in, warn user that data is saved locally but cannot sync to Supabase without login
-                if (!userId && !targetShopId) {
-                    alert('⚠️ ไม่พบการเข้าสู่ระบบ: ข้อมูลถูกบันทึกลงเครื่องแล้ว แต่ไม่สามารถบันทึกไปยัง Supabase ได้ กรุณาเข้าสู่ระบบด้วยบัญชีเจ้าของร้านใหม่อีกครั้ง');
-                    window.location.href = '../auth/login.html';
-                    return;
-                }
-
-                // ONLY valid database columns for shops table:
-                // id, owner_id, name, description, address, latitude, longitude, phone_number, is_open, rating, updated_at
-                const validShopCols = {
-                    name: name,
+            // Background sync for Profile Avatar & Auth User Metadata
+            if (userId && newLogoCompressed && client?.from) {
+                client.from('profiles').update({ avatar_url: newLogoCompressed }).eq('id', userId).catch(() => {});
+            }
+            if (client?.auth?.updateUser) {
+                const userMetaUpdate = {
+                    shop_name: name,
                     phone_number: phone,
-                    description: rawDesc,
-                    address: fullAddr,
-                    updated_at: new Date().toISOString()
+                    shop_description: rawDesc,
+                    street: street,
+                    full_address: fullAddr,
+                    sub_district: subDist,
+                    city: cty,
+                    zip: zip,
+                    map_link: mapLink
                 };
                 if (lat !== null && lng !== null) {
-                    validShopCols.latitude = lat;
-                    validShopCols.longitude = lng;
+                    userMetaUpdate.latitude = lat;
+                    userMetaUpdate.longitude = lng;
                 }
-                if (mapLink) {
-                    validShopCols.map_link = mapLink;
+                if (mainCoverPhoto) userMetaUpdate.cover_image_url = mainCoverPhoto;
+                if (shopPhotos && shopPhotos.length > 0) userMetaUpdate.shop_images = shopPhotos;
+                if (newLogoCompressed) userMetaUpdate.avatar_url = newLogoCompressed;
+                client.auth.updateUser({ data: userMetaUpdate }).catch(() => {});
+            }
+
+            // 4. CHECK RESULTS AND GIVE USER TRUTHFUL IMMEDIATE FEEDBACK
+            if (!shopUpdated) {
+                alert('⚠️ ไม่สามารถบันทึกลงฐานข้อมูล Supabase ได้:\n' + (lastUpdateError || 'กรุณาลองตรวจสอบการเชื่อมต่ออินเทอร์เน็ตหรือเข้าสู่ระบบใหม่อีกครั้ง'));
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> บันทึกข้อมูลร้านค้า';
                 }
-
-                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
-                const promises = [];
-
-                // 1. Sync Shop Table (SDK FIRST for automatic JWT auth token passing)
-                if (targetShopId) {
-                    promises.push((async () => {
-                        let shopUpdated = false;
-                        // A. Try SDK first (Official Supabase Client with active JWT session)
-                        if (client && client.from) {
-                            try {
-                                let { data: sdkData, error: sdkErr } = await client.from('shops').update(validShopCols).eq('id', targetShopId).select();
-                                // If map_link column doesn't exist in Supabase table yet, gracefully retry without it
-                                if (sdkErr && (sdkErr.message?.includes('map_link') || sdkErr.code === 'PGRST204')) {
-                                    delete validShopCols.map_link;
-                                    const retry = await client.from('shops').update(validShopCols).eq('id', targetShopId).select();
-                                    sdkData = retry.data;
-                                    sdkErr = retry.error;
-                                }
-                                if (!sdkErr && sdkData && sdkData.length > 0) {
-                                    shopUpdated = true;
-                                    console.log('✅ Shop table updated via Supabase SDK:', sdkData[0]);
-                                } else if (sdkErr) {
-                                    console.warn('SDK update warning:', sdkErr.message || sdkErr);
-                                }
-                            } catch (e) {
-                                console.warn('SDK update exception:', e);
-                            }
-                        }
-                        // B. Fallback to safeSupabaseRest
-                        if (!shopUpdated && fetcher) {
-                            try {
-                                let restRes = await fetcher(`shops?id=eq.${targetShopId}`, {
-                                    method: 'PATCH',
-                                    headers: { 'Prefer': 'return=representation' },
-                                    body: validShopCols
-                                });
-                                if (restRes?.error && (String(restRes.error).includes('map_link') || String(restRes.error).includes('PGRST204'))) {
-                                    delete validShopCols.map_link;
-                                    restRes = await fetcher(`shops?id=eq.${targetShopId}`, {
-                                        method: 'PATCH',
-                                        headers: { 'Prefer': 'return=representation' },
-                                        body: validShopCols
-                                    });
-                                }
-                                if (Array.isArray(restRes) && restRes.length > 0) {
-                                    shopUpdated = true;
-                                    console.log('✅ Shop table updated via REST:', restRes[0]);
-                                }
-                            } catch (restE) {
-                                console.warn('REST shop update warning:', restE);
-                            }
-                        }
-                    })());
-                } else if (userId) {
-                    promises.push((async () => {
-                        let newId = null;
-                        if (client && client.from) {
-                            try {
-                                const { data: newShop, error: nErr } = await client.from('shops').insert({ owner_id: userId, ...validShopCols }).select();
-                                if (!nErr && newShop && newShop[0]?.id) newId = newShop[0].id;
-                            } catch (_) {}
-                        }
-                        if (!newId && fetcher) {
-                            try {
-                                const ns = await fetcher('shops', {
-                                    method: 'POST',
-                                    headers: { 'Prefer': 'return=representation' },
-                                    body: { owner_id: userId, ...validShopCols }
-                                });
-                                const row = Array.isArray(ns) && ns.length > 0 ? ns[0] : ns;
-                                if (row?.id) newId = row.id;
-                            } catch (_) {}
-                        }
-                        if (newId) {
-                            currentShopId = newId;
-                            localStorage.setItem('currentShopId', newId);
-                        }
-                    })());
-                }
-
-                // 2. Sync Profile Avatar in public.profiles (if changed)
-                if (userId && newLogoCompressed) {
-                    promises.push((async () => {
-                        if (client && client.from) {
-                            try {
-                                await client.from('profiles').update({ avatar_url: newLogoCompressed }).eq('id', userId);
-                            } catch (_) {}
-                        } else if (fetcher) {
-                            try {
-                                await fetcher(`profiles?id=eq.${userId}`, {
-                                    method: 'PATCH',
-                                    body: { avatar_url: newLogoCompressed }
-                                });
-                            } catch (_) {}
-                        }
-                    })());
-                }
-
-                // 3. Sync User Metadata in Supabase Auth (saves cover photo, gallery, and map link)
-                if (client?.auth && client.auth.updateUser) {
-                    const userMetaUpdate = {
-                        shop_name: name,
-                        phone_number: phone,
-                        shop_description: rawDesc,
-                        description: rawDesc,
-                        street: street,
-                        address: street,
-                        full_address: fullAddr,
-                        sub_district: subDist,
-                        city: cty,
-                        zip: zip,
-                        map_link: mapLink
-                    };
-                    if (lat !== null && lng !== null) {
-                        userMetaUpdate.latitude = lat;
-                        userMetaUpdate.longitude = lng;
-                    }
-                    if (mainCoverPhoto) userMetaUpdate.cover_image_url = mainCoverPhoto;
-                    if (shopPhotos && shopPhotos.length > 0) userMetaUpdate.shop_images = shopPhotos;
-                    if (newLogoCompressed) userMetaUpdate.avatar_url = newLogoCompressed;
-
-                    promises.push(
-                        client.auth.updateUser({ data: userMetaUpdate }).catch(err => console.warn('updateUser notice:', err))
-                    );
-                }
-
-                // Await all sync promises with a safety limit
-                await Promise.race([
-                    Promise.allSettled(promises),
-                    new Promise(resolve => setTimeout(resolve, 3000))
-                ]);
-            } catch (err) {
-                console.warn('Shop details sync warning:', err);
+                return;
             }
 
             // Visual confirmation
@@ -1264,7 +1331,7 @@
             setTimeout(() => {
                 toast.classList.remove('show');
                 window.location.href = 'Owner%20Profile.html';
-            }, 600);
+            }, 1000);
         });
     });
 </script>
