@@ -1847,9 +1847,13 @@
         // Save active booking to localStorage for live tracking (Point 1 Continuity)
         const activeBooking = {
             bookingId: currentBookingId,
-            shopId: currentShop?.id || 'shop1',
-            shopName: currentShop?.name || 'Sparkle Wash & Detailing',
-            shopPhone: currentShop?.phone || '089-123-4567',
+            shopId: currentShop?.id || (typeof paramShopId !== 'undefined' ? paramShopId : null) || 'bccb746a-18ba-4802-ac29-eb30b7af7dd1',
+            shopName: currentShop?.name || 'ohm Car Wash',
+            shopPhone: currentShop?.phone || currentShop?.phone_number || '065-027-2381',
+            shopAddress: currentShop?.address || currentShop?.street || '',
+            shopLat: currentShop?.latitude || currentShop?.lat || null,
+            shopLng: currentShop?.longitude || currentShop?.lng || null,
+            shopMapLink: currentShop?.map_link || currentShop?.map_url || '',
             customerName: customerName,
             customerPhone: customerPhone,
             serviceName: selectedServiceName || 'ล้างสี ดูดฝุ่น',

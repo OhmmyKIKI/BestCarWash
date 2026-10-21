@@ -1,4 +1,4 @@
-// supabase-client.js (customer local copy)
+// supabase-client.js
 // Supabase Configuration & Resilient Client
 var SUPABASE_DIRECT_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
 var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
@@ -17,6 +17,7 @@ function getPreferredSupabaseUrl() {
 
 var SUPABASE_URL = getPreferredSupabaseUrl();
 
+// Safe initializer to ensure supabaseClient is always available
 function getSupabaseClient() {
     if (window.supabaseClient) return window.supabaseClient;
     if (window.supabase && typeof window.supabase.createClient === 'function') {
@@ -209,18 +210,16 @@ function formatRestResponse(parsed, error = null) {
     return { ok: true, data: parsed, error: null };
 }
 
+// Resilient REST fetcher to eliminate net::ERR_CONNECTION_RESET and handle RLS gracefully
 async function safeSupabaseRest(endpoint, options = {}) {
     const method = (options.method || 'GET').toUpperCase();
     const cleanEndpoint = endpoint.replace(/^\/+/, '');
 
     const token = await getValidAuthToken();
-    const isTokenLarge = token && token.length > 2500;
+    const isTokenLarge = token && token.length > 1200;
 
     const candidateBases = [];
-    if (isTokenLarge) {
-        // Route large tokens directly to Supabase to bypass proxy header limits
-        candidateBases.push(SUPABASE_DIRECT_URL);
-    } else if (typeof window !== 'undefined' && window.location.origin && window.location.hostname.includes('vercel.app')) {
+    if (typeof window !== 'undefined' && window.location.origin && window.location.hostname.includes('vercel.app')) {
         candidateBases.push(window.location.origin + '/api/supabase');
         candidateBases.push(SUPABASE_DIRECT_URL);
     } else {
@@ -230,32 +229,40 @@ async function safeSupabaseRest(endpoint, options = {}) {
         }
     }
 
-    const authHeader = token ? `Bearer ${token}` : `Bearer ${SUPABASE_ANON_KEY}`;
-
-    let headers = {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': authHeader,
-        ...(options.headers || {})
-    };
-
-    if (options.body || method === 'POST' || method === 'PUT' || method === 'PATCH') {
-        headers['Content-Type'] = 'application/json';
-    }
-
-    const fetchOpts = {
-        method: method,
-        headers: headers,
-        credentials: 'omit'
-    };
-
-    if (options.body) {
-        fetchOpts.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
-    }
-
+    const defaultAuthHeader = token ? `Bearer ${token}` : `Bearer ${SUPABASE_ANON_KEY}`;
     let lastErr = null;
+
     for (let i = 0; i < candidateBases.length; i++) {
         const base = candidateBases[i];
+        const isProxy = base.includes('/api/supabase');
         const url = endpoint.startsWith('http') ? endpoint : `${base}/rest/v1/${cleanEndpoint}`;
+
+        // Vercel / Nginx proxy rejects large headers with HTTP 494.
+        // For public GET requests or large tokens on proxy, use anon key to guarantee safe header size.
+        let activeAuth = defaultAuthHeader;
+        if (isProxy && (method === 'GET' || isTokenLarge)) {
+            activeAuth = `Bearer ${SUPABASE_ANON_KEY}`;
+        }
+
+        const reqHeaders = {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': activeAuth,
+            ...(options.headers || {})
+        };
+
+        if (options.body || method === 'POST' || method === 'PUT' || method === 'PATCH') {
+            reqHeaders['Content-Type'] = 'application/json';
+        }
+
+        const fetchOpts = {
+            method: method,
+            headers: reqHeaders,
+            credentials: 'omit'
+        };
+
+        if (options.body) {
+            fetchOpts.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
+        }
 
         try {
             const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -268,11 +275,10 @@ async function safeSupabaseRest(endpoint, options = {}) {
             let res = await fetch(url, fetchOpts);
             if (timeoutId) clearTimeout(timeoutId);
 
-            // If 494/431 (Header Too Large) or 401/403 with user token, retry once with anon key
-            if (!res.ok && (res.status === 494 || res.status === 431 || res.status === 401 || res.status === 403) && authHeader !== `Bearer ${SUPABASE_ANON_KEY}`) {
-                headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
-                fetchOpts.headers = headers;
-                fetchOpts.credentials = 'omit';
+            // If 494/431 (Header Too Large) or 401/403 (Auth invalid), retry immediately with anon key
+            if (!res.ok && (res.status === 494 || res.status === 431 || res.status === 401 || res.status === 403) && activeAuth !== `Bearer ${SUPABASE_ANON_KEY}`) {
+                reqHeaders['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
+                fetchOpts.headers = reqHeaders;
                 const resAnon = await fetch(url, fetchOpts);
                 if (resAnon.ok) {
                     const txt = await resAnon.text();
@@ -288,8 +294,8 @@ async function safeSupabaseRest(endpoint, options = {}) {
             } else {
                 const errTxt = await res.text().catch(() => '');
                 lastErr = new Error(errTxt || `HTTP ${res.status}`);
-                // If it's a client 4xx error (not network error), return immediately unless 404
-                if (res.status >= 400 && res.status < 500 && res.status !== 404) {
+                // Don't stop loop on 494, 431, 502, 503, 504 - failover to next tunnel
+                if (res.status >= 400 && res.status < 500 && res.status !== 404 && res.status !== 494 && res.status !== 431) {
                     console.warn(`Supabase REST [${method} ${cleanEndpoint}] returned ${res.status}:`, errTxt);
                     return formatRestResponse(null, lastErr);
                 }
