@@ -1319,9 +1319,22 @@
                     userMetaUpdate.latitude = lat;
                     userMetaUpdate.longitude = lng;
                 }
-                if (mainCoverPhoto) userMetaUpdate.cover_image_url = mainCoverPhoto;
-                if (shopPhotos && shopPhotos.length > 0) userMetaUpdate.shop_images = shopPhotos;
-                if (newLogoCompressed) userMetaUpdate.avatar_url = newLogoCompressed;
+                // Never store Base64 images in Auth user_metadata (causes HTTP 494 REQUEST_HEADER_TOO_LARGE)
+                if (mainCoverPhoto && !mainCoverPhoto.startsWith('data:') && mainCoverPhoto.length < 1000) {
+                    userMetaUpdate.cover_image_url = mainCoverPhoto;
+                } else {
+                    userMetaUpdate.cover_image_url = null;
+                }
+                if (shopPhotos && shopPhotos.length > 0 && !shopPhotos.some(p => typeof p === 'string' && (p.startsWith('data:') || p.length > 1000))) {
+                    userMetaUpdate.shop_images = shopPhotos;
+                } else {
+                    userMetaUpdate.shop_images = null;
+                }
+                if (newLogoCompressed && !newLogoCompressed.startsWith('data:') && newLogoCompressed.length < 1000) {
+                    userMetaUpdate.avatar_url = newLogoCompressed;
+                } else {
+                    userMetaUpdate.avatar_url = null;
+                }
                 client.auth.updateUser({ data: userMetaUpdate }).catch(() => {});
             }
 

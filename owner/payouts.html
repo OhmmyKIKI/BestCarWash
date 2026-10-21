@@ -610,14 +610,15 @@
                     // 4. Save to Supabase auth user_metadata if authenticated
                     if (client?.auth && currentUserId) {
                         try {
+                            const cleanBankInfo = {
+                                bank_name: bankName,
+                                account_number: accNum,
+                                account_name: accName,
+                                qr_code: (qrImg && !qrImg.startsWith('data:') && qrImg.length < 1000) ? qrImg : null
+                            };
                             await client.auth.updateUser({
                                 data: {
-                                    bank_info: {
-                                        bank_name: bankName,
-                                        account_number: accNum,
-                                        account_name: accName,
-                                        qr_code: qrImg
-                                    }
+                                    bank_info: cleanBankInfo
                                 }
                             });
                         } catch(authErr) {

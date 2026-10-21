@@ -43,6 +43,7 @@ window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
 
 // Safe token resolver that checks expiration and auto-refreshes if needed
 async function getValidAuthToken() {
+    let token = null;
     try {
         const client = getSupabaseClient();
         if (client && client.auth) {
@@ -51,33 +52,105 @@ async function getValidAuthToken() {
             if (sess?.access_token) {
                 const now = Math.floor(Date.now() / 1000);
                 if (sess.expires_at && sess.expires_at > now + 30) {
-                    return sess.access_token;
-                }
-                const refreshRes = await client.auth.refreshSession().catch(() => null);
-                if (refreshRes?.data?.session?.access_token) {
-                    return refreshRes.data.session.access_token;
-                }
-            }
-        }
-    } catch (_) {}
-
-    try {
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && (key.startsWith('sb-') && key.endsWith('-auth-token'))) {
-                const parsed = JSON.parse(localStorage.getItem(key) || '{}');
-                if (parsed.access_token) {
-                    const now = Math.floor(Date.now() / 1000);
-                    if (parsed.expires_at && parsed.expires_at > now + 30) {
-                        return parsed.access_token;
+                    token = sess.access_token;
+                } else {
+                    const refreshRes = await client.auth.refreshSession().catch(() => null);
+                    if (refreshRes?.data?.session?.access_token) {
+                        token = refreshRes.data.session.access_token;
                     }
                 }
             }
         }
     } catch (_) {}
-    return null;
+
+    if (!token) {
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.startsWith('sb-') && key.endsWith('-auth-token'))) {
+                    const parsed = JSON.parse(localStorage.getItem(key) || '{}');
+                    if (parsed.access_token) {
+                        const now = Math.floor(Date.now() / 1000);
+                        if (parsed.expires_at && parsed.expires_at > now + 30) {
+                            token = parsed.access_token;
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (_) {}
+    }
+
+    // Critical Guard: Prevent HTTP 494 REQUEST_HEADER_TOO_LARGE
+    // Normal JWT tokens are ~800 to 1,500 chars. If > 2,500 chars, it's bloated with base64 data
+    // which exceeds Vercel / Nginx request header buffers (8KB).
+    if (token && token.length > 2500) {
+        console.warn(`[Supabase] Auth token bloated (${token.length} chars). Suppressing to prevent HTTP 494. Triggering metadata purge.`);
+        triggerUserMetadataCleanup();
+        return null;
+    }
+
+    return token;
 }
 window.getValidAuthToken = getValidAuthToken;
+
+let isSanitizing = false;
+async function triggerUserMetadataCleanup() {
+    if (isSanitizing) return;
+    isSanitizing = true;
+    try {
+        const client = getSupabaseClient();
+        if (!client || !client.auth) return;
+        const { data } = await client.auth.getSession().catch(() => ({ data: null }));
+        const user = data?.session?.user;
+        if (!user || !user.user_metadata) return;
+
+        const meta = user.user_metadata;
+        const purgedMeta = {};
+        let foundBloat = false;
+
+        for (const [key, val] of Object.entries(meta)) {
+            if (typeof val === 'string' && (val.startsWith('data:') || val.length > 1000)) {
+                foundBloat = true;
+                purgedMeta[key] = null;
+            } else if (Array.isArray(val) && (val.length > 20 || val.some(item => typeof item === 'string' && (item.startsWith('data:') || item.length > 1000)))) {
+                foundBloat = true;
+                purgedMeta[key] = null;
+            } else if (val && typeof val === 'object') {
+                let objectHasBloat = false;
+                const cleanObj = { ...val };
+                for (const [subKey, subVal] of Object.entries(val)) {
+                    if (typeof subVal === 'string' && (subVal.startsWith('data:') || subVal.length > 1000)) {
+                        cleanObj[subKey] = null;
+                        objectHasBloat = true;
+                        foundBloat = true;
+                    }
+                }
+                if (objectHasBloat) {
+                    purgedMeta[key] = cleanObj;
+                }
+            }
+        }
+
+        if (foundBloat) {
+            console.log('[Supabase] Found bloated items in user_metadata. Purging base64 from Auth account to shrink JWT token...');
+            await client.auth.updateUser({ data: purgedMeta }).catch(e => console.warn('Update user metadata error:', e));
+            const refreshRes = await client.auth.refreshSession().catch(() => null);
+            console.log('[Supabase] Successfully cleaned Auth metadata! Fresh JWT token size:', refreshRes?.data?.session?.access_token?.length || 'purged');
+        }
+    } catch (e) {
+        console.warn('[Supabase] Cleanup metadata notice:', e);
+    } finally {
+        isSanitizing = false;
+    }
+}
+window.triggerUserMetadataCleanup = triggerUserMetadataCleanup;
+
+if (typeof window !== 'undefined') {
+    setTimeout(() => {
+        triggerUserMetadataCleanup().catch(() => {});
+    }, 1500);
+}
 
 function formatRestResponse(parsed, error = null) {
     if (error) {
@@ -136,7 +209,8 @@ async function safeSupabaseRest(endpoint, options = {}) {
     }
 
     const token = await getValidAuthToken();
-    const authHeader = token ? `Bearer ${token}` : `Bearer ${SUPABASE_ANON_KEY}`;
+    const isTokenSafe = token && token.length <= 2500;
+    const authHeader = isTokenSafe ? `Bearer ${token}` : `Bearer ${SUPABASE_ANON_KEY}`;
 
     let headers = {
         'apikey': SUPABASE_ANON_KEY,
@@ -150,7 +224,8 @@ async function safeSupabaseRest(endpoint, options = {}) {
 
     const fetchOpts = {
         method: method,
-        headers: headers
+        headers: headers,
+        credentials: 'omit'
     };
 
     if (options.body) {
@@ -173,10 +248,11 @@ async function safeSupabaseRest(endpoint, options = {}) {
             let res = await fetch(url, fetchOpts);
             if (timeoutId) clearTimeout(timeoutId);
 
-            // If 401/403 with user token, retry once with anon key (allows public reads/unlocked writes)
-            if (!res.ok && (res.status === 401 || res.status === 403) && authHeader !== `Bearer ${SUPABASE_ANON_KEY}`) {
+            // If 494/431 (Header Too Large) or 401/403 (Auth invalid), retry immediately with anon key
+            if (!res.ok && (res.status === 494 || res.status === 431 || res.status === 401 || res.status === 403) && authHeader !== `Bearer ${SUPABASE_ANON_KEY}`) {
                 headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
                 fetchOpts.headers = headers;
+                fetchOpts.credentials = 'omit';
                 const resAnon = await fetch(url, fetchOpts);
                 if (resAnon.ok) {
                     const txt = await resAnon.text();

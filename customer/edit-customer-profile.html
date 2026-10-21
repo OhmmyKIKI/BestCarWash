@@ -387,12 +387,17 @@
                     }
 
                     if (client?.auth && user) {
+                        const metaUpdate = {
+                            full_name: profileData.fullName,
+                            phone_number: profileData.phone
+                        };
+                        if (profileData.avatar && !profileData.avatar.startsWith('data:') && profileData.avatar.length < 1000) {
+                            metaUpdate.avatar_url = profileData.avatar;
+                        } else {
+                            metaUpdate.avatar_url = null;
+                        }
                         await client.auth.updateUser({
-                            data: {
-                                full_name: profileData.fullName,
-                                phone_number: profileData.phone,
-                                avatar_url: profileData.avatar
-                            }
+                            data: metaUpdate
                         }).catch(() => {});
                     }
                 } catch (err) {

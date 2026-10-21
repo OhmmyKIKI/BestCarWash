@@ -535,7 +535,7 @@
                             full_name: fullName,
                             phone_number: phone,
                             role: 'CUSTOMER',
-                            avatar_url: uploadedCustomerAvatarBase64 || null,
+                            avatar_url: null, // Keep auth metadata lightweight to avoid HTTP 494
                             vehicle_model: carModel,
                             license_plate: licensePlate
                         }

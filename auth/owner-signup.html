@@ -1320,12 +1320,10 @@
                             latitude: lat,
                             longitude: lng,
                             role: 'OWNER',
-                            avatar_url: uploadedLogoBase64 || null,
-                            logo_url: uploadedLogoBase64 || null,
-                            cover_image_url: uploadedCoverBase64 || null,
-                            shop_images: uploadedCoverBase64 ? [uploadedCoverBase64] : [],
-                            initial_services: initialServices,
-                            initial_operating_hours: initialOperatingHours
+                            avatar_url: null, // Keep auth metadata lightweight to avoid HTTP 494
+                            logo_url: null,
+                            cover_image_url: null,
+                            shop_images: []
                         }
                     }
                 });
