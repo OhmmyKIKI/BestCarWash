@@ -390,7 +390,9 @@
                             const cover = shop.cover_image_url || meta.cover_image_url || localStorage.getItem('ownerCoverImage');
                             if (cover) {
                                 localStorage.setItem('ownerCoverImage', cover);
-                                localStorage.setItem('ownerShopGallery', JSON.stringify([cover]));
+                                if (!localStorage.getItem('ownerShopGallery')) {
+                                    localStorage.setItem('ownerShopGallery', JSON.stringify([cover]));
+                                }
                             }
 
                             // Logo / Avatar sync from database

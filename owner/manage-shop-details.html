@@ -129,7 +129,7 @@
 
                 <!-- Cover Photo -->
                 <div class="relative w-full h-44 rounded-xl overflow-hidden border border-outline-variant/50 group bg-surface-container-lowest">
-                    <img id="coverPhotoImg" src="https://images.unsplash.com/photo-1601362840469-51e4d8d58785?q=80&w=2070&auto=format&fit=crop" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80';" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Shop Cover">
+                    <img id="coverPhotoImg" src="https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80';" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Shop Cover">
                     <div class="absolute inset-0 bg-gradient-to-t from-background/90 via-black/30 to-transparent"></div>
                     <label for="coverPhotoInput" class="absolute inset-0 flex flex-col items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white gap-1 backdrop-blur-xs">
                         <span class="material-symbols-outlined text-[28px] text-secondary">photo_camera</span>
@@ -377,8 +377,8 @@
         let newCoverCompressed = null;
         let shopPhotos = [];
 
-        // Helper: Compress image via canvas
-        function compressImage(file, maxDim = 900, quality = 0.82) {
+        // Helper: Compress image via canvas with optimal balance of quality and byte size
+        function compressImage(file, maxDim = 750, quality = 0.75) {
             return new Promise((resolve) => {
                 if (!file || !file.type.startsWith('image/')) return resolve(null);
                 const reader = new FileReader();
@@ -409,6 +409,64 @@
             });
         }
 
+        // IndexedDB media persistence (immune to 5MB localStorage quota limit)
+        const IDB_NAME = 'BestCarWashMedia';
+        const IDB_STORE = 'shop_media';
+
+        function openMediaDB() {
+            return new Promise((resolve) => {
+                if (typeof indexedDB === 'undefined') return resolve(null);
+                try {
+                    const req = indexedDB.open(IDB_NAME, 1);
+                    req.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains(IDB_STORE)) {
+                            db.createObjectStore(IDB_STORE);
+                        }
+                    };
+                    req.onsuccess = (e) => resolve(e.target.result);
+                    req.onerror = () => resolve(null);
+                } catch(_) { resolve(null); }
+            });
+        }
+
+        async function saveMediaToIDB(key, val) {
+            try {
+                const db = await openMediaDB();
+                if (!db) return;
+                const tx = db.transaction(IDB_STORE, 'readwrite');
+                tx.objectStore(IDB_STORE).put(val, key);
+            } catch (_) {}
+        }
+
+        async function getMediaFromIDB(key) {
+            try {
+                const db = await openMediaDB();
+                if (!db) return null;
+                return new Promise((resolve) => {
+                    const tx = db.transaction(IDB_STORE, 'readonly');
+                    const req = tx.objectStore(IDB_STORE).get(key);
+                    req.onsuccess = () => resolve(req.result || null);
+                    req.onerror = () => resolve(null);
+                });
+            } catch (_) {
+                return null;
+            }
+        }
+
+        function safeLocalStorageSet(key, val) {
+            try {
+                localStorage.setItem(key, val);
+            } catch (e) {
+                if (e && (e.name === 'QuotaExceededError' || e.code === 22 || String(e).includes('quota') || String(e).includes('Quota'))) {
+                    console.warn(`LocalStorage quota reached for "${key}". Saving to IndexedDB instead.`);
+                    try {
+                        saveMediaToIDB(key, val);
+                    } catch (_) {}
+                }
+            }
+        }
+
         // Render Multi-Photo Gallery Grid
         function renderPhotoGallery() {
             if (!galleryGrid) return;
@@ -419,7 +477,7 @@
                 const isCover = idx === 0;
                 html += `
                     <div class="relative aspect-[4/3] rounded-xl overflow-hidden border ${isCover ? 'border-secondary ring-2 ring-secondary/40' : 'border-outline-variant/40'} group bg-surface-container-low shadow-sm">
-                        <img src="${imgUrl}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80';" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" alt="Shop Photo ${idx+1}">
+                        <img src="${imgUrl}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80';" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" alt="Shop Photo ${idx+1}">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-1.5">
                             <div class="flex justify-end gap-1">
                                 <button type="button" onclick="deletePhoto(${idx})" class="w-6 h-6 rounded-md bg-black/70 hover:bg-error text-white flex items-center justify-center transition-colors shadow-sm" title="ลบรูป">
@@ -453,7 +511,7 @@
             galleryGrid.innerHTML = html;
         }
 
-        window.deletePhoto = function(index) {
+        window.deletePhoto = async function(index) {
             if (index < 0 || index >= shopPhotos.length) return;
             if (shopPhotos.length <= 1) {
                 if (!confirm('นี่คือรูปภาพเดียวของร้าน ต้องการลบออกใช่หรือไม่?')) return;
@@ -462,20 +520,29 @@
             if (shopPhotos.length > 0) {
                 coverImg.src = shopPhotos[0];
                 newCoverCompressed = shopPhotos[0];
-                localStorage.setItem('ownerCoverImage', shopPhotos[0]);
+                safeLocalStorageSet('ownerCoverImage', shopPhotos[0]);
+                await saveMediaToIDB('ownerCoverImage', shopPhotos[0]);
+            } else {
+                coverImg.src = 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80';
+                newCoverCompressed = null;
+                localStorage.removeItem('ownerCoverImage');
+                await saveMediaToIDB('ownerCoverImage', null);
             }
-            localStorage.setItem('ownerShopGallery', JSON.stringify(shopPhotos));
+            safeLocalStorageSet('ownerShopGallery', JSON.stringify(shopPhotos));
+            await saveMediaToIDB('ownerShopGallery', shopPhotos);
             renderPhotoGallery();
         };
 
-        window.setPhotoAsCover = function(index) {
+        window.setPhotoAsCover = async function(index) {
             if (index <= 0 || index >= shopPhotos.length) return;
             const [chosen] = shopPhotos.splice(index, 1);
             shopPhotos.unshift(chosen);
             coverImg.src = chosen;
             newCoverCompressed = chosen;
-            localStorage.setItem('ownerCoverImage', chosen);
-            localStorage.setItem('ownerShopGallery', JSON.stringify(shopPhotos));
+            safeLocalStorageSet('ownerCoverImage', chosen);
+            safeLocalStorageSet('ownerShopGallery', JSON.stringify(shopPhotos));
+            await saveMediaToIDB('ownerCoverImage', chosen);
+            await saveMediaToIDB('ownerShopGallery', shopPhotos);
             renderPhotoGallery();
         };
 
@@ -669,17 +736,35 @@
         if (localGallery && Array.isArray(localGallery) && localGallery.length > 0) {
             shopPhotos = sanitizeGalleryUrls(localGallery);
         } else if (localCover) {
-            shopPhotos = [
-                localCover,
-                "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80",
-                "https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80",
-                "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=1200&q=80"
-            ];
+            shopPhotos = [localCover];
         }
         if (shopPhotos.length > 0 && coverImg) {
             coverImg.src = shopPhotos[0];
         }
         renderPhotoGallery();
+
+        // Check IndexedDB immediately for persisted media (in case localStorage was cleared/quota-hit)
+        (async () => {
+            const idbAvatar = await getMediaFromIDB('ownerProfileAvatar');
+            if (idbAvatar && logoImg && (!logoImg.src || logoImg.src.includes('googleusercontent.com'))) {
+                logoImg.src = idbAvatar;
+                safeLocalStorageSet('ownerProfileAvatar', idbAvatar);
+            }
+
+            const idbGallery = await getMediaFromIDB('ownerShopGallery');
+            const idbCover = await getMediaFromIDB('ownerCoverImage');
+            if (Array.isArray(idbGallery) && idbGallery.length > 0 && shopPhotos.length === 0) {
+                shopPhotos = sanitizeGalleryUrls(idbGallery);
+                if (coverImg && shopPhotos.length > 0) {
+                    coverImg.src = shopPhotos[0];
+                }
+                renderPhotoGallery();
+            } else if (idbCover && shopPhotos.length === 0) {
+                shopPhotos = [idbCover];
+                if (coverImg) coverImg.src = idbCover;
+                renderPhotoGallery();
+            }
+        })();
 
         // Cloud Sync Status Controller
         function setCloudSyncStatus(status, customText) {
@@ -711,21 +796,6 @@
                 setTimeout(() => {
                     badge.classList.add('opacity-0');
                 }, 2500);
-            }
-        }
-
-        function safeLocalStorageSet(key, val) {
-            try {
-                localStorage.setItem(key, val);
-            } catch (e) {
-                if (e && (e.name === 'QuotaExceededError' || e.code === 22 || String(e).includes('quota') || String(e).includes('Quota'))) {
-                    console.warn(`LocalStorage quota exceeded while setting "${key}". Freeing heavy image caches.`);
-                    try {
-                        localStorage.removeItem('ownerShopGallery');
-                        localStorage.removeItem('ownerCoverImage');
-                        localStorage.setItem(key, val);
-                    } catch (_) {}
-                }
             }
         }
 
@@ -902,12 +972,25 @@
                 // Mark sync status as ONLINE!
                 setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
 
-                // 4. LOAD LOGO (Non-fatal)
+                // 4. LOAD LOGO (Supabase profiles -> IndexedDB -> localStorage)
                 try {
-                    const finalLogo = shop?.logo_url || (meta.avatar_url && !meta.avatar_url.startsWith('data:') ? meta.avatar_url : null) || localStorage.getItem('ownerProfileAvatar');
+                    let finalLogo = localStorage.getItem('ownerProfileAvatar') || (await getMediaFromIDB('ownerProfileAvatar'));
+
+                    if (!finalLogo && effectiveUserId && fetcher) {
+                        try {
+                            const profData = await fetcher(`profiles?id=eq.${effectiveUserId}&limit=1`);
+                            if (Array.isArray(profData) && profData.length > 0 && profData[0].avatar_url) {
+                                finalLogo = profData[0].avatar_url;
+                            }
+                        } catch (_) {}
+                    }
+                    if (!finalLogo && shop?.logo_url) {
+                        finalLogo = shop.logo_url;
+                    }
                     if (finalLogo && logoImg) {
                         logoImg.src = finalLogo;
                         safeLocalStorageSet('ownerProfileAvatar', finalLogo);
+                        saveMediaToIDB('ownerProfileAvatar', finalLogo);
                     }
                 } catch (_) {}
 
@@ -924,37 +1007,28 @@
                         } catch(_) {}
                     }
 
+                    if (!rawGallery || !Array.isArray(rawGallery) || rawGallery.length === 0) {
+                        rawGallery = await getMediaFromIDB('ownerShopGallery');
+                    }
+
                     let savedGallery = sanitizeGalleryUrls(rawGallery);
-                    const finalCover = shop?.cover_image_url || (meta.cover_image_url && !meta.cover_image_url.startsWith('data:') ? meta.cover_image_url : null) || localStorage.getItem('ownerCoverImage') || (coverImg ? coverImg.src : '');
+                    let finalCover = localStorage.getItem('ownerCoverImage') || (await getMediaFromIDB('ownerCoverImage')) || shop?.cover_image_url || meta.cover_image_url;
 
                     if (savedGallery && savedGallery.length > 0) {
                         shopPhotos = [...savedGallery];
-                    } else if (finalCover) {
-                        shopPhotos = [
-                            finalCover,
-                            "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80",
-                            "https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80",
-                            "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=1200&q=80"
-                        ];
-                    }
-
-                    if (finalCover && !finalCover.includes('photo-1601362840469-51e4d8d58785')) {
-                        const cIdx = shopPhotos.indexOf(finalCover);
-                        if (cIdx > 0) {
-                            shopPhotos.splice(cIdx, 1);
-                            shopPhotos.unshift(finalCover);
-                        } else if (cIdx === -1 && shopPhotos.length < 8) {
-                            shopPhotos.unshift(finalCover);
-                        }
+                    } else if (finalCover && !finalCover.includes('photo-1601362840469-51e4d8d58785')) {
+                        shopPhotos = [finalCover];
                     }
 
                     if (shopPhotos.length > 0) {
                         safeLocalStorageSet('ownerShopGallery', JSON.stringify(shopPhotos));
+                        saveMediaToIDB('ownerShopGallery', shopPhotos);
                     }
 
                     if (shopPhotos.length > 0 && coverImg) {
                         coverImg.src = shopPhotos[0];
                         safeLocalStorageSet('ownerCoverImage', shopPhotos[0]);
+                        saveMediaToIDB('ownerCoverImage', shopPhotos[0]);
                     }
 
                     renderPhotoGallery();
@@ -982,7 +1056,7 @@
         coverInput.addEventListener('change', async (e) => {
             const file = e.target.files && e.target.files[0];
             if (file) {
-                const compressed = await compressImage(file, 900, 0.85);
+                const compressed = await compressImage(file, 750, 0.75);
                 if (compressed) {
                     newCoverCompressed = compressed;
                     coverImg.src = compressed;
@@ -991,6 +1065,10 @@
                     } else {
                         shopPhotos.unshift(compressed);
                     }
+                    safeLocalStorageSet('ownerCoverImage', compressed);
+                    safeLocalStorageSet('ownerShopGallery', JSON.stringify(shopPhotos));
+                    saveMediaToIDB('ownerCoverImage', compressed);
+                    saveMediaToIDB('ownerShopGallery', shopPhotos);
                     renderPhotoGallery();
                 }
             }
@@ -1021,16 +1099,23 @@
                 }
 
                 for (const file of filesToLoad) {
-                    const compressed = await compressImage(file, 900, 0.82);
+                    const compressed = await compressImage(file, 640, 0.72);
                     if (compressed) {
                         shopPhotos.push(compressed);
                     }
                 }
 
-                if (shopPhotos.length > 0 && (!coverImg.src || coverImg.src.includes('placeholder') || coverImg.src.includes('photo-1601362840469-51e4d8d58785'))) {
+                if (shopPhotos.length > 0 && (!coverImg.src || coverImg.src.includes('placeholder') || coverImg.src.includes('photo-1601362840469-51e4d8d58785') || coverImg.src.includes('photo-1520340356584-f9917d1eea6f'))) {
                     coverImg.src = shopPhotos[0];
                     newCoverCompressed = shopPhotos[0];
                 }
+
+                safeLocalStorageSet('ownerShopGallery', JSON.stringify(shopPhotos));
+                if (shopPhotos.length > 0) {
+                    safeLocalStorageSet('ownerCoverImage', shopPhotos[0]);
+                    saveMediaToIDB('ownerCoverImage', shopPhotos[0]);
+                }
+                saveMediaToIDB('ownerShopGallery', shopPhotos);
 
                 if (openUploadBtn) {
                     openUploadBtn.disabled = false;
@@ -1045,10 +1130,17 @@
         logoInput.addEventListener('change', async (e) => {
             const file = e.target.files && e.target.files[0];
             if (file) {
-                const compressed = await compressImage(file, 400, 0.85);
+                const compressed = await compressImage(file, 300, 0.75);
                 if (compressed) {
                     newLogoCompressed = compressed;
                     logoImg.src = compressed;
+                    safeLocalStorageSet('ownerProfileAvatar', compressed);
+                    saveMediaToIDB('ownerProfileAvatar', compressed);
+
+                    const userId = currentUserId || localStorage.getItem('lastLoggedInUserId');
+                    if (userId && window.supabaseClient?.from) {
+                        window.supabaseClient.from('profiles').update({ avatar_url: compressed }).eq('id', userId).catch(() => {});
+                    }
                 }
             }
         });
@@ -1093,7 +1185,7 @@
 
             const mainCoverPhoto = (shopPhotos && shopPhotos[0]) || newCoverCompressed || (coverImg ? coverImg.src : null);
 
-            // 1. SAFELY CACHE IN LOCALSTORAGE (Wrapped in try-catch so quota limit never blocks saving)
+            // 1. SAFELY CACHE IN LOCALSTORAGE & INDEXEDDB
             try {
                 localStorage.setItem('ownerShopName', name);
                 localStorage.setItem('ownerShopPhone', phone);
@@ -1109,17 +1201,22 @@
                     localStorage.setItem('ownerShopLat', lat);
                     localStorage.setItem('ownerShopLng', lng);
                 }
-                if (newLogoCompressed) {
-                    localStorage.setItem('ownerProfileAvatar', newLogoCompressed);
-                }
-                if (mainCoverPhoto) {
-                    localStorage.setItem('ownerCoverImage', mainCoverPhoto);
-                }
-                if (shopPhotos && shopPhotos.length > 0) {
-                    localStorage.setItem('ownerShopGallery', JSON.stringify(shopPhotos));
-                }
             } catch (storageErr) {
-                console.warn('LocalStorage quota notice:', storageErr);
+                console.warn('LocalStorage text fields notice:', storageErr);
+            }
+
+            // Save media to BOTH safeLocalStorageSet and saveMediaToIDB (immune to quota)
+            if (newLogoCompressed) {
+                safeLocalStorageSet('ownerProfileAvatar', newLogoCompressed);
+                await saveMediaToIDB('ownerProfileAvatar', newLogoCompressed);
+            }
+            if (mainCoverPhoto) {
+                safeLocalStorageSet('ownerCoverImage', mainCoverPhoto);
+                await saveMediaToIDB('ownerCoverImage', mainCoverPhoto);
+            }
+            if (shopPhotos && shopPhotos.length > 0) {
+                safeLocalStorageSet('ownerShopGallery', JSON.stringify(shopPhotos));
+                await saveMediaToIDB('ownerShopGallery', shopPhotos);
             }
 
             // 2. RESOLVE USER & SHOP ID ROBUSTLY

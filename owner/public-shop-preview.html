@@ -582,6 +582,24 @@
         }
     }
 
+    async function getIDBMedia(key) {
+        if (typeof indexedDB === 'undefined') return null;
+        return new Promise((resolve) => {
+            try {
+                const req = indexedDB.open('BestCarWashMedia', 1);
+                req.onsuccess = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('shop_media')) return resolve(null);
+                    const tx = db.transaction('shop_media', 'readonly');
+                    const gReq = tx.objectStore('shop_media').get(key);
+                    gReq.onsuccess = () => resolve(gReq.result || null);
+                    gReq.onerror = () => resolve(null);
+                };
+                req.onerror = () => resolve(null);
+            } catch (_) { resolve(null); }
+        });
+    }
+
     // --- Master Data (Defaults, dynamically updated from localStorage & Supabase) ---
     let SHOP1_DATA = {
         id: localStorage.getItem('selectedShopId') || 'shop1',
@@ -599,7 +617,7 @@
             try { gallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null'); } catch(_) {}
             if (gallery && Array.isArray(gallery) && gallery.length > 0) return gallery;
             const cover = localStorage.getItem('ownerCoverImage');
-            if (cover) return [cover, cover, cover, cover];
+            if (cover) return [cover];
             return [
                 "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80",
                 "https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80",
@@ -1205,7 +1223,17 @@
                     customGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null');
                 } catch(_) {}
             }
-            const cover = shop.cover_image_url || user?.user_metadata?.cover_image_url || localStorage.getItem('ownerCoverImage');
+            if (!customGallery || !customGallery.length) {
+                try {
+                    customGallery = await getIDBMedia('ownerShopGallery');
+                } catch(_) {}
+            }
+            let cover = shop.cover_image_url || user?.user_metadata?.cover_image_url || localStorage.getItem('ownerCoverImage');
+            if (!cover) {
+                try {
+                    cover = await getIDBMedia('ownerCoverImage');
+                } catch(_) {}
+            }
             if (cover && (!customGallery || !customGallery.length)) {
                 customGallery = [cover];
             }
