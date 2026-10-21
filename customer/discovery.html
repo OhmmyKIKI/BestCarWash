@@ -518,7 +518,7 @@ tailwind.config = {
             const cardHtml = `
                 <div id="desktop-card-${shop.id}" class="flex gap-4 p-4 bg-white hover:bg-white rounded-2xl border border-slate-200 hover:border-primary shadow-sm hover:shadow-md transition-all cursor-pointer group relative" onclick="focusShop('${shop.id}')">
                     <div class="relative w-[115px] h-[115px] shrink-0">
-                        <img src="${shop.image}" class="w-full h-full object-cover rounded-2xl shadow-md group-hover:scale-105 transition-transform duration-300" />
+                        <img src="${shop.image}" class="w-full h-full object-cover rounded-2xl shadow-md group-hover:scale-105 transition-transform duration-300" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=800&q=80';" />
                         <div class="absolute top-1.5 left-1.5 ${shop.badgeColor} px-2.5 py-1 rounded-lg text-xs font-bold shadow-sm leading-none">${shop.badge}</div>
                         <!-- Favorite Heart Button -->
                         <button type="button" onclick="toggleFavInDiscovery('${shop.id}', event)" title="บันทึกร้านโปรด" class="absolute top-1.5 right-1.5 w-8 h-8 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center transition-transform hover:scale-110 active:scale-95 shadow-sm border border-slate-200">
@@ -580,7 +580,7 @@ tailwind.config = {
                 <div id="mobile-card-${shop.id}" class="flex-shrink-0 w-[88vw] max-w-[340px] bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200 p-3.5 shadow-xl snap-center flex items-center gap-3.5 group cursor-pointer active:scale-98 transition-all hover:border-primary" onclick="focusShop('${shop.id}')">
                     <!-- Thumbnail with Badge & Fav (88x88px) -->
                     <div class="relative w-22 h-22 sm:w-24 sm:h-24 rounded-2xl overflow-hidden shrink-0 shadow-md">
-                        <img src="${shop.image}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        <img src="${shop.image}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=800&q=80';" />
                         <div class="absolute top-1.5 left-1.5 ${shop.badgeColor} px-2 py-0.5 rounded-md text-xs font-bold shadow-sm leading-none">${shop.badge}</div>
                         <!-- Favorite Heart Button -->
                         <button type="button" onclick="toggleFavInDiscovery('${shop.id}', event)" title="บันทึกร้านโปรด" class="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center transition-transform hover:scale-110 active:scale-95 shadow-sm border border-slate-200">
@@ -944,6 +944,34 @@ tailwind.config = {
         return (R * c).toFixed(1); // คืนค่าระยะทาง ทศนิยม 1 ตำแหน่ง
     }
 
+    // Curated high-resolution car wash cover photos (Fallback if shop has not uploaded a cover image)
+    const DEFAULT_COVER_IMAGES = [
+        'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=800&q=80',
+        'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=800&q=80',
+        'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=800&q=80',
+        'https://images.unsplash.com/photo-1580274455191-1c62238fa333?w=800&q=80'
+    ];
+
+    async function getIDBMedia(key) {
+        if (typeof indexedDB === 'undefined') return null;
+        return new Promise((resolve) => {
+            try {
+                const req = indexedDB.open('BestCarWashMedia', 1);
+                req.onsuccess = (e) => {
+                    const db = e.target.result;
+                    if (!db || !db.objectStoreNames || !db.objectStoreNames.contains('shop_media')) return resolve(null);
+                    const tx = db.transaction('shop_media', 'readonly');
+                    const gReq = tx.objectStore('shop_media').get(key);
+                    gReq.onsuccess = () => resolve(gReq.result || null);
+                    gReq.onerror = () => resolve(null);
+                };
+                req.onerror = () => resolve(null);
+            } catch (_) {
+                resolve(null);
+            }
+        });
+    }
+
     // --- Boot (Dual-Layer: 0ms Instant Cache Display + Silent Background Sync) ---
     window.addEventListener('DOMContentLoaded', () => {
         initMap();
@@ -955,6 +983,24 @@ tailwind.config = {
         try {
             const cached = JSON.parse(localStorage.getItem('cachedDiscoveryShops') || 'null');
             if (Array.isArray(cached) && cached.length > 0) {
+                const localCover = localStorage.getItem('ownerCoverImage');
+                const currentShopId = localStorage.getItem('currentShopId');
+                const ownerShopName = localStorage.getItem('ownerShopName');
+
+                // Migrate any cached shop images to cover images (never show avatar as card thumbnail)
+                cached.forEach((s, idx) => {
+                    const isOwnerShop = (currentShopId && s.id === currentShopId) || (ownerShopName && s.name === ownerShopName);
+                    if (isOwnerShop && localCover) {
+                        s.image = localCover;
+                        s.cover_image = localCover;
+                    } else if (s.cover_image && !s.cover_image.includes('avatar') && !s.cover_image.startsWith('data:image/svg')) {
+                        s.image = s.cover_image;
+                    } else if (!s.image || s.image.includes('avatar') || s.image.startsWith('data:image/svg')) {
+                        s.image = DEFAULT_COVER_IMAGES[idx % DEFAULT_COVER_IMAGES.length];
+                        s.cover_image = s.image;
+                    }
+                });
+
                 shops = [...cached];
                 renderDesktopCards(shops);
                 renderMobileCards(shops);
@@ -1008,11 +1054,54 @@ tailwind.config = {
                     const profData = Array.isArray(profRes) ? profRes : (profRes?.data || null);
                     if (Array.isArray(profData)) allProfiles = profData;
 
+                    // Retrieve local device owner cover and gallery for instant sync
+                    const localCover = localStorage.getItem('ownerCoverImage');
+                    const idbCover = await getIDBMedia('ownerCoverImage').catch(() => null);
+                    let localGallery = null;
+                    try { localGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null'); } catch(_) {}
+                    if (!localGallery || !localGallery.length) {
+                        try { localGallery = await getIDBMedia('ownerShopGallery').catch(() => null); } catch(_) {}
+                    }
+                    const currentShopId = localStorage.getItem('currentShopId');
+                    const currentUserId = localStorage.getItem('lastLoggedInUserId');
+                    const ownerShopName = localStorage.getItem('ownerShopName');
+
                     shops = dbShops.map((db, i) => {
                         const shopServices = (allServices || []).filter(srv => srv.shop_id === db.id);
                         const minPrice = shopServices.length > 0 ? Math.min(...shopServices.map(srv => parseFloat(srv.price_s || srv.price) || 200)) : 150;
                         const ownerProf = (allProfiles || []).find(p => p.id === db.owner_id);
-                        const logo = db.logo_url || ownerProf?.avatar_url || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80';
+                        const logo = db.logo_url || ownerProf?.avatar_url || DEFAULT_COVER_IMAGES[i % DEFAULT_COVER_IMAGES.length];
+
+                        // Identify if this shop belongs to the logged-in owner on this device
+                        const isCurrentOwnerShop = (currentShopId && db.id === currentShopId) ||
+                                                   (currentUserId && db.owner_id === currentUserId) ||
+                                                   (ownerShopName && db.name === ownerShopName) ||
+                                                   (dbShops.length === 1 && (localCover || idbCover || (localGallery && localGallery.length > 0)));
+
+                        // Resolve Cover Image (รูปปกหลัก - NOT Profile/Avatar)
+                        let coverImg = db.cover_image_url || db.cover_image || db.cover_url || db.banner_url || null;
+
+                        if (!coverImg && Array.isArray(db.photos) && db.photos.length > 0) {
+                            coverImg = db.photos[0];
+                        } else if (!coverImg && typeof db.photos === 'string' && db.photos.startsWith('[')) {
+                            try {
+                                const parsedP = JSON.parse(db.photos);
+                                if (Array.isArray(parsedP) && parsedP.length > 0) coverImg = parsedP[0];
+                            } catch (_) {}
+                        }
+
+                        if (!coverImg && Array.isArray(db.gallery) && db.gallery.length > 0) {
+                            coverImg = db.gallery[0];
+                        }
+
+                        if (!coverImg && isCurrentOwnerShop) {
+                            coverImg = localCover || idbCover || (localGallery && localGallery.length > 0 ? localGallery[0] : null);
+                        }
+
+                        // Fallback to high quality car wash cover photo (NEVER use profile avatar as cover)
+                        if (!coverImg || coverImg.includes('avatar') || coverImg.startsWith('data:image/svg')) {
+                            coverImg = DEFAULT_COVER_IMAGES[i % DEFAULT_COVER_IMAGES.length];
+                        }
 
                         const offset = SHOP_OFFSETS[i % SHOP_OFFSETS.length];
                         const lat = (db.latitude !== null && db.latitude !== undefined && !isNaN(Number(db.latitude))) ? Number(db.latitude) : (userLocation[0] + offset.latOff);
@@ -1030,7 +1119,9 @@ tailwind.config = {
                             reviews: db.review_count ? `${db.review_count} รีวิว` : 'ใหม่',
                             tags: (db.facilities && db.facilities.length > 0) ? db.facilities : ['คาร์แคร์', 'ล้างสีดูดฝุ่น'],
                             price: '฿' + minPrice,
-                            image: logo,
+                            image: coverImg,        // แสดงเป็นรูปปกหลัก (Cover image, NOT avatar)
+                            cover_image: coverImg,  // Explicit cover image reference
+                            logo: logo,             // Logo/avatar retained separately
                             lat: Number(lat.toFixed(6)),
                             lng: Number(lng.toFixed(6)),
                             badge: db.is_open ? 'เปิดอยู่' : 'ปิดชั่วคราว',
@@ -1080,10 +1171,18 @@ tailwind.config = {
             }
         })();
         
-        // Add listener to Search Inputs (Mockup behavior)
+        // Add listener to Search Inputs (Real-time live search + Enter key)
+        let searchDebounceTimer = null;
         document.querySelectorAll('input[placeholder*="ค้นหา"]').forEach(input => {
+            input.addEventListener('input', (e) => {
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => {
+                    applyFilter('ค้นหา', e.target.value);
+                }, 180);
+            });
             input.addEventListener('keyup', (e) => {
                 if(e.key === 'Enter') {
+                    clearTimeout(searchDebounceTimer);
                     applyFilter('ค้นหา', e.target.value);
                 }
             });
@@ -1153,9 +1252,15 @@ tailwind.config = {
         } else if (filterType === 'โปรโมชั่น') {
             // จำลองดึงเฉพาะร้านที่มีคำว่าโปรโมชั่นหรือดีลเด็ด
             filteredShops = shops.filter(s => s.badge === 'โปรโมชั่น' || s.badge === 'ดีลเด็ด');
-        } else if (filterType === 'ค้นหา' && searchQuery) {
-            // จำลองการค้นหาชื่อร้าน
-            filteredShops = shops.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        } else if (filterType === 'ค้นหา') {
+            const q = (searchQuery || '').trim().toLowerCase();
+            if (q) {
+                filteredShops = shops.filter(s => 
+                    (s.name && s.name.toLowerCase().includes(q)) ||
+                    (s.address && s.address.toLowerCase().includes(q)) ||
+                    (s.tags && s.tags.some(t => t.toLowerCase().includes(q)))
+                );
+            }
         }
 
         // 3. Re-render UI
@@ -1500,7 +1605,7 @@ tailwind.config = {
                 <div class="flex gap-4 items-start">
                     <!-- Image Container with Badges -->
                     <div class="relative w-22 h-22 sm:w-28 sm:h-28 rounded-2xl overflow-hidden shrink-0 shadow-md">
-                        <img src="${shop.image}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="${shop.name}" />
+                        <img src="${shop.image}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="${shop.name}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=800&q=80';" />
                         <div class="absolute top-1.5 left-1.5 ${shop.badgeColor} px-2.5 py-1 rounded-lg text-xs font-bold shadow-sm leading-none">
                             ${shop.badge}
                         </div>
