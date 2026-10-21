@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html class="dark" lang="th">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>BestCarWash - ค้นหาและจองบริการคาร์แคร์ชั้นนำ</title>
+    <meta name="description" content="ระบบจองบริการล้างรถและคาร์แคร์ชั้นนำที่ดีที่สุด สะดวกรวดเร็ว ทั้งสำหรับลูกค้าและเจ้าของร้าน"/>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Google Fonts & Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#3b82f6",
+                        secondary: "#10b981",
+                        background: "#0b1326",
+                        surface: "#101b33",
+                        "surface-card": "#152244"
+                    },
+                    fontFamily: {
+                        sans: ['Outfit', 'Prompt', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+
+    <style>
+        body {
+            font-family: 'Outfit', 'Prompt', sans-serif;
+            background-color: #0b1326;
+            color: #f1f5f9;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden bg-gradient-to-b from-[#0b1326] via-[#0f1d3d] to-[#0b1326]">
+
+    <!-- Decorative background glow -->
+    <div class="absolute -top-32 -left-32 w-96 h-96 bg-primary/20 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-secondary/15 rounded-full blur-[120px] pointer-events-none"></div>
+
+    <div class="max-w-md w-full text-center space-y-8 relative z-10 animate-fade-in">
+        <!-- Logo & Brand -->
+        <div class="flex flex-col items-center gap-4">
+            <div class="w-20 h-20 rounded-3xl bg-gradient-to-tr from-primary to-blue-400 flex items-center justify-center shadow-xl shadow-primary/30 border border-white/10 ring-4 ring-primary/20 animate-pulse">
+                <span class="material-symbols-outlined text-[42px] text-white">local_car_wash</span>
+            </div>
+            <div>
+                <h1 class="text-3xl font-extrabold tracking-tight text-white flex items-center justify-center gap-2">
+                    BestCarWash
+                    <span class="text-xs px-2.5 py-0.5 rounded-full bg-primary/20 text-blue-300 font-semibold border border-primary/30">Official</span>
+                </h1>
+                <p class="text-sm text-slate-400 mt-1">แพลตฟอร์มค้นหาและจองคิวคาร์แคร์อันดับ 1</p>
+            </div>
+        </div>
+
+        <!-- Redirect Status -->
+        <div id="loading-state" class="flex flex-col items-center gap-3 py-4">
+            <div class="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p id="status-text" class="text-xs text-slate-400 font-medium">กำลังเตรียมพร้อมระบบและเข้าสู่หน้าหลัก...</p>
+        </div>
+
+        <!-- Navigation shortcuts for instant access -->
+        <div class="pt-4 space-y-3">
+            <a href="customer/discovery.html" class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold text-sm shadow-lg shadow-primary/25 transition-all transform active:scale-98 flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-[20px]">explore</span>
+                ค้นหาร้านคาร์แคร์ใกล้คุณ (สำหรับลูกค้า)
+            </a>
+            
+            <div class="grid grid-cols-2 gap-3">
+                <a href="owner/Owner%20Dashboard.html" class="py-3 px-4 rounded-xl bg-surface-card hover:bg-[#1c2c58] text-slate-200 border border-slate-700/60 font-semibold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-98">
+                    <span class="material-symbols-outlined text-[18px] text-emerald-400">storefront</span>
+                    แดชบอร์ดร้านค้า
+                </a>
+                <a href="auth/login.html" class="py-3 px-4 rounded-xl bg-surface-card hover:bg-[#1c2c58] text-slate-200 border border-slate-700/60 font-semibold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-98">
+                    <span class="material-symbols-outlined text-[18px] text-blue-400">login</span>
+                    เข้าสู่ระบบ
+                </a>
+            </div>
+        </div>
+
+        <p class="text-[11px] text-slate-500">
+            &copy; 2026 BestCarWash Platform. All rights reserved.
+        </p>
+    </div>
+
+    <!-- Smart Redirect Script -->
+    <script>
+        (async () => {
+            const statusEl = document.getElementById('status-text');
+
+            // Quick timeout fallback: if Supabase takes too long, redirect to discovery
+            const fallbackTimer = setTimeout(() => {
+                window.location.replace('customer/discovery.html');
+            }, 2500);
+
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                let user = null;
+
+                if (client?.auth) {
+                    const sessRes = await client.auth.getSession().catch(() => null);
+                    user = sessRes?.data?.session?.user;
+                }
+
+                clearTimeout(fallbackTimer);
+
+                const savedUser = localStorage.getItem('currentUser');
+                const lastUserId = localStorage.getItem('lastLoggedInUserId');
+                const isOwner = localStorage.getItem('ownerShopName') || localStorage.getItem('currentShopId');
+                
+                let role = user?.user_metadata?.role;
+                if (!role && savedUser) {
+                    try { role = JSON.parse(savedUser)?.user_metadata?.role; } catch(_) {}
+                }
+
+                if ((user || lastUserId) && (role === 'OWNER' || isOwner)) {
+                    if (statusEl) statusEl.textContent = 'กำลังเปิดหน้าแดชบอร์ดร้านค้า...';
+                    window.location.replace('owner/Owner%20Dashboard.html');
+                } else {
+                    if (statusEl) statusEl.textContent = 'กำลังเปิดหน้าค้นหาร้านคาร์แคร์...';
+                    window.location.replace('customer/discovery.html');
+                }
+            } catch (err) {
+                clearTimeout(fallbackTimer);
+                window.location.replace('customer/discovery.html');
+            }
+        })();
+    </script>
+</body>
+</html>

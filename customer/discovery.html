@@ -973,17 +973,20 @@ tailwind.config = {
                 
                 // 1. Fetch live shops via safeSupabaseRest
                 let dbShops = null;
-                const { data: shopsData } = await safeSupabaseRest('shops?select=*');
+                const shopsRes = await safeSupabaseRest('shops?select=*');
+                const shopsData = Array.isArray(shopsRes) ? shopsRes : (shopsRes?.data || null);
                 if (Array.isArray(shopsData) && shopsData.length > 0) dbShops = shopsData;
 
                 // 2. If shops are present in database, fetch related services and profiles
                 if (Array.isArray(dbShops) && dbShops.length > 0) {
                     let allServices = null;
-                    const { data: srvData } = await safeSupabaseRest('services?select=*');
+                    const srvRes = await safeSupabaseRest('services?select=*');
+                    const srvData = Array.isArray(srvRes) ? srvRes : (srvRes?.data || null);
                     if (Array.isArray(srvData)) allServices = srvData;
 
                     let allProfiles = null;
-                    const { data: profData } = await safeSupabaseRest('profiles?select=id,avatar_url');
+                    const profRes = await safeSupabaseRest('profiles?select=id,avatar_url');
+                    const profData = Array.isArray(profRes) ? profRes : (profRes?.data || null);
                     if (Array.isArray(profData)) allProfiles = profData;
 
                     shops = dbShops.map((db, i) => {

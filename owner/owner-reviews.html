@@ -486,7 +486,7 @@
                 let fastShopPromise = null;
                 if (savedShopId && savedShopId.length > 20) {
                     fastReviewsPromise = safeSupabaseRest(`reviews?select=*,customer:customer_id(full_name,avatar_url)&shop_id=eq.${savedShopId}&order=created_at.desc`);
-                    fastShopPromise = safeSupabaseRest(`shops?select=id,name,rating,review_count&id=eq.${savedShopId}&limit=1`);
+                    fastShopPromise = safeSupabaseRest(`shops?select=id,name,rating&id=eq.${savedShopId}&limit=1`);
                 }
 
                 const sessionPromise = (async () => {
@@ -497,8 +497,8 @@
                 })();
 
                 const [reviewsRes, shopRes, sessRes] = await Promise.all([
-                    fastReviewsPromise || Promise.resolve({ data: null }),
-                    fastShopPromise || Promise.resolve({ data: null }),
+                    fastReviewsPromise || Promise.resolve([]),
+                    fastShopPromise || Promise.resolve([]),
                     sessionPromise
                 ]);
 
@@ -514,8 +514,9 @@
 
                 // Non-blocking Role Guard in background via safeSupabaseRest
                 if (effectiveUserId) {
-                    safeSupabaseRest(`profiles?select=role&id=eq.${effectiveUserId}&limit=1`).then(({ data: pList }) => {
-                        const prof = Array.isArray(pList) && pList.length > 0 ? pList[0] : null;
+                    safeSupabaseRest(`profiles?select=role&id=eq.${effectiveUserId}&limit=1`).then(pList => {
+                        const profList = Array.isArray(pList) ? pList : (pList?.data || []);
+                        const prof = profList.length > 0 ? profList[0] : null;
                         if (prof?.role === 'CUSTOMER' || user?.user_metadata?.role === 'CUSTOMER') {
                             const mainContainer = document.querySelector('main');
                             if (mainContainer) {
@@ -542,14 +543,17 @@
                 }
 
                 // Resolve shop (fast-track or fallback)
-                let shop = (shopRes?.data && shopRes.data.length > 0) ? shopRes.data[0] : null;
+                const fastShops = Array.isArray(shopRes) ? shopRes : (shopRes?.data || []);
+                let shop = fastShops.length > 0 ? fastShops[0] : null;
                 if (!shop && effectiveUserId) {
-                    const { data: sList } = await safeSupabaseRest(`shops?select=id,name,rating,review_count&owner_id=eq.${effectiveUserId}&limit=1`);
-                    if (sList && sList.length > 0) shop = sList[0];
+                    const sList = await safeSupabaseRest(`shops?select=id,name,rating&owner_id=eq.${effectiveUserId}&limit=1`);
+                    const list = Array.isArray(sList) ? sList : (sList?.data || []);
+                    if (list.length > 0) shop = list[0];
                 }
                 if (!shop && cachedShopName) {
-                    const { data: sList } = await safeSupabaseRest(`shops?select=id,name,rating,review_count&name=eq.${encodeURIComponent(cachedShopName)}&limit=1`);
-                    if (sList && sList.length > 0) shop = sList[0];
+                    const sList = await safeSupabaseRest(`shops?select=id,name,rating&name=eq.${encodeURIComponent(cachedShopName)}&limit=1`);
+                    const list = Array.isArray(sList) ? sList : (sList?.data || []);
+                    if (list.length > 0) shop = list[0];
                 }
 
                 if (!shop) {
@@ -569,10 +573,10 @@
                     localStorage.setItem('ownerShopName', shop.name);
                 }
 
-                let reviews = reviewsRes?.data;
-                if (!reviews) {
-                    const { data } = await safeSupabaseRest(`reviews?select=*,customer:customer_id(full_name,avatar_url)&shop_id=eq.${shop.id}&order=created_at.desc`);
-                    reviews = data;
+                let reviews = Array.isArray(reviewsRes) ? reviewsRes : (reviewsRes?.data || null);
+                if (!reviews && shop) {
+                    const rList = await safeSupabaseRest(`reviews?select=*,customer:customer_id(full_name,avatar_url)&shop_id=eq.${shop.id}&order=created_at.desc`);
+                    reviews = Array.isArray(rList) ? rList : (rList?.data || []);
                 }
 
                 const freshReviews = Array.isArray(reviews) ? reviews : [];

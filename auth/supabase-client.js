@@ -62,6 +62,46 @@ async function getValidAuthToken() {
 }
 window.getValidAuthToken = getValidAuthToken;
 
+function formatRestResponse(parsed, error = null) {
+    if (error) {
+        const errObj = [];
+        Object.defineProperty(errObj, 'data', { value: null, enumerable: false, configurable: true });
+        Object.defineProperty(errObj, 'error', { value: error, enumerable: false, configurable: true });
+        return errObj;
+    }
+    if (Array.isArray(parsed)) {
+        Object.defineProperty(parsed, 'data', {
+            get: function() { return this; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(parsed, 'error', {
+            value: null,
+            enumerable: false,
+            configurable: true
+        });
+        return parsed;
+    }
+    if (parsed && typeof parsed === 'object') {
+        if (!('data' in parsed)) {
+            Object.defineProperty(parsed, 'data', {
+                get: function() { return this; },
+                enumerable: false,
+                configurable: true
+            });
+        }
+        if (!('error' in parsed)) {
+            Object.defineProperty(parsed, 'error', {
+                value: null,
+                enumerable: false,
+                configurable: true
+            });
+        }
+        return parsed;
+    }
+    return { ok: true, data: parsed, error: null };
+}
+
 async function safeSupabaseRest(endpoint, options = {}) {
     const method = (options.method || 'GET').toUpperCase();
     const url = endpoint.startsWith('http') 
@@ -74,9 +114,12 @@ async function safeSupabaseRest(endpoint, options = {}) {
     let headers = {
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': authHeader,
-        'Content-Type': 'application/json',
         ...(options.headers || {})
     };
+
+    if (options.body || method === 'POST' || method === 'PUT' || method === 'PATCH') {
+        headers['Content-Type'] = 'application/json';
+    }
 
     const fetchOpts = {
         method: method,
@@ -104,20 +147,22 @@ async function safeSupabaseRest(endpoint, options = {}) {
             const resAnon = await fetch(url, fetchOpts);
             if (resAnon.ok) {
                 const txt = await resAnon.text();
-                return txt ? JSON.parse(txt) : true;
+                const parsed = txt ? JSON.parse(txt) : true;
+                return formatRestResponse(parsed);
             }
         }
 
         if (res.ok) {
             const text = await res.text();
-            return text ? JSON.parse(text) : true;
+            const parsed = text ? JSON.parse(text) : true;
+            return formatRestResponse(parsed);
         } else {
             const errTxt = await res.text().catch(() => '');
             console.warn(`Supabase REST [${method} ${endpoint}] returned ${res.status}:`, errTxt);
-            return null;
+            return formatRestResponse(null, new Error(errTxt || `HTTP ${res.status}`));
         }
     } catch (err) {
-        if (method === 'GET' && authHeader !== `Bearer ${SUPABASE_ANON_KEY}`) {
+        if (method === 'GET') {
             try {
                 headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
                 fetchOpts.headers = headers;
@@ -125,12 +170,13 @@ async function safeSupabaseRest(endpoint, options = {}) {
                 const fallbackRes = await fetch(url, fetchOpts);
                 if (fallbackRes.ok) {
                     const txt = await fallbackRes.text();
-                    return txt ? JSON.parse(txt) : true;
+                    const parsed = txt ? JSON.parse(txt) : true;
+                    return formatRestResponse(parsed);
                 }
             } catch (_) {}
         }
         console.warn(`Supabase REST connection notice on ${endpoint}:`, err.message || err);
-        return null;
+        return formatRestResponse(null, err);
     }
 }
 
