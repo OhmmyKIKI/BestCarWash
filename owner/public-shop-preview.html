@@ -1219,7 +1219,7 @@
                 updateGalleryDOM(galleryImages);
             }
 
-            // Update Map Coordinates
+            // Update Map Coordinates & Shop Location Link
             const lat = shop.latitude || user?.user_metadata?.latitude || parseFloat(localStorage.getItem('ownerShopLat')) || 18.7938;
             const lng = shop.longitude || user?.user_metadata?.longitude || parseFloat(localStorage.getItem('ownerShopLng')) || 98.9898;
             SHOP1_DATA.lat = lat;
@@ -1230,11 +1230,28 @@
             if (window.previewMarker) {
                 window.previewMarker.setLatLng([lat, lng]);
             }
+
+            // Prefer verified shop map_link from Supabase, then user metadata or localStorage, fallback to lat,lng navigation
+            const rawMapLink = shop.map_link || user?.user_metadata?.map_link || localStorage.getItem('ownerShopMapLink');
+            const targetMapUrl = rawMapLink ? rawMapLink : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+
             const dirLink = document.getElementById('map-directions-link');
-            if (dirLink) dirLink.href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+            if (dirLink) {
+                dirLink.href = targetMapUrl;
+                dirLink.setAttribute('title', 'ขอเส้นทางไปยังร้านผ่าน Google Maps');
+            }
             const searchLink = document.getElementById('map-search-link');
-            const customMapLink = user?.user_metadata?.map_link || localStorage.getItem('ownerShopMapLink') || `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-            if (searchLink) searchLink.href = customMapLink;
+            if (searchLink) {
+                searchLink.href = targetMapUrl;
+            }
+
+            // Allow clicking on mini-map container to open Google Maps directly
+            const mapContainer = document.getElementById('mini-map');
+            if (mapContainer) {
+                mapContainer.style.cursor = 'pointer';
+                mapContainer.title = 'คลิกเพื่อเปิดดูตำแหน่งร้านบน Google Maps';
+                mapContainer.onclick = () => window.open(targetMapUrl, '_blank');
+            }
 
             // 2. Fetch Operating Hours via safeSupabaseRest
             const { data: hours } = await safeSupabaseRest(`shop_operating_hours?shop_id=eq.${shop.id}&order=day_of_week.asc`);

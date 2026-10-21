@@ -470,6 +470,15 @@ tailwind.config = {
         window.location.href = `shop-details.html?shopId=${encodeURIComponent(shopId)}`;
     }
 
+    function navigateToShopMaps(shopId) {
+        const shop = (shops || []).find(s => s.id === shopId);
+        if (!shop) return;
+        const targetUrl = shop.map_link || (shop.lat && shop.lng 
+            ? `https://www.google.com/maps/dir/?api=1&destination=${shop.lat},${shop.lng}`
+            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.name + ' ' + (shop.address || ''))}`);
+        window.open(targetUrl, '_blank');
+    }
+
     function showToast(message) {
         let toast = document.getElementById('discovery-toast');
         if (!toast) {
@@ -534,7 +543,12 @@ tailwind.config = {
                         </div>
                         <div class="flex justify-between items-center mt-3 pt-2.5 border-t border-slate-100">
                             <div class="text-xs text-slate-500 font-medium">เริ่มต้น <span class="font-black text-primary text-lg ml-1 font-mono">${shop.price}</span></div>
-                            <button class="bg-primary hover:bg-sky-700 text-white px-5 py-2 rounded-xl text-sm font-bold active:scale-95 transition-all shadow-md shadow-sky-500/20" onclick="event.stopPropagation(); selectAndGoToShop('${shop.id}')">จอง</button>
+                            <div class="flex items-center gap-2">
+                                <button type="button" class="px-3 py-2 rounded-xl border border-slate-200 hover:border-primary/50 bg-slate-50 hover:bg-sky-50 text-slate-600 hover:text-primary flex items-center gap-1 text-xs font-semibold transition-all active:scale-95" title="นำทางไปยังร้านผ่าน Google Maps" onclick="event.stopPropagation(); navigateToShopMaps('${shop.id}')">
+                                    <span class="material-symbols-outlined text-[17px] text-primary">directions</span> นำทาง
+                                </button>
+                                <button class="bg-primary hover:bg-sky-700 text-white px-5 py-2 rounded-xl text-sm font-bold active:scale-95 transition-all shadow-md shadow-sky-500/20" onclick="event.stopPropagation(); selectAndGoToShop('${shop.id}')">จอง</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -595,9 +609,14 @@ tailwind.config = {
                             <div class="text-xs text-slate-500 font-medium">
                                 เริ่มต้น <span class="font-black text-primary text-base ml-1 font-mono">${shop.price}</span>
                             </div>
-                            <button class="bg-primary hover:bg-sky-700 text-white px-4.5 py-2 rounded-xl text-sm font-bold shadow-md shadow-sky-500/20 active:scale-95 transition-transform" onclick="event.stopPropagation(); selectAndGoToShop('${shop.id}')">
-                                จอง
-                            </button>
+                            <div class="flex items-center gap-1.5">
+                                <button type="button" class="w-8 h-8 rounded-xl border border-slate-200 hover:border-primary/50 bg-slate-50 hover:bg-sky-50 text-slate-600 hover:text-primary flex items-center justify-center transition-all active:scale-95" title="นำทางไปยังร้านผ่าน Google Maps" onclick="event.stopPropagation(); navigateToShopMaps('${shop.id}')">
+                                    <span class="material-symbols-outlined text-[18px] text-primary">directions</span>
+                                </button>
+                                <button class="bg-primary hover:bg-sky-700 text-white px-4 py-1.5 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-sky-500/20 active:scale-95 transition-transform" onclick="event.stopPropagation(); selectAndGoToShop('${shop.id}')">
+                                    จอง
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1003,6 +1022,9 @@ tailwind.config = {
                         return {
                             id: db.id,
                             name: db.name || 'ร้านคาร์แคร์',
+                            address: db.address || '',
+                            phone: db.phone_number || '',
+                            map_link: db.map_link || '',
                             distance: distKm + ' กม.',
                             rating: db.rating ? Number(db.rating).toFixed(1) : '5.0',
                             reviews: db.review_count ? `${db.review_count} รีวิว` : 'ใหม่',
@@ -1518,14 +1540,19 @@ tailwind.config = {
                         <span class="text-xs text-slate-500 leading-tight">ราคาเริ่มต้น</span>
                         <span class="text-base sm:text-lg font-black text-primary font-mono">${shop.price}</span>
                     </div>
-                    <div class="flex items-center gap-2.5">
+                    <div class="flex items-center gap-2">
+                        <!-- Navigation Link via Google Maps -->
+                        <button type="button" onclick="event.stopPropagation(); navigateToShopMaps('${shop.id}');" class="px-3 py-2 rounded-xl border border-slate-200 hover:border-primary/50 bg-slate-50 hover:bg-sky-50 text-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-1 active:scale-95 transition-all" title="นำทางไปยังร้านผ่าน Google Maps">
+                            <span class="material-symbols-outlined text-[16px] text-primary">directions</span>
+                            <span class="hidden sm:inline">นำทาง</span>
+                        </button>
                         <!-- Focus on Map Button -->
-                        <button type="button" onclick="event.stopPropagation(); closeAllShopsModal(); focusShop('${shop.id}');" class="px-3.5 py-2 rounded-xl border border-slate-200 hover:border-primary bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-1.5 active:scale-95 transition-all" title="ดูตำแหน่งร้านบนแผนที่">
+                        <button type="button" onclick="event.stopPropagation(); closeAllShopsModal(); focusShop('${shop.id}');" class="px-3 py-2 rounded-xl border border-slate-200 hover:border-primary bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-1 active:scale-95 transition-all" title="ดูตำแหน่งร้านบนแผนที่">
                             <span class="material-symbols-outlined text-[16px] text-primary">navigation</span>
                             <span>ดูบนแผนที่</span>
                         </button>
                         <!-- Go to Shop Details / Booking Button -->
-                        <button type="button" onclick="event.stopPropagation(); selectAndGoToShop('${shop.id}');" class="bg-primary hover:bg-sky-700 text-white px-5 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-sky-500/20 active:scale-95 transition-all" title="เข้าสู่หน้าร้านเพื่อจองคิว">
+                        <button type="button" onclick="event.stopPropagation(); selectAndGoToShop('${shop.id}');" class="bg-primary hover:bg-sky-700 text-white px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-sky-500/20 active:scale-95 transition-all" title="เข้าสู่หน้าร้านเพื่อจองคิว">
                             จองคิว
                         </button>
                     </div>

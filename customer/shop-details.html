@@ -767,11 +767,26 @@
         // Render Live Operating Hours & Holidays
         renderCustomerOperatingHours(currentShopId, client);
 
-        // Update direction link
-        const dirLink = document.querySelector('a[href*="google.com/maps/dir"]');
-        if (dirLink) dirLink.href = `https://www.google.com/maps/dir/?api=1&destination=${currentShop.lat},${currentShop.lng}`;
-        const searchLink = document.querySelector('a[href*="google.com/maps/search"]');
-        if (searchLink) searchLink.href = `https://www.google.com/maps/search/?api=1&query=${currentShop.lat},${currentShop.lng}`;
+        // Update direction link with smart priority: shop.map_link -> lat/lng coords -> name query
+        const targetMapUrl = currentShop.map_link || (currentShop.lat && currentShop.lng ? `https://www.google.com/maps/dir/?api=1&destination=${currentShop.lat},${currentShop.lng}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentShop.name || 'car wash')}`);
+
+        const dirLink = document.querySelector('a[href*="google.com/maps/dir"]') || document.getElementById('map-directions-link');
+        if (dirLink) {
+            dirLink.href = targetMapUrl;
+            dirLink.setAttribute('title', 'ขอเส้นทางไปยังร้านผ่าน Google Maps');
+        }
+        const searchLink = document.querySelector('a[href*="google.com/maps/search"]') || document.getElementById('map-search-link');
+        if (searchLink) {
+            searchLink.href = targetMapUrl;
+        }
+
+        // Allow clicking on mini-map container to open Google Maps directly
+        const miniMapContainer = document.getElementById('mini-map');
+        if (miniMapContainer) {
+            miniMapContainer.style.cursor = 'pointer';
+            miniMapContainer.title = 'คลิกเพื่อเปิดดูตำแหน่งร้านบน Google Maps';
+            miniMapContainer.onclick = () => window.open(targetMapUrl, '_blank');
+        }
 
         // Map setup or update
         const mapEl = document.getElementById('mini-map');
@@ -856,6 +871,7 @@
                             about: found.about || 'บริการคาร์แคร์ระดับพรีเมียม ล้างสี ดูดฝุ่น และเคลือบเงาสีรถด้วยมาตรฐานระดับมืออาชีพ',
                             lat: found.lat || 18.7938,
                             lng: found.lng || 98.9898,
+                            map_link: found.map_link || '',
                             images: found.image ? [found.image] : [
                                 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80',
                                 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80'
@@ -900,6 +916,7 @@
                 about: localAbout,
                 lat: parseFloat(localStorage.getItem('ownerShopLat')) || 18.7938,
                 lng: parseFloat(localStorage.getItem('ownerShopLng')) || 98.9898,
+                map_link: localStorage.getItem('ownerShopMapLink') || '',
                 images: localGallery,
                 services: [
                     { id: 'srv1', name: 'บริการล้างรถมาตรฐาน', price: 200, duration: '45 นาที', popular: true, items: ['ล้างสี ดูดฝุ่น เช็ดแห้ง'] }
@@ -1008,6 +1025,7 @@
                         about: dbShop.description || 'บริการคาร์แคร์ระดับพรีเมียม ล้างสี ดูดฝุ่น และเคลือบเงาสีรถด้วยมาตรฐานระดับมืออาชีพ',
                         lat: dbShop.latitude || 18.7938,
                         lng: dbShop.longitude || 98.9898,
+                        map_link: dbShop.map_link || '',
                         images: (() => {
                             let gallery = null;
                             try { gallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null'); } catch(_) {}
