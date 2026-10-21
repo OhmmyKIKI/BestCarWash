@@ -100,47 +100,66 @@ async function triggerUserMetadataCleanup() {
     if (isSanitizing) return;
     isSanitizing = true;
     try {
+        // 1. Immediately purge bloated base64 from localStorage auth cache to free quota
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+                    const raw = localStorage.getItem(k);
+                    if (raw && (raw.includes('data:image') || raw.length > 300000)) {
+                        const parsed = JSON.parse(raw);
+                        if (parsed.user?.user_metadata) {
+                            let modified = false;
+                            for (const [mKey, mVal] of Object.entries(parsed.user.user_metadata)) {
+                                if (typeof mVal === 'string' && (mVal.startsWith('data:') || mVal.length > 1000)) {
+                                    delete parsed.user.user_metadata[mKey];
+                                    modified = true;
+                                } else if (Array.isArray(mVal) && mVal.some(x => typeof x === 'string' && (x.startsWith('data:') || x.length > 1000))) {
+                                    delete parsed.user.user_metadata[mKey];
+                                    modified = true;
+                                }
+                            }
+                            if (modified) {
+                                localStorage.setItem(k, JSON.stringify(parsed));
+                                console.log('[Supabase] Sanitized base64 from localStorage:', k);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (_) {}
+
         const client = getSupabaseClient();
         if (!client || !client.auth) return;
         const { data } = await client.auth.getSession().catch(() => ({ data: null }));
         const user = data?.session?.user;
+        const token = data?.session?.access_token;
         if (!user || !user.user_metadata) return;
 
-        const meta = user.user_metadata;
-        const purgedMeta = {};
-        let foundBloat = false;
+        // Only invoke updateUser if token is within safe header limits (< 2500 chars)
+        // because sending a 1MB token in Authorization header causes HTTP 494
+        if (token && token.length <= 2500) {
+            const meta = user.user_metadata;
+            const purgedMeta = {};
+            let foundBloat = false;
 
-        for (const [key, val] of Object.entries(meta)) {
-            if (typeof val === 'string' && (val.startsWith('data:') || val.length > 1000)) {
-                foundBloat = true;
-                purgedMeta[key] = null;
-            } else if (Array.isArray(val) && (val.length > 20 || val.some(item => typeof item === 'string' && (item.startsWith('data:') || item.length > 1000)))) {
-                foundBloat = true;
-                purgedMeta[key] = null;
-            } else if (val && typeof val === 'object') {
-                let objectHasBloat = false;
-                const cleanObj = { ...val };
-                for (const [subKey, subVal] of Object.entries(val)) {
-                    if (typeof subVal === 'string' && (subVal.startsWith('data:') || subVal.length > 1000)) {
-                        cleanObj[subKey] = null;
-                        objectHasBloat = true;
-                        foundBloat = true;
-                    }
-                }
-                if (objectHasBloat) {
-                    purgedMeta[key] = cleanObj;
+            for (const [key, val] of Object.entries(meta)) {
+                if (typeof val === 'string' && (val.startsWith('data:') || val.length > 1000)) {
+                    foundBloat = true;
+                    purgedMeta[key] = null;
+                } else if (Array.isArray(val) && (val.length > 20 || val.some(item => typeof item === 'string' && (item.startsWith('data:') || item.length > 1000)))) {
+                    foundBloat = true;
+                    purgedMeta[key] = null;
                 }
             }
-        }
 
-        if (foundBloat) {
-            console.log('[Supabase] Found bloated items in user_metadata. Purging base64 from Auth account to shrink JWT token...');
-            await client.auth.updateUser({ data: purgedMeta }).catch(e => console.warn('Update user metadata error:', e));
-            const refreshRes = await client.auth.refreshSession().catch(() => null);
-            console.log('[Supabase] Successfully cleaned Auth metadata! Fresh JWT token size:', refreshRes?.data?.session?.access_token?.length || 'purged');
+            if (foundBloat) {
+                await client.auth.updateUser({ data: purgedMeta }).catch(() => {});
+                await client.auth.refreshSession().catch(() => null);
+            }
         }
     } catch (e) {
-        console.warn('[Supabase] Cleanup metadata notice:', e);
+        // Silent catch to prevent console noise
     } finally {
         isSanitizing = false;
     }

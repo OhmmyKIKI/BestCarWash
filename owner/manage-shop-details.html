@@ -714,13 +714,50 @@
             }
         }
 
+        function safeLocalStorageSet(key, val) {
+            try {
+                localStorage.setItem(key, val);
+            } catch (e) {
+                if (e && (e.name === 'QuotaExceededError' || e.code === 22 || String(e).includes('quota') || String(e).includes('Quota'))) {
+                    console.warn(`LocalStorage quota exceeded while setting "${key}". Freeing heavy image caches.`);
+                    try {
+                        localStorage.removeItem('ownerShopGallery');
+                        localStorage.removeItem('ownerCoverImage');
+                        localStorage.setItem(key, val);
+                    } catch (_) {}
+                }
+            }
+        }
+
         // 2. Fetch live shop data from Supabase (Silent Background Sync - 0ms instant display)
         async function loadShopData() {
-            const isNetErr = (err) => {
-                if (!err) return false;
-                const msg = (err.message || String(err)).toLowerCase();
-                return msg.includes('fetch') || msg.includes('network') || msg.includes('abort') || msg.includes('connection');
-            };
+            // Clean bloated base64 from localStorage auth cache if present
+            try {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+                        const raw = localStorage.getItem(k);
+                        if (raw && (raw.includes('data:image') || raw.length > 500000)) {
+                            const parsed = JSON.parse(raw);
+                            if (parsed.user?.user_metadata) {
+                                let modified = false;
+                                for (const [mKey, mVal] of Object.entries(parsed.user.user_metadata)) {
+                                    if (typeof mVal === 'string' && (mVal.startsWith('data:') || mVal.length > 1000)) {
+                                        delete parsed.user.user_metadata[mKey];
+                                        modified = true;
+                                    } else if (Array.isArray(mVal) && mVal.some(x => typeof x === 'string' && (x.startsWith('data:') || x.length > 1000))) {
+                                        delete parsed.user.user_metadata[mKey];
+                                        modified = true;
+                                    }
+                                }
+                                if (modified) {
+                                    localStorage.setItem(k, JSON.stringify(parsed));
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (_) {}
 
             try {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
@@ -740,38 +777,6 @@
                     currentUserId = effectiveUserId;
                 }
                 const meta = currentUser?.user_metadata || {};
-
-                // Non-blocking background sync for freshest metadata from Supabase Auth
-                if (client.auth) {
-                    client.auth.getUser().then(({ data: uData }) => {
-                        const cloudUser = uData?.user;
-                        if (cloudUser) {
-                            if (cloudUser.id) currentUserId = cloudUser.id;
-                            const freshMeta = cloudUser.user_metadata || {};
-                            if (freshMeta.map_link && !googleMapLinkInput.value) {
-                                googleMapLinkInput.value = freshMeta.map_link;
-                                testMapBtn.href = formatMapUrl(freshMeta.map_link);
-                                localStorage.setItem('ownerShopMapLink', freshMeta.map_link);
-                            }
-                            if (freshMeta.sub_district && !subDistrictInput.value) {
-                                subDistrictInput.value = freshMeta.sub_district;
-                                localStorage.setItem('ownerShopSubDistrict', freshMeta.sub_district);
-                            }
-                            if (freshMeta.street && (!streetAddressInput.value || streetAddressInput.value.includes(freshMeta.city || '___'))) {
-                                streetAddressInput.value = freshMeta.street;
-                                localStorage.setItem('ownerShopStreet', freshMeta.street);
-                            }
-                            if (freshMeta.city && !cityInput.value) {
-                                cityInput.value = freshMeta.city;
-                                localStorage.setItem('ownerShopCity', freshMeta.city);
-                            }
-                            if (freshMeta.zip && !zipCodeInput.value) {
-                                zipCodeInput.value = freshMeta.zip;
-                                localStorage.setItem('ownerShopZip', freshMeta.zip);
-                            }
-                        }
-                    }).catch(() => {});
-                }
 
                 // 2. Fetch Shop row via safeSupabaseRest
                 let shop = null;
@@ -811,107 +816,42 @@
                 }
 
                 // 2.2 Global Fallback if no shop found yet
-                if (!shop) {
+                if (!shop && fetcher) {
                     try {
-                        if (client && client.from) {
-                            const { data: anyShops } = await client.from('shops').select('*').limit(1);
-                            if (anyShops && anyShops.length > 0) shop = anyShops[0];
-                        } else if (fetcher) {
-                            const anyShops = await fetcher('shops?limit=1');
-                            if (Array.isArray(anyShops) && anyShops.length > 0) shop = anyShops[0];
-                        }
+                        const anyShops = await fetcher('shops?limit=1');
+                        if (Array.isArray(anyShops) && anyShops.length > 0) shop = anyShops[0];
                     } catch (_) {}
                 }
 
-
                 if (shop) {
                     currentShopId = shop.id;
-                    localStorage.setItem('currentShopId', shop.id);
-                    if (shop.name) localStorage.setItem('ownerShopName', shop.name);
-                    if (shop.latitude) localStorage.setItem('ownerShopLat', shop.latitude);
-                    if (shop.longitude) localStorage.setItem('ownerShopLng', shop.longitude);
-                    setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
+                    safeLocalStorageSet('currentShopId', shop.id);
+                    if (shop.name) safeLocalStorageSet('ownerShopName', shop.name);
+                    if (shop.latitude) safeLocalStorageSet('ownerShopLat', shop.latitude);
+                    if (shop.longitude) safeLocalStorageSet('ownerShopLng', shop.longitude);
                 }
 
-                const finalLogo = shop?.logo_url || meta.avatar_url || localStorage.getItem('ownerProfileAvatar');
-                if (finalLogo && logoImg) {
-                    logoImg.src = finalLogo;
-                    localStorage.setItem('ownerProfileAvatar', finalLogo);
-                }
-
-                // Load Cover Photo and Multi-Photo Gallery (Pull all photos saved in cloud or local)
-                let rawGallery = null;
-                if (meta.shop_images && Array.isArray(meta.shop_images) && meta.shop_images.length > 0) {
-                    rawGallery = meta.shop_images;
-                } else if (shop?.shop_images && Array.isArray(shop.shop_images) && shop.shop_images.length > 0) {
-                    rawGallery = shop.shop_images;
-                } else if (shop?.images && Array.isArray(shop.images) && shop.images.length > 0) {
-                    rawGallery = shop.images;
-                } else {
-                    try {
-                        rawGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null');
-                    } catch(_) {}
-                }
-
-                let savedGallery = sanitizeGalleryUrls(rawGallery);
-                const finalCover = shop?.cover_image_url || meta.cover_image_url || localStorage.getItem('ownerCoverImage') || (coverImg ? coverImg.src : '');
-
-                if (savedGallery && savedGallery.length > 0) {
-                    shopPhotos = [...savedGallery];
-                } else if (finalCover) {
-                    shopPhotos = [
-                        finalCover,
-                        "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80",
-                        "https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80",
-                        "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=1200&q=80"
-                    ];
-                }
-
-                // Ensure finalCover is at index 0 as cover if present
-                if (finalCover && !finalCover.includes('photo-1601362840469-51e4d8d58785')) {
-                    const cIdx = shopPhotos.indexOf(finalCover);
-                    if (cIdx > 0) {
-                        shopPhotos.splice(cIdx, 1);
-                        shopPhotos.unshift(finalCover);
-                    } else if (cIdx === -1 && shopPhotos.length < 8) {
-                        shopPhotos.unshift(finalCover);
-                    }
-                }
-
-                if (shopPhotos.length > 0) {
-                    localStorage.setItem('ownerShopGallery', JSON.stringify(shopPhotos));
-                }
-
-                if (shopPhotos.length > 0 && coverImg) {
-                    coverImg.src = shopPhotos[0];
-                    localStorage.setItem('ownerCoverImage', shopPhotos[0]);
-                }
-
-                renderPhotoGallery();
-
-                // Populate Shop Name
+                // 3. POPULATE FORM TEXT FIELDS FIRST (Guaranteed to display, unaffected by gallery size)
                 const finalName = shop?.name || meta.shop_name || localStorage.getItem('ownerShopName') || '';
-                if (finalName) {
+                if (finalName && shopNameInput) {
                     shopNameInput.value = finalName;
-                    localStorage.setItem('ownerShopName', finalName);
+                    safeLocalStorageSet('ownerShopName', finalName);
                 }
 
-                // Populate Phone Number
                 const finalPhone = shop?.phone_number || meta.phone_number || localStorage.getItem('ownerShopPhone') || '';
-                if (finalPhone) {
+                if (finalPhone && contactNumberInput) {
                     contactNumberInput.value = finalPhone;
-                    localStorage.setItem('ownerShopPhone', finalPhone);
+                    safeLocalStorageSet('ownerShopPhone', finalPhone);
                 }
 
-                // Populate Description
-                const fullDesc = shop?.description || meta.shop_description || meta.description || meta.about || localStorage.getItem('ownerShopDesc') || localStorage.getItem('shopDescription') || localStorage.getItem('ownerShopDescription') || '';
-                if (fullDesc) {
+                const fullDesc = shop?.description || meta.shop_description || meta.description || meta.about || localStorage.getItem('ownerShopDesc') || localStorage.getItem('shopDescription') || '';
+                if (fullDesc && shopDescInput) {
                     shopDescInput.value = fullDesc;
-                    charCount.textContent = `${shopDescInput.value.length}/500`;
-                    localStorage.setItem('ownerShopDesc', fullDesc);
+                    if (charCount) charCount.textContent = `${fullDesc.length}/500`;
+                    safeLocalStorageSet('ownerShopDesc', fullDesc);
                 }
 
-                // Populate Location fields (Street, SubDistrict, City, Zip)
+                // Location parsing & population
                 const rawAddress = shop?.address || meta.full_address || meta.address || meta.street || localStorage.getItem('ownerShopStreet') || '';
                 const parsedRaw = parseAddress(rawAddress);
 
@@ -920,7 +860,6 @@
                 let finalCity = meta.city || parsedRaw.city || localStorage.getItem('ownerShopCity') || '';
                 let finalZip = meta.zip || parsedRaw.zip || localStorage.getItem('ownerShopZip') || '';
 
-                // Clean up: if finalStreet contains finalCity or finalZip, re-parse
                 if (finalStreet && ((finalCity && finalStreet.includes(finalCity)) || (finalZip && finalStreet.includes(finalZip)))) {
                     const p = parseAddress(finalStreet);
                     if (p.street) finalStreet = p.street;
@@ -929,38 +868,100 @@
                     if (!finalZip && p.zip) finalZip = p.zip;
                 }
 
-                if (finalStreet) {
+                if (finalStreet && streetAddressInput) {
                     streetAddressInput.value = finalStreet;
-                    localStorage.setItem('ownerShopStreet', finalStreet);
+                    safeLocalStorageSet('ownerShopStreet', finalStreet);
                 }
-                if (finalSubDist) {
+                if (finalSubDist && subDistrictInput) {
                     subDistrictInput.value = finalSubDist;
-                    localStorage.setItem('ownerShopSubDistrict', finalSubDist);
+                    safeLocalStorageSet('ownerShopSubDistrict', finalSubDist);
                 }
-                if (finalCity) {
+                if (finalCity && cityInput) {
                     cityInput.value = finalCity;
-                    localStorage.setItem('ownerShopCity', finalCity);
+                    safeLocalStorageSet('ownerShopCity', finalCity);
                 }
-                if (finalZip) {
+                if (finalZip && zipCodeInput) {
                     zipCodeInput.value = finalZip;
-                    localStorage.setItem('ownerShopZip', finalZip);
+                    safeLocalStorageSet('ownerShopZip', finalZip);
                 }
 
-                // Populate Google Maps link
+                // Google Maps link population
                 let savedMapLink = shop?.map_link || meta.map_link || localStorage.getItem('ownerShopMapLink') || '';
                 if (!savedMapLink && shop?.latitude && shop?.longitude) {
                     savedMapLink = `https://maps.google.com/?q=${shop.latitude},${shop.longitude}`;
                 }
 
-                if (savedMapLink) {
+                if (savedMapLink && googleMapLinkInput) {
                     googleMapLinkInput.value = savedMapLink;
                     updateMapPreview(savedMapLink);
-                    localStorage.setItem('ownerShopMapLink', savedMapLink);
+                    safeLocalStorageSet('ownerShopMapLink', savedMapLink);
                 } else {
                     updateMapPreview('');
                 }
 
+                // Mark sync status as ONLINE!
                 setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
+
+                // 4. LOAD LOGO (Non-fatal)
+                try {
+                    const finalLogo = shop?.logo_url || (meta.avatar_url && !meta.avatar_url.startsWith('data:') ? meta.avatar_url : null) || localStorage.getItem('ownerProfileAvatar');
+                    if (finalLogo && logoImg) {
+                        logoImg.src = finalLogo;
+                        safeLocalStorageSet('ownerProfileAvatar', finalLogo);
+                    }
+                } catch (_) {}
+
+                // 5. LOAD COVER & GALLERY SAFELY (Non-fatal, protected against QuotaExceededError)
+                try {
+                    let rawGallery = null;
+                    if (shop?.shop_images && Array.isArray(shop.shop_images) && shop.shop_images.length > 0) {
+                        rawGallery = shop.shop_images;
+                    } else if (shop?.images && Array.isArray(shop.images) && shop.images.length > 0) {
+                        rawGallery = shop.images;
+                    } else {
+                        try {
+                            rawGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null');
+                        } catch(_) {}
+                    }
+
+                    let savedGallery = sanitizeGalleryUrls(rawGallery);
+                    const finalCover = shop?.cover_image_url || (meta.cover_image_url && !meta.cover_image_url.startsWith('data:') ? meta.cover_image_url : null) || localStorage.getItem('ownerCoverImage') || (coverImg ? coverImg.src : '');
+
+                    if (savedGallery && savedGallery.length > 0) {
+                        shopPhotos = [...savedGallery];
+                    } else if (finalCover) {
+                        shopPhotos = [
+                            finalCover,
+                            "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1200&q=80",
+                            "https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=1200&q=80",
+                            "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=1200&q=80"
+                        ];
+                    }
+
+                    if (finalCover && !finalCover.includes('photo-1601362840469-51e4d8d58785')) {
+                        const cIdx = shopPhotos.indexOf(finalCover);
+                        if (cIdx > 0) {
+                            shopPhotos.splice(cIdx, 1);
+                            shopPhotos.unshift(finalCover);
+                        } else if (cIdx === -1 && shopPhotos.length < 8) {
+                            shopPhotos.unshift(finalCover);
+                        }
+                    }
+
+                    if (shopPhotos.length > 0) {
+                        safeLocalStorageSet('ownerShopGallery', JSON.stringify(shopPhotos));
+                    }
+
+                    if (shopPhotos.length > 0 && coverImg) {
+                        coverImg.src = shopPhotos[0];
+                        safeLocalStorageSet('ownerCoverImage', shopPhotos[0]);
+                    }
+
+                    renderPhotoGallery();
+                } catch (gErr) {
+                    console.warn('Gallery render notice (non-fatal):', gErr);
+                }
+
             } catch (err) {
                 console.warn('Load shop error:', err);
                 setCloudSyncStatus('offline', 'แสดงผลจากข้อมูลในเครื่อง (ออฟไลน์)');
