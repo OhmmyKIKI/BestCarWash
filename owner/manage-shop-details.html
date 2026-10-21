@@ -8,7 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-client.js"></script>
+    <script src="supabase-client.js?v=1.2"></script>
+    <script src="../supabase-client.js?v=1.2"></script>
     <script id="tailwind-config">
         tailwind.config = {
           darkMode: "class",
@@ -750,6 +751,22 @@
                     }
                 }
 
+                // 2.1 SDK Fallback
+                if (!shop && client && client.from) {
+                    try {
+                        if (savedShopId && savedShopId.length > 20) {
+                            const { data: sdkShops } = await client.from('shops').select('*').eq('id', savedShopId).limit(1);
+                            if (sdkShops && sdkShops.length > 0) shop = sdkShops[0];
+                        }
+                        if (!shop && effectiveUserId) {
+                            const { data: sdkShops } = await client.from('shops').select('*').eq('owner_id', effectiveUserId).limit(1);
+                            if (sdkShops && sdkShops.length > 0) shop = sdkShops[0];
+                        }
+                    } catch (sdkErr) {
+                        console.warn('SDK shop fallback notice:', sdkErr);
+                    }
+                }
+
 
                 if (shop) {
                     currentShopId = shop.id;
@@ -1044,7 +1061,144 @@
                 localStorage.setItem('ownerShopGallery', JSON.stringify(shopPhotos));
             }
 
-            // INSTANT OPTIMISTIC UI FEEDBACK (0ms)
+            // 2. AWAITED DUAL-ENGINE SYNC TO SUPABASE
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                let userId = currentUserId || localStorage.getItem('lastLoggedInUserId');
+                if (!userId && client?.auth) {
+                    try {
+                        const sess = await client.auth.getSession();
+                        userId = sess?.data?.session?.user?.id;
+                    } catch (_) {}
+                }
+
+                if (userId && client) {
+                    // ONLY valid database columns for shops table:
+                    // id, owner_id, name, description, address, latitude, longitude, phone_number, is_open, rating, updated_at
+                    const validShopCols = {
+                        name: name,
+                        phone_number: phone,
+                        description: rawDesc,
+                        address: fullAddr,
+                        updated_at: new Date().toISOString()
+                    };
+                    if (lat !== null && lng !== null) {
+                        validShopCols.latitude = lat;
+                        validShopCols.longitude = lng;
+                    }
+
+                    let targetShopId = currentShopId || localStorage.getItem('currentShopId');
+                    const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                    const promises = [];
+
+                    // 1. Sync Shop Table (PATCH or INSERT)
+                    if (targetShopId) {
+                        promises.push((async () => {
+                            let restSuccess = false;
+                            if (fetcher) {
+                                try {
+                                    await fetcher(`shops?id=eq.${targetShopId}`, {
+                                        method: 'PATCH',
+                                        body: validShopCols
+                                    });
+                                    restSuccess = true;
+                                } catch (e) {
+                                    console.warn('REST shop update notice, trying SDK:', e);
+                                }
+                            }
+                            if (!restSuccess && client.from) {
+                                try {
+                                    await client.from('shops').update(validShopCols).eq('id', targetShopId);
+                                } catch (sdkE) {
+                                    console.warn('SDK shop update notice:', sdkE);
+                                }
+                            }
+                        })());
+                    } else {
+                        promises.push((async () => {
+                            let newId = null;
+                            if (fetcher) {
+                                try {
+                                    const ns = await fetcher('shops', {
+                                        method: 'POST',
+                                        headers: { 'Prefer': 'return=representation' },
+                                        body: { owner_id: userId, ...validShopCols }
+                                    });
+                                    const row = Array.isArray(ns) && ns.length > 0 ? ns[0] : ns;
+                                    if (row?.id) newId = row.id;
+                                } catch (_) {}
+                            }
+                            if (!newId && client.from) {
+                                try {
+                                    const { data: newShop } = await client.from('shops').insert({ owner_id: userId, ...validShopCols }).select();
+                                    if (newShop && newShop[0]?.id) newId = newShop[0].id;
+                                } catch (_) {}
+                            }
+                            if (newId) {
+                                currentShopId = newId;
+                                localStorage.setItem('currentShopId', newId);
+                            }
+                        })());
+                    }
+
+                    // 2. Sync Profile Avatar in public.profiles (if changed)
+                    if (newLogoCompressed) {
+                        promises.push((async () => {
+                            if (fetcher) {
+                                try {
+                                    await fetcher(`profiles?id=eq.${userId}`, {
+                                        method: 'PATCH',
+                                        body: { avatar_url: newLogoCompressed }
+                                    });
+                                } catch (_) {}
+                            }
+                            if (client.from) {
+                                try {
+                                    await client.from('profiles').update({ avatar_url: newLogoCompressed }).eq('id', userId);
+                                } catch (_) {}
+                            }
+                        })());
+                    }
+
+                    // 3. Sync User Metadata in Supabase Auth (saves cover photo, gallery, and map link)
+                    if (client.auth && client.auth.updateUser) {
+                        const userMetaUpdate = {
+                            shop_name: name,
+                            phone_number: phone,
+                            shop_description: rawDesc,
+                            description: rawDesc,
+                            street: street,
+                            address: street,
+                            full_address: fullAddr,
+                            sub_district: subDist,
+                            city: cty,
+                            zip: zip,
+                            map_link: mapLink
+                        };
+                        if (lat !== null && lng !== null) {
+                            userMetaUpdate.latitude = lat;
+                            userMetaUpdate.longitude = lng;
+                        }
+                        if (mainCoverPhoto) userMetaUpdate.cover_image_url = mainCoverPhoto;
+                        if (shopPhotos && shopPhotos.length > 0) userMetaUpdate.shop_images = shopPhotos;
+                        if (newLogoCompressed) userMetaUpdate.avatar_url = newLogoCompressed;
+
+                        promises.push(
+                            client.auth.updateUser({ data: userMetaUpdate }).catch(err => console.warn('updateUser notice:', err))
+                        );
+                    }
+
+                    // Await cloud sync with safety limit so user isn't blocked on slow connections
+                    await Promise.race([
+                        Promise.allSettled(promises),
+                        new Promise(resolve => setTimeout(resolve, 3000))
+                    ]);
+                }
+            } catch (err) {
+                console.warn('Shop details sync warning:', err);
+            }
+
+            // Visual confirmation
             if (saveBtn) {
                 saveBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">check_circle</span> บันทึกสำเร็จ';
                 saveBtn.classList.remove('bg-secondary');
@@ -1052,101 +1206,7 @@
             }
             toast.classList.add('show');
 
-            // 2. BACKGROUND SYNC TO SUPABASE (Non-blocking & Parallelized)
-            (async () => {
-                try {
-                    const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                    if (!client) return;
-
-                    let userId = currentUserId || localStorage.getItem('lastLoggedInUserId');
-                    if (!userId && client.auth) {
-                        try {
-                            const sess = await client.auth.getSession();
-                            userId = sess?.data?.session?.user?.id;
-                        } catch (_) {}
-                    }
-
-                    if (userId) {
-                        const validShopData = {
-                            name: name,
-                            phone_number: phone,
-                            description: rawDesc,
-                            address: fullAddr,
-                            updated_at: new Date().toISOString()
-                        };
-                        if (lat !== null && lng !== null) {
-                            validShopData.latitude = lat;
-                            validShopData.longitude = lng;
-                        }
-                        if (mainCoverPhoto) validShopData.cover_image_url = mainCoverPhoto;
-                        if (newLogoCompressed) validShopData.logo_url = newLogoCompressed;
-
-                        if (!currentShopId) currentShopId = localStorage.getItem('currentShopId');
-
-                        // Parallelize Shop Sync + Profile Sync + Metadata Sync
-                        const promises = [];
-                        const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
-
-                        if (fetcher) {
-                            if (currentShopId) {
-                                promises.push(fetcher(`shops?id=eq.${currentShopId}`, {
-                                    method: 'PATCH',
-                                    body: validShopData
-                                }));
-                            } else {
-                                promises.push(
-                                    fetcher('shops', {
-                                        method: 'POST',
-                                        headers: { 'Prefer': 'return=representation' },
-                                        body: { owner_id: userId, ...validShopData }
-                                    }).then(ns => {
-                                        const row = Array.isArray(ns) && ns.length > 0 ? ns[0] : ns;
-                                        if (row?.id) localStorage.setItem('currentShopId', row.id);
-                                    })
-                                );
-                            }
-
-                            if (newLogoCompressed) {
-                                promises.push(fetcher(`profiles?id=eq.${userId}`, {
-                                    method: 'PATCH',
-                                    body: { avatar_url: newLogoCompressed }
-                                }));
-                            }
-                        }
-
-                        if (client.auth) {
-                            const userMetaUpdate = {
-                                shop_name: name,
-                                phone_number: phone,
-                                shop_description: rawDesc,
-                                description: rawDesc,
-                                street: street,
-                                address: street,
-                                full_address: fullAddr,
-                                sub_district: subDist,
-                                city: cty,
-                                zip: zip,
-                                map_link: mapLink
-                            };
-                            if (lat !== null && lng !== null) {
-                                userMetaUpdate.latitude = lat;
-                                userMetaUpdate.longitude = lng;
-                            }
-                            if (mainCoverPhoto) userMetaUpdate.cover_image_url = mainCoverPhoto;
-                            if (shopPhotos && shopPhotos.length > 0) userMetaUpdate.shop_images = shopPhotos;
-                            if (newLogoCompressed) userMetaUpdate.avatar_url = newLogoCompressed;
-
-                            promises.push(client.auth.updateUser({ data: userMetaUpdate }));
-                        }
-
-                        await Promise.allSettled(promises);
-                    }
-                } catch (err) {
-                    console.warn('Background shop sync notice:', err);
-                }
-            })();
-
-            // Smooth redirect after visual confirmation (Fast & Snappy)
+            // Redirect smoothly to Owner Profile after saving
             setTimeout(() => {
                 toast.classList.remove('show');
                 window.location.href = 'Owner%20Profile.html';

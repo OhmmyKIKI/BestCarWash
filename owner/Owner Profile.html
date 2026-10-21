@@ -7,9 +7,9 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-client.js"></script>
+    <script src="supabase-client.js?v=1.2"></script>
+    <script src="../supabase-client.js?v=1.2"></script>
     <script id="tailwind-config">
         tailwind.config = {
           darkMode: "class",
@@ -655,6 +655,22 @@
                         if (sList && sList.length > 0) shop = sList[0];
                     } catch(e) {
                         console.warn('Network sync notice (shop by owner):', e);
+                    }
+                }
+
+                // SDK Fallback for shop
+                if (!shop && client && client.from) {
+                    try {
+                        if (savedShopId && savedShopId.length > 20) {
+                            const { data: sdkShops } = await client.from('shops').select('*').eq('id', savedShopId).limit(1);
+                            if (sdkShops && sdkShops.length > 0) shop = sdkShops[0];
+                        }
+                        if (!shop && effectiveUserId) {
+                            const { data: sdkShops } = await client.from('shops').select('*').eq('owner_id', effectiveUserId).limit(1);
+                            if (sdkShops && sdkShops.length > 0) shop = sdkShops[0];
+                        }
+                    } catch(sdkErr) {
+                        console.warn('SDK fallback notice (shop in profile):', sdkErr);
                     }
                 }
 
