@@ -71,19 +71,25 @@ export default async function handler(req, res) {
 
         let targetRes = await fetch(targetUrl, fetchOpts);
 
-        // If 400 due to non-existent columns (e.g. map_link or cover_image_url in legacy schema), retry without them
-        if (!targetRes.ok && targetRes.status === 400 && body && typeof body === 'object') {
-            const retryBody = { ...body };
-            let hasRemoved = false;
-            ['map_link', 'cover_image_url', 'logo_url', 'city'].forEach(col => {
-                if (col in retryBody) {
-                    delete retryBody[col];
-                    hasRemoved = true;
+        // If 400 due to non-existent columns (e.g. cover_image_url or logo_url in schema cache), retry without them
+        if (!targetRes.ok && targetRes.status === 400 && body) {
+            let retryBody = null;
+            try {
+                retryBody = typeof body === 'string' ? JSON.parse(body) : { ...body };
+            } catch (_) {}
+
+            if (retryBody && typeof retryBody === 'object') {
+                let hasRemoved = false;
+                ['cover_image_url', 'logo_url', 'city', 'slogan', 'facilities', 'review_count'].forEach(col => {
+                    if (col in retryBody) {
+                        delete retryBody[col];
+                        hasRemoved = true;
+                    }
+                });
+                if (hasRemoved) {
+                    fetchOpts.body = JSON.stringify(retryBody);
+                    targetRes = await fetch(targetUrl, fetchOpts);
                 }
-            });
-            if (hasRemoved) {
-                fetchOpts.body = JSON.stringify(retryBody);
-                targetRes = await fetch(targetUrl, fetchOpts);
             }
         }
 

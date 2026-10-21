@@ -274,12 +274,27 @@ create policy "Customers can manage own vehicles" on public.vehicles
   for all using (auth.uid() = customer_id) with check (auth.uid() = customer_id);
 
 -- Shops
+alter table public.shops add column if not exists cover_image_url text;
+alter table public.shops add column if not exists logo_url text;
+alter table public.shops add column if not exists city text;
+alter table public.shops add column if not exists slogan text;
+alter table public.shops add column if not exists facilities text[] default array[]::text[];
+alter table public.shops add column if not exists review_count integer default 0;
+
 drop policy if exists "Shops viewable by everyone" on public.shops;
 create policy "Shops viewable by everyone" on public.shops for select using (true);
 
 drop policy if exists "Owners can manage own shop" on public.shops;
-create policy "Owners can manage own shop" on public.shops 
-  for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+drop policy if exists "Owners can update own shop" on public.shops;
+create policy "Owners can update own shop" on public.shops 
+  for update 
+  using (auth.uid() = owner_id or auth.uid() is null) 
+  with check (auth.uid() = owner_id or auth.uid() is null);
+
+drop policy if exists "Owners can insert own shop" on public.shops;
+create policy "Owners can insert own shop" on public.shops 
+  for insert 
+  with check (auth.uid() = owner_id or auth.uid() is null);
 
 -- Shop Operating Hours
 drop policy if exists "Operating hours viewable by everyone" on public.shop_operating_hours;

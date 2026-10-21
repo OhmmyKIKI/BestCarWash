@@ -1534,17 +1534,20 @@
             const paramShopId = urlParams.get('shop_id') || urlParams.get('id');
             let targetShopId = (paramShopId && paramShopId.length > 20) ? paramShopId : (currentShopId || localStorage.getItem('currentShopId'));
 
+            // Priority: Resolve shop belonging to logged-in owner first
+            if (userId && window.safeSupabaseRest) {
+                try {
+                    const myShops = await window.safeSupabaseRest(`shops?owner_id=eq.${userId}&limit=1`);
+                    if (Array.isArray(myShops) && myShops.length > 0 && myShops[0]?.id) {
+                        targetShopId = myShops[0].id;
+                    }
+                } catch (_) {}
+            }
 
             if (!targetShopId && window.safeSupabaseRest) {
                 try {
-                    if (userId) {
-                        const sData = await window.safeSupabaseRest(`shops?owner_id=eq.${userId}&limit=1`);
-                        if (Array.isArray(sData) && sData.length > 0) targetShopId = sData[0].id;
-                    }
-                    if (!targetShopId) {
-                        const anyData = await window.safeSupabaseRest('shops?limit=1');
-                        if (Array.isArray(anyData) && anyData.length > 0) targetShopId = anyData[0].id;
-                    }
+                    const anyData = await window.safeSupabaseRest('shops?limit=1');
+                    if (Array.isArray(anyData) && anyData.length > 0) targetShopId = anyData[0].id;
                 } catch (_) {}
             }
 
@@ -1589,8 +1592,8 @@
                 } catch (_) {}
             }
 
-            // Database columns for shops table
-            const validShopCols = {
+            // Core guaranteed columns in standard shops table
+            const coreShopCols = {
                 name: name,
                 phone_number: phone,
                 description: rawDesc,
@@ -1598,34 +1601,48 @@
                 updated_at: new Date().toISOString()
             };
             if (lat !== null && lng !== null) {
-                validShopCols.latitude = lat;
-                validShopCols.longitude = lng;
+                coreShopCols.latitude = lat;
+                coreShopCols.longitude = lng;
             }
             if (mapLink) {
-                validShopCols.map_link = mapLink;
-            }
-            if (mainCoverPhoto) {
-                validShopCols.cover_image_url = mainCoverPhoto;
-            }
-            if (newLogoCompressed) {
-                validShopCols.logo_url = newLogoCompressed;
-            }
-            if (cty) {
-                validShopCols.city = cty;
+                coreShopCols.map_link = mapLink;
             }
 
-            // 3. DIRECT AWAITED SHOP UPDATE (High-capacity serverless proxy eliminates 494 and ISP resets)
+            // Extended columns (supported once Supabase migration is executed)
+            const extendedShopCols = { ...coreShopCols };
+            if (mainCoverPhoto) {
+                extendedShopCols.cover_image_url = mainCoverPhoto;
+            }
+            if (newLogoCompressed) {
+                extendedShopCols.logo_url = newLogoCompressed;
+            }
+            if (cty) {
+                extendedShopCols.city = cty;
+            }
+
+            // 3. DIRECT AWAITED SHOP UPDATE WITH SCHEMA-AWARE RESILIENCE
             let shopUpdated = false;
             let lastUpdateError = null;
             const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
 
             if (targetShopId && fetcher) {
                 try {
-                    const patchRes = await fetcher(`shops?id=eq.${targetShopId}`, {
+                    let patchRes = await fetcher(`shops?id=eq.${targetShopId}`, {
                         method: 'PATCH',
                         headers: { 'Prefer': 'return=representation' },
-                        body: validShopCols
+                        body: extendedShopCols
                     });
+
+                    // If patch failed because columns don't exist in Supabase schema cache (PGRST204)
+                    if (patchRes?.error && (String(patchRes.error).includes('column') || String(patchRes.error).includes('PGRST204'))) {
+                        console.warn('⚠️ Retrying with core columns...');
+                        patchRes = await fetcher(`shops?id=eq.${targetShopId}`, {
+                            method: 'PATCH',
+                            headers: { 'Prefer': 'return=representation' },
+                            body: coreShopCols
+                        });
+                    }
+
                     if (patchRes && !patchRes.error && (Array.isArray(patchRes) ? patchRes.length > 0 : true)) {
                         shopUpdated = true;
                         console.log('✅ Shop table updated via safeSupabaseRest');
@@ -1637,14 +1654,23 @@
                 }
             }
 
-            // Fallback insert if shop row does not exist yet
+            // Fallback: If not updated by ID (e.g. brand new user or ownership mismatch), insert shop with owner_id
             if (!shopUpdated && userId && fetcher) {
                 try {
-                    const insertRes = await fetcher('shops', {
+                    let insertRes = await fetcher('shops', {
                         method: 'POST',
                         headers: { 'Prefer': 'return=representation' },
-                        body: { owner_id: userId, ...validShopCols }
+                        body: { owner_id: userId, ...extendedShopCols }
                     });
+
+                    if (insertRes?.error && (String(insertRes.error).includes('column') || String(insertRes.error).includes('PGRST204'))) {
+                        insertRes = await fetcher('shops', {
+                            method: 'POST',
+                            headers: { 'Prefer': 'return=representation' },
+                            body: { owner_id: userId, ...coreShopCols }
+                        });
+                    }
+
                     if (insertRes && !insertRes.error) {
                         shopUpdated = true;
                         const newId = Array.isArray(insertRes) ? insertRes[0]?.id : insertRes?.id;
