@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-client.js"></script>
+    <script src="supabase-client.js?v=1.1"></script>
     <script id="tailwind-config">
         tailwind.config = {
           darkMode: "class",
@@ -616,9 +616,9 @@
         localStorage.setItem('appBookingsList', JSON.stringify(list));
     }
 
-    function updateBooking(bookingId, updates) {
+    async function updateBooking(bookingId, updates) {
         const list = getBookingsList();
-        const b = list.find(item => normId(item.bookingId) === normId(bookingId));
+        const b = list.find(item => normId(item.bookingId) === normId(bookingId) || normId(item.dbId) === normId(bookingId) || normId(item.id) === normId(bookingId));
         if (b) {
             Object.assign(b, updates);
             saveBookingsList(list);
@@ -629,11 +629,31 @@
         if (activeCust) {
             try {
                 const cust = JSON.parse(activeCust);
-                if (normId(cust.bookingId) === normId(bookingId)) {
+                if (normId(cust.bookingId) === normId(bookingId) || normId(cust.id) === normId(bookingId)) {
                     Object.assign(cust, updates);
                     localStorage.setItem('activeCustomerBooking', JSON.stringify(cust));
                 }
             } catch(e) {}
+        }
+
+        // Background sync status update to Supabase
+        const targetDbId = b?.dbId || (b?.id && b.id.length > 20 ? b.id : null);
+        if (targetDbId && updates.status) {
+            try {
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                if (fetcher) {
+                    fetcher(`bookings?id=eq.${targetDbId}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ status: updates.status, updated_at: new Date().toISOString() })
+                    }).catch(() => {});
+                }
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (client?.from) {
+                    client.from('bookings').update({ status: updates.status, updated_at: new Date().toISOString() }).eq('id', targetDbId).then().catch(() => {});
+                }
+            } catch(err) {
+                console.warn('Sync booking status to Supabase notice:', err);
+            }
         }
     }
 
@@ -1264,12 +1284,30 @@
                     }
                 }
 
+                // SDK Fallback for Bookings
+                if (!dbBookings && client?.from) {
+                    try {
+                        const targetShopId = savedShopId || localStorage.getItem('currentShopId');
+                        if (targetShopId) {
+                            const { data: sdkB } = await client
+                                .from('bookings')
+                                .select('*')
+                                .eq('shop_id', targetShopId)
+                                .order('created_at', { ascending: false });
+                            if (Array.isArray(sdkB) && sdkB.length > 0) dbBookings = sdkB;
+                        }
+                    } catch(_) {}
+                }
+
                 if (dbBookings && dbBookings.length > 0) {
                     let list = getBookingsList();
                     dbBookings.forEach(db => {
-                        if (!list.some(item => normId(item.bookingId) === normId(db.id))) {
+                        const existing = list.find(item => normId(item.bookingId) === normId(db.id) || normId(item.dbId) === normId(db.id) || normId(item.id) === normId(db.id));
+                        if (!existing) {
                             list.push({
                                 bookingId: '#' + (db.id.slice(0, 8)),
+                                dbId: db.id,
+                                id: db.id,
                                 customerName: db.customer_name || 'ลูกค้า',
                                 customerPhone: db.customer_phone || '-',
                                 carBrand: db.vehicle_info || 'รถยนต์',
@@ -1282,6 +1320,11 @@
                                 status: db.status || 'confirmed',
                                 isNew: false
                             });
+                        } else {
+                            existing.dbId = db.id;
+                            if (db.status && db.status !== existing.status) {
+                                existing.status = db.status;
+                            }
                         }
                     });
                     saveBookingsList(list);

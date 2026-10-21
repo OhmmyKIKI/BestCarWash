@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-client.js"></script>
+    <script src="supabase-client.js?v=1.1"></script>
     <script id="tailwind-config">
         tailwind.config = {
           darkMode: "class",
@@ -594,10 +594,27 @@
                     }
                 }
 
+                // SDK Fallback for History Bookings
+                if (!dbBookings && client?.from) {
+                    try {
+                        const targetShopId = savedShopId || localStorage.getItem('currentShopId');
+                        if (targetShopId) {
+                            const { data: sdkB } = await client
+                                .from('bookings')
+                                .select('*')
+                                .eq('shop_id', targetShopId)
+                                .in('status', ['completed', 'refunded', 'declined', 'no_show', 'refund_requested'])
+                                .order('created_at', { ascending: false });
+                            if (Array.isArray(sdkB) && sdkB.length > 0) dbBookings = sdkB;
+                        }
+                    } catch(_) {}
+                }
+
                 if (dbBookings && dbBookings.length > 0) {
                     let list = getHistoryBookings();
                     dbBookings.forEach(db => {
-                        if (!list.some(item => normId(item.bookingId) === normId(db.id))) {
+                        const existing = list.find(item => normId(item.bookingId) === normId(db.id) || normId(item.dbId) === normId(db.id) || normId(item.id) === normId(db.id));
+                        if (!existing) {
                             list.push({
                                 bookingId: '#' + (db.id.slice(0, 8)),
                                 customerName: db.customer_name || 'ลูกค้า',
