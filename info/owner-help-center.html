@@ -1,238 +1,755 @@
-﻿<!DOCTYPE html>
-<html class="light" lang="th"><head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>BestCarWash - ศูนย์ช่วยเหลือสำหรับเจ้าของร้าน</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
+<!DOCTYPE html>
+<html class="light" lang="th">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>BestCarWash - ศูนย์ช่วยเหลือสำหรับพาร์ทเนอร์ร้านค้า</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
         tailwind.config = {
-          darkMode: "class",
-          theme: {
-            extend: {
-              "colors": {
-                  "background": "#f8fafc",           // Slate 50 (Clean Pearl White)
-                  "on-background": "#0f172a",        // Slate 900 (Rich Charcoal)
-                  "primary": "#0284c7",              // Ocean Blue / Sky 600
-                  "secondary": "#059669",            // Emerald 600
-                  "surface": "#ffffff",              // Pure White
-                  "on-surface": "#0f172a",           // Slate 900
-                  "surface-container": "#ffffff",    // Card Pure White
-                  "surface-container-low": "#f8fafc",// Slate 50
-                  "surface-container-highest": "#f1f5f9", // Slate 100
-                  "surface-bright": "#ffffff",
-                  "surface-variant": "#f1f5f9",
-                  "on-surface-variant": "#475569",   // Slate 600 (Clear, legible)
-                  "outline": "#94a3b8",              // Slate 400
-                  "outline-variant": "#e2e8f0",      // Slate 200 border
-                  "primary-container": "#0284c7",    // Ocean Blue
-                  "on-primary-container": "#ffffff", // Pure White
-                  "secondary-container": "#ecfdf5",  // Mint 50
-                  "on-secondary-container": "#065f46", // Mint 900
-                  "error": "#e11d48",                // Rose 600
-                  "error-container": "#ffe4e6",
-                  "secondary-fixed": "#10b981",
-              },
-              "spacing": {
-                      "margin-mobile": "1rem",
-                      "gutter": "1rem",
-                      "touch-target-min": "3rem",
-                      "stack-sm": "0.5rem",
-                      "stack-md": "1rem",
-                      "stack-lg": "1.5rem"
-              },
-              "fontFamily": {
-                      "sans": ["Prompt", "Inter", "sans-serif"]
-              },
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        background: "#f8fafc",
+                        "on-background": "#0f172a",
+                        primary: "#0284c7",
+                        secondary: "#059669",
+                        surface: "#ffffff",
+                        "on-surface": "#0f172a",
+                        "surface-container": "#ffffff",
+                        "surface-container-low": "#f8fafc",
+                        "surface-container-highest": "#f1f5f9",
+                        "surface-bright": "#ffffff",
+                        "surface-variant": "#f1f5f9",
+                        "on-surface-variant": "#475569",
+                        outline: "#94a3b8",
+                        "outline-variant": "#e2e8f0",
+                        "primary-container": "#0284c7",
+                        "on-primary-container": "#ffffff",
+                        "secondary-container": "#ecfdf5",
+                        "on-secondary-container": "#065f46",
+                        error: "#e11d48",
+                        "error-container": "#ffe4e6",
+                        "secondary-fixed": "#10b981",
+                    },
+                    fontFamily: {
+                        sans: ["Prompt", "Inter", "sans-serif"]
+                    }
+                }
             }
-          }
         }
-      </script>
-<style>
+    </script>
+    <style>
         body {
             background-color: theme('colors.background');
             color: theme('colors.on-background');
             -webkit-tap-highlight-color: transparent;
         }
-        
-        /* Accordion transition */
-        .accordion-content {
-            display: grid;
-            grid-template-rows: 0fr;
-            transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .accordion-content[aria-hidden="false"] {
-            grid-template-rows: 1fr;
-        }
-        .accordion-inner {
+
+        /* Accordion transition using max-height */
+        .faq-answer {
+            max-height: 0;
             overflow: hidden;
+            transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease-out;
+            opacity: 0;
         }
-        
-        /* Arrow rotation */
-        .accordion-button[aria-expanded="true"] .chevron-icon {
+        .faq-item.active .faq-answer {
+            opacity: 1;
+        }
+        .faq-icon {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .faq-item.active .faq-icon {
             transform: rotate(180deg);
+        }
+
+        /* Filter Chip Active */
+        .filter-chip.active {
+            background-color: #059669;
+            color: #ffffff;
+            border-color: #059669;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+        }
+
+        /* Highlighting searched text */
+        mark.search-highlight {
+            background-color: #fef08a;
+            color: #854d0e;
+            padding: 0 2px;
+            border-radius: 2px;
         }
     </style>
 </head>
-<body class="antialiased flex flex-col min-h-screen bg-background text-on-background pb-12">
+<body class="antialiased flex flex-col min-h-screen bg-background text-on-background pb-16">
 
 <!-- Top Header (App Bar) -->
-<header class="sticky top-0 w-full z-50 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md">
-    <div class="w-full px-4 md:px-8 h-20 flex items-center justify-between">
-        <!-- Left: Back Button & Page Identification -->
-        <div class="flex items-center gap-3.5">
-            <a href="../owner/Owner%20Profile.html" class="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/40 transition-all active:scale-95 group" title="กลับไปโปรไฟล์">
-                <span class="material-symbols-outlined text-[22px] md:text-[24px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
-            </a>
-            <h1 class="text-lg md:text-xl font-bold text-on-surface tracking-tight flex items-center gap-2.5">
-                <span class="material-symbols-outlined text-secondary text-[26px]">help_center</span>
-                <span>ศูนย์ช่วยเหลือพาร์ทเนอร์</span>
-            </h1>
+<header class="sticky top-0 w-full z-40 bg-surface/90 backdrop-blur-md border-b border-outline-variant/60 shadow-xs">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between">
+        <!-- Left: Back Button & Page Title -->
+        <div class="flex items-center gap-3">
+            <button type="button" onclick="goBack()" class="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/60 transition-all active:scale-95 group" title="ย้อนกลับ">
+                <span class="material-symbols-outlined text-[20px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+            </button>
+            <div class="flex flex-col">
+                <h1 class="text-base sm:text-lg font-bold text-on-surface tracking-tight flex items-center gap-2">
+                    <span class="material-symbols-outlined text-secondary text-[22px]">help_center</span>
+                    <span>ศูนย์ช่วยเหลือพาร์ทเนอร์</span>
+                </h1>
+                <span class="text-[11px] text-on-surface-variant">BestCarWash Partner Help Center</span>
+            </div>
         </div>
 
         <!-- Right: Action Buttons -->
-        <div class="flex items-center gap-2.5 sm:gap-3.5">
-            <a href="https://line.me" target="_blank" class="h-11 px-3.5 sm:px-5 rounded-xl bg-surface-container hover:bg-surface-variant border border-outline-variant/40 text-on-surface text-sm font-semibold flex items-center gap-2 transition-all hover:border-secondary/40 active:scale-95" title="ติดต่อฝ่ายบริการลูกค้า">
-                <span class="material-symbols-outlined text-[20px] text-secondary">support_agent</span>
-                <span class="hidden sm:inline">ติดต่อเจ้าหน้าที่</span>
-            </a>
+        <div class="flex items-center gap-2">
+            <button type="button" onclick="openContactModal()" class="h-10 px-3.5 sm:px-4 rounded-xl bg-secondary-container hover:bg-secondary/15 text-secondary border border-secondary/30 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all active:scale-95 shadow-xs">
+                <span class="material-symbols-outlined text-[18px]">support_agent</span>
+                <span>ติดต่อเจ้าหน้าที่</span>
+            </button>
         </div>
     </div>
 </header>
 
-<main class="w-full max-w-3xl px-4 pt-8 pb-24 md:pt-10 mx-auto space-y-6 flex-1">
+<main class="w-full max-w-4xl px-4 sm:px-6 pt-6 sm:pt-8 mx-auto space-y-6 flex-1">
     
-    <!-- Search Bar -->
-    <div class="relative w-full">
-        <input type="text" placeholder="ค้นหาคำถามหรือหัวข้อที่ต้องการความช่วยเหลือ..." class="w-full h-14 pl-12 pr-4 bg-surface-container/80 backdrop-blur-md border border-outline-variant/30 rounded-2xl text-on-surface placeholder-outline-variant focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors shadow-lg">
-        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[24px]">search</span>
-    </div>
+    <!-- Hero Banner with Greeting & Live Search -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900 p-6 sm:p-8 text-white shadow-xl">
+        <div class="absolute -right-12 -bottom-12 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="absolute top-0 right-0 p-8 opacity-10 pointer-events-none hidden sm:block">
+            <span class="material-symbols-outlined text-[140px]">storefront</span>
+        </div>
 
-    <!-- FAQ Section -->
-    <div class="space-y-4">
-        <h2 class="text-sm font-bold text-secondary flex items-center gap-2 px-1">
-            <span class="material-symbols-outlined text-[18px]">quick_reference_all</span> คำถามที่พบบ่อยสำหรับเจ้าของร้าน
-        </h2>
-        
-        <div class="space-y-3">
-            
-            <!-- FAQ Item 1 -->
-            <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden group hover:border-secondary/30 transition-colors">
-                <button class="accordion-button w-full flex items-center justify-between p-4 text-left focus:outline-none" aria-expanded="false">
-                    <span class="text-sm font-semibold text-on-surface pr-4">การเบิกจ่ายใช้เวลาดำเนินการนานแค่ไหน?</span>
-                    <span class="material-symbols-outlined text-outline-variant chevron-icon transition-transform duration-300">expand_more</span>
-                </button>
-                <div class="accordion-content" aria-hidden="true">
-                    <div class="accordion-inner">
-                        <div class="px-4 pb-4 pt-1 text-sm text-on-surface-variant leading-relaxed">
-                            โดยปกติระบบจะทำการรวบรวมยอดและโอนเงินเข้าบัญชีธนาคารที่คุณผูกไว้ภายใน 1-3 วันทำการ นับจากวันที่ลูกค้าทำการเข้ารับบริการสำเร็จ (ไม่รวมวันหยุดนักขัตฤกษ์)
-                        </div>
-                    </div>
-                </div>
+        <div class="relative z-10 max-w-xl space-y-3">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-xs font-medium text-emerald-100">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>ยินดีต้อนรับพาร์ทเนอร์ร้านค้า</span>
             </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                มีอะไรให้เราช่วยเหลือวันนี้?
+            </h2>
+            <p class="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
+                ค้นหาวิธีการใช้งานระบบ จัดการคิวงาน ตรวจสลิปยอดเงิน หรือตั้งค่าร้านค้าได้อย่างรวดเร็ว
+            </p>
 
-            <!-- FAQ Item 2 -->
-            <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden group hover:border-secondary/30 transition-colors">
-                <button class="accordion-button w-full flex items-center justify-between p-4 text-left focus:outline-none" aria-expanded="false">
-                    <span class="text-sm font-semibold text-on-surface pr-4">ฉันควรทำอย่างไรหากลูกค้าไม่มาตามนัด?</span>
-                    <span class="material-symbols-outlined text-outline-variant chevron-icon transition-transform duration-300">expand_more</span>
+            <!-- Search Bar -->
+            <div class="relative w-full pt-2">
+                <input type="text" id="faqSearchInput" placeholder="ค้นหาคำถาม เช่น ตรวจสลิป, เบิกจ่าย, ลูกค้าไม่มา, LINE, ปักหมุด..." 
+                       class="w-full h-13 pl-11 pr-10 bg-white/95 text-slate-900 placeholder:text-slate-400 rounded-2xl text-sm font-medium border-0 shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all">
+                <span class="material-symbols-outlined absolute left-3.5 top-[21px] text-slate-400 text-[22px] pointer-events-none">search</span>
+                <button type="button" id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-3 top-[20px] w-6 h-6 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center transition-colors">
+                    <span class="material-symbols-outlined text-[14px]">close</span>
                 </button>
-                <div class="accordion-content" aria-hidden="true">
-                    <div class="accordion-inner">
-                        <div class="px-4 pb-4 pt-1 text-sm text-on-surface-variant leading-relaxed">
-                            หากลูกค้าไม่มาแสดงตัว (No-Show) เกินเวลาที่กำหนดไว้ 15 นาที คุณสามารถกดยกเลิกคิวในหน้ารายละเอียดการจอง และเลือกเหตุผล "ลูกค้าไม่มาตามนัด" ระบบจะทำการปรับสถานะและคืนเงิน/หักเครดิตลูกค้าตามเงื่อนไขอัตโนมัติ
-                        </div>
-                    </div>
-                </div>
             </div>
-
-            <!-- FAQ Item 3 -->
-            <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden group hover:border-secondary/30 transition-colors">
-                <button class="accordion-button w-full flex items-center justify-between p-4 text-left focus:outline-none" aria-expanded="false">
-                    <span class="text-sm font-semibold text-on-surface pr-4">ฉันสามารถหยุดรับคิวชั่วคราวได้อย่างไร?</span>
-                    <span class="material-symbols-outlined text-outline-variant chevron-icon transition-transform duration-300">expand_more</span>
-                </button>
-                <div class="accordion-content" aria-hidden="true">
-                    <div class="accordion-inner">
-                        <div class="px-4 pb-4 pt-1 text-sm text-on-surface-variant leading-relaxed">
-                            คุณสามารถตั้งสถานะร้านเป็น 'ปิดรับคิวชั่วคราว' ได้โดยไปที่เมนู <span class="font-semibold text-on-surface">"เวลาเปิดทำการ"</span> ในหน้าโปรไฟล์ของคุณ และทำการปิดสวิตช์ในวันที่คุณต้องการหยุดรับงาน ลูกค้าจะไม่สามารถจองคิวเข้ามาในวันนั้นได้
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- FAQ Item 4 -->
-            <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden group hover:border-secondary/30 transition-colors">
-                <button class="accordion-button w-full flex items-center justify-between p-4 text-left focus:outline-none" aria-expanded="false">
-                    <span class="text-sm font-semibold text-on-surface pr-4">วิธีการอัปเดตข้อมูลภาษีหรือนิติบุคคลของร้านค้า?</span>
-                    <span class="material-symbols-outlined text-outline-variant chevron-icon transition-transform duration-300">expand_more</span>
-                </button>
-                <div class="accordion-content" aria-hidden="true">
-                    <div class="accordion-inner">
-                        <div class="px-4 pb-4 pt-1 text-sm text-on-surface-variant leading-relaxed">
-                            หากร้านของคุณมีการจดทะเบียนหรือเปลี่ยนแปลงข้อมูลภาษี ภ.พ.20 กรุณาติดต่อทีมสนับสนุนพาร์ทเนอร์โดยตรงผ่านทางอีเมลพร้อมแนบเอกสารรับรอง เพื่อให้เจ้าหน้าที่ทำการอัปเดตข้อมูลในระบบบัญชีหลังบ้านให้ถูกต้อง
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+            <div id="searchCounter" class="text-[11px] text-emerald-100/80 font-medium pl-1 hidden"></div>
         </div>
     </div>
 
-    <!-- Dedicated Partner Support Section -->
-    <div class="space-y-4 pt-4 border-t border-outline-variant/30">
-        <h2 class="text-sm font-bold text-secondary flex items-center gap-2 px-1">
-            <span class="material-symbols-outlined text-[18px]">support_agent</span> ต้องการความช่วยเหลือเพิ่มเติม?
-        </h2>
-        
-        <div class="bg-surface-container/80 backdrop-blur-xl border border-secondary/20 p-5 rounded-3xl shadow-[0_8px_30px_rgba(37,99,235,0.05)] relative overflow-hidden flex flex-col gap-4 text-center items-center">
-            <div class="absolute -top-10 -right-10 w-32 h-32 bg-secondary/5 rounded-full blur-2xl pointer-events-none"></div>
-            
-            <div class="w-16 h-16 rounded-full bg-secondary-container text-secondary flex items-center justify-center mb-2">
-                <span class="material-symbols-outlined text-[32px]">headset_mic</span>
-            </div>
-            
-            <p class="text-sm text-on-surface-variant mb-2">ทีมดูแลพาร์ทเนอร์ของเราพร้อมช่วยเหลือคุณเสมอในเวลาทำการ (จันทร์-ศุกร์ 09:00 - 18:00 น.)</p>
-
-            <button class="w-full h-12 bg-secondary text-on-secondary-container font-bold rounded-xl hover:bg-secondary/90 transition-colors shadow-lg shadow-secondary/20 active:scale-[0.98] flex items-center justify-center gap-2">
-                <span class="material-symbols-outlined text-[20px]">call</span> ติดต่อทีมดูแลพาร์ทเนอร์
+    <!-- Quick Filter Category Chips -->
+    <div class="space-y-2">
+        <div class="flex items-center justify-between px-1">
+            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">หมวดหมู่คำถาม</span>
+            <span id="itemsCountBadge" class="text-xs font-semibold text-secondary">ทั้งหมด 11 คำถาม</span>
+        </div>
+        <div class="flex items-center gap-2 overflow-x-auto pb-2 pt-1 no-scrollbar text-xs">
+            <button type="button" onclick="filterCategory('all', this)" class="filter-chip active shrink-0 px-3.5 py-2 rounded-xl bg-surface border border-outline-variant/60 font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-all">
+                ทั้งหมด
             </button>
-            
-            <button class="w-full h-12 bg-transparent border-2 border-secondary text-secondary font-bold rounded-xl hover:bg-secondary/10 transition-colors active:scale-[0.98] flex items-center justify-center gap-2">
-                <span class="material-symbols-outlined text-[20px]">mail</span> ส่งอีเมลหาทีมสนับสนุน
+            <button type="button" onclick="filterCategory('queue', this)" class="filter-chip shrink-0 px-3.5 py-2 rounded-xl bg-surface border border-outline-variant/60 font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-all flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[15px]">list_alt</span> การจัดการคิว
+            </button>
+            <button type="button" onclick="filterCategory('payment', this)" class="filter-chip shrink-0 px-3.5 py-2 rounded-xl bg-surface border border-outline-variant/60 font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-all flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[15px]">payments</span> การเงิน & สลิป
+            </button>
+            <button type="button" onclick="filterCategory('shop', this)" class="filter-chip shrink-0 px-3.5 py-2 rounded-xl bg-surface border border-outline-variant/60 font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-all flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[15px]">storefront</span> ข้อมูลร้าน & เมนู
+            </button>
+            <button type="button" onclick="filterCategory('line', this)" class="filter-chip shrink-0 px-3.5 py-2 rounded-xl bg-surface border border-outline-variant/60 font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-all flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[15px]">chat</span> LINE & แจ้งเตือน
+            </button>
+            <button type="button" onclick="filterCategory('account', this)" class="filter-chip shrink-0 px-3.5 py-2 rounded-xl bg-surface border border-outline-variant/60 font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-all flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[15px]">badge</span> บัญชี & ภาษี
             </button>
         </div>
+    </div>
+
+    <!-- FAQ Accordion List -->
+    <div class="space-y-3" id="faqContainer">
+
+        <!-- Item 1: Queue - Status Updates -->
+        <div class="faq-item bg-surface border border-outline-variant/60 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:border-secondary/40" data-category="queue">
+            <button type="button" class="w-full flex items-center justify-between p-4 sm:p-5 text-left focus:outline-none gap-3" aria-expanded="false">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-xl bg-emerald-50 text-secondary border border-emerald-200/60 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[18px]">sync_alt</span>
+                    </span>
+                    <span class="faq-question text-sm sm:text-base font-bold text-on-surface">การเปลี่ยนสถานะคิวงานของลูกค้า (กำลังล้าง, เสร็จแล้ว) ทำอย่างไร?</span>
+                </div>
+                <span class="material-symbols-outlined text-outline faq-icon shrink-0 text-[22px]">expand_more</span>
+            </button>
+            <div class="faq-answer">
+                <div class="px-4 sm:px-5 pb-5 pt-1 text-xs sm:text-sm text-on-surface-variant leading-relaxed border-t border-outline-variant/40 bg-surface-container-low/50">
+                    <p class="mb-2">คุณสามารถปรับสถานะการทำงานได้ในหน้า <a href="../owner/owner-bookings.html" class="font-bold text-secondary hover:underline inline-flex items-center gap-0.5"><span>จัดการคิวงาน</span> <span class="material-symbols-outlined text-[14px]">open_in_new</span></a> ตามลำดับขั้นตอนดังนี้:</p>
+                    <ol class="list-decimal pl-5 space-y-1.5 text-xs text-on-surface-variant">
+                        <li><strong>ยืนยันรับงาน (Confirmed):</strong> เมื่อตรวจสอบวันเวลาและรายละเอียดคิวถูกต้อง</li>
+                        <li><strong>กำลังให้บริการ (In Progress):</strong> กดยืนยันเมื่อลูกค้านำรถเข้ามาจอดและเริ่มขั้นตอนการล้าง</li>
+                        <li><strong>ล้างเสร็จแล้ว (Ready for Pickup):</strong> กดยืนยันเพื่อให้ระบบส่งแจ้งเตือนให้ลูกค้ามารับรถ</li>
+                        <li><strong>ส่งมอบรถเรียบร้อย (Completed):</strong> ปิดงานเมื่อลูกค้าตรวจสอบรถและรับรถกลับเรียบร้อย</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- Item 2: Queue - No Show -->
+        <div class="faq-item bg-surface border border-outline-variant/60 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:border-secondary/40" data-category="queue">
+            <button type="button" class="w-full flex items-center justify-between p-4 sm:p-5 text-left focus:outline-none gap-3" aria-expanded="false">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-xl bg-rose-50 text-error border border-rose-200/60 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[18px]">person_cancel</span>
+                    </span>
+                    <span class="faq-question text-sm sm:text-base font-bold text-on-surface">หากลูกค้าไม่มาตามนัด (No-Show) ร้านค้าควรทำอย่างไร?</span>
+                </div>
+                <span class="material-symbols-outlined text-outline faq-icon shrink-0 text-[22px]">expand_more</span>
+            </button>
+            <div class="faq-answer">
+                <div class="px-4 sm:px-5 pb-5 pt-1 text-xs sm:text-sm text-on-surface-variant leading-relaxed border-t border-outline-variant/40 bg-surface-container-low/50">
+                    ทางระบบกำหนดระยะเวลาผ่อนผันการมาสายอย่างน้อย <strong>15 นาที</strong> หากเกินระยะเวลาและไม่สามารถติดต่อลูกค้าได้:
+                    <ul class="list-disc pl-5 mt-2 space-y-1 text-xs">
+                        <li>ไปที่หน้ารายละเอียดการจองของคิวดังกล่าว</li>
+                        <li>เลือกปุ่ม <strong>"ยกเลิกคิวงาน"</strong> แล้วระบุเหตุผลว่า <em>"ลูกค้าไม่มาแสดงตัวตามนัด (No-Show)"</em></li>
+                        <li>ระบบจะทำการบันทึกประวัติ และปลดล็อกช่องบริการเพื่อให้ร้านค้ารับลูกค้ารายอื่นต่อไป</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Item 3: Payment - Slip Verification -->
+        <div class="faq-item bg-surface border border-outline-variant/60 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:border-secondary/40" data-category="payment">
+            <button type="button" class="w-full flex items-center justify-between p-4 sm:p-5 text-left focus:outline-none gap-3" aria-expanded="false">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-xl bg-sky-50 text-primary border border-sky-200/60 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+                    </span>
+                    <span class="faq-question text-sm sm:text-base font-bold text-on-surface">จะตรวจสอบสลิปโอนเงินของลูกค้าได้อย่างไรว่าถูกต้อง?</span>
+                </div>
+                <span class="material-symbols-outlined text-outline faq-icon shrink-0 text-[22px]">expand_more</span>
+            </button>
+            <div class="faq-answer">
+                <div class="px-4 sm:px-5 pb-5 pt-1 text-xs sm:text-sm text-on-surface-variant leading-relaxed border-t border-outline-variant/40 bg-surface-container-low/50">
+                    <p class="mb-2">ในหน้ารายละเอียดคิวงาน (<a href="../owner/owner-bookings.html" class="font-bold text-secondary hover:underline">จัดการคิว</a>):</p>
+                    <ul class="list-disc pl-5 space-y-1.5 text-xs">
+                        <li>หากลูกค้าชำระเงินแบบโอนเงิน จะมีปุ่ม <strong>"ดูสลิปหลักฐานการโอน"</strong> แสดงขึ้นมา</li>
+                        <li>กดเพื่อดูภาพสลิปขนาดเต็ม แนะนำให้ร้านค้าตรวจสอบ: <strong>ชื่อบัญชีผู้รับ, จำนวนเงินตรงกับแพ็กเกจ, และวันเวลาที่ทำรายการ</strong> ก่อนเริ่มบริการ</li>
+                        <li>หากพบสลิปปลอมหรือไม่มียอดเข้า สามารถกดยกเลิกและแจ้งลูกค้าให้อัปโหลดใหม่ได้ทันที</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Item 4: Payment - Payout Timelines -->
+        <div class="faq-item bg-surface border border-outline-variant/60 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:border-secondary/40" data-category="payment">
+            <button type="button" class="w-full flex items-center justify-between p-4 sm:p-5 text-left focus:outline-none gap-3" aria-expanded="false">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-xl bg-emerald-50 text-secondary border border-emerald-200/60 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+                    </span>
+                    <span class="faq-question text-sm sm:text-base font-bold text-on-surface">การเบิกจ่ายเงิน (Payout) ใช้เวลาดำเนินการนานแค่ไหน?</span>
+                </div>
+                <span class="material-symbols-outlined text-outline faq-icon shrink-0 text-[22px]">expand_more</span>
+            </button>
+            <div class="faq-answer">
+                <div class="px-4 sm:px-5 pb-5 pt-1 text-xs sm:text-sm text-on-surface-variant leading-relaxed border-t border-outline-variant/40 bg-surface-container-low/50">
+                    โดยปกติระบบจะทำการรวบรวมยอดเงินที่สำเร็จและโอนเข้าบัญชีธนาคารที่คุณผูกไว้ภายใน <strong>1-3 วันทำการ</strong> นับจากวันที่งานเสร็จสิ้นสมบูรณ์ (ไม่รวมวันเสาร์-อาทิตย์ และวันหยุดนักขัตฤกษ์) สามารถติดตามสถานะยอดเงินคงเหลือและประวัติได้ที่หน้า <a href="../owner/payouts.html" class="font-bold text-secondary hover:underline">ข้อมูลการเงิน & เบิกจ่าย</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Item 5: Shop - Services & Pricing -->
+        <div class="faq-item bg-surface border border-outline-variant/60 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:border-secondary/40" data-category="shop">
+            <button type="button" class="w-full flex items-center justify-between p-4 sm:p-5 text-left focus:outline-none gap-3" aria-expanded="false">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 border border-amber-200/60 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[18px]">local_car_wash</span>
+                    </span>
+                    <span class="faq-question text-sm sm:text-base font-bold text-on-surface">ฉันสามารถเพิ่ม หรือแก้ไขบริการและราคาล้างรถได้อย่างไร?</span>
+                </div>
+                <span class="material-symbols-outlined text-outline faq-icon shrink-0 text-[22px]">expand_more</span>
+            </button>
+            <div class="faq-answer">
+                <div class="px-4 sm:px-5 pb-5 pt-1 text-xs sm:text-sm text-on-surface-variant leading-relaxed border-t border-outline-variant/40 bg-surface-container-low/50">
+                    เข้าเมนู <a href="../owner/manage-services.html" class="font-bold text-secondary hover:underline">"จัดการบริการและราคา"</a> คุณสามารถ:
+                    <ul class="list-disc pl-5 mt-2 space-y-1 text-xs">
+                        <li>เพิ่มบริการใหม่ เช่น ล้างสีดูดฝุ่น, เคลือบแก้ว, ล้างห้องเครื่อง, อบโอโซน</li>
+                        <li>ตั้งราคาแยกตามขนาดไซส์รถยนต์ (S, M, L, XL) ได้อย่างอิสระ</li>
+                        <li>เปิด/ปิด สวิตช์บริการที่ต้องการเปิดรับชั่วคราว ข้อมูลจะแสดงผลบนหน้าค้นหาร้านทันที</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Item 6: Shop - Google Maps Location -->
+        <div class="faq-item bg-surface border border-outline-variant/60 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:border-secondary/40" data-category="shop">
+            <button type="button" class="w-full flex items-center justify-between p-4 sm:p-5 text-left focus:outline-none gap-3" aria-expanded="false">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200/60 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[18px]">pin_drop</span>
+                    </span>
+                    <span class="faq-question text-sm sm:text-base font-bold text-on-surface">วิธีตั้งค่าพิกัดแผนที่ (Google Maps) เพื่อให้ลูกค้ากดขอเส้นทางได้ถูกต้อง?</span>
+                </div>
+                <span class="material-symbols-outlined text-outline faq-icon shrink-0 text-[22px]">expand_more</span>
+            </button>
+            <div class="faq-answer">
+                <div class="px-4 sm:px-5 pb-5 pt-1 text-xs sm:text-sm text-on-surface-variant leading-relaxed border-t border-outline-variant/40 bg-surface-container-low/50">
+                    <p class="mb-2">ไปที่เมนู <a href="../owner/manage-shop-details.html" class="font-bold text-secondary hover:underline">"จัดการรายละเอียดร้านค้า"</a>:</p>
+                    <ul class="list-disc pl-5 space-y-1.5 text-xs">
+                        <li>กรอกลิงก์ <strong>Google Maps Link</strong> ของร้านค้า หรือปักหมุดระบุละติจูด-ลองจิจูด</li>
+                        <li>เมื่อลูกค้าเปิดดูร้านค้าของคุณในหน้า <a href="../customer/discovery.html" class="font-bold text-secondary hover:underline">ค้นหาร้าน</a> หรือหน้ารายละเอียดร้าน จะมีปุ่ม <strong>"ขอเส้นทาง"</strong> ที่นำทางลูกค้าผ่าน Google Maps ตรงมายังร้านได้ทันที</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Item 7: Shop - Operating Hours & Temporary Closing -->
+        <div class="faq-item bg-surface border border-outline-variant/60 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:border-secondary/40" data-category="shop">
+            <button type="button" class="w-full flex items-center justify-between p-4 sm:p-5 text-left focus:outline-none gap-3" aria-expanded="false">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 border border-orange-200/60 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[18px]">schedule</span>
+                    </span>
+                    <span class="faq-question text-sm sm:text-base font-bold text-on-surface">ฉันสามารถหยุดรับคิวชั่วคราว หรือเปลี่ยนเวลาเปิด-ปิดร้านได้อย่างไร?</span>
+                </div>
+                <span class="material-symbols-outlined text-outline faq-icon shrink-0 text-[22px]">expand_more</span>
+            </button>
+            <div class="faq-answer">
+                <div class="px-4 sm:px-5 pb-5 pt-1 text-xs sm:text-sm text-on-surface-variant leading-relaxed border-t border-outline-variant/40 bg-surface-container-low/50">
+                    คุณสามารถไปที่เมนู <a href="../owner/manage-operating-hours.html" class="font-bold text-secondary hover:underline">"จัดการเวลาเปิดทำการ"</a> แล้วเลือกเปิด/ปิดสวิตช์ประจำวัน (จันทร์ - อาทิตย์) หรือกำหนดช่วงเวลาเปิด-ปิด หากปิดวันใด ลูกค้าจะไม่สามารถกดเลือกจองคิวในวันนั้นๆ ได้
+                </div>
+            </div>
+        </div>
+
+        <!-- Item 8: LINE - Connect & Notifications -->
+        <div class="faq-item bg-surface border border-outline-variant/60 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:border-secondary/40" data-category="line">
+            <button type="button" class="w-full flex items-center justify-between p-4 sm:p-5 text-left focus:outline-none gap-3" aria-expanded="false">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-xl bg-emerald-50 text-[#06C755] border border-emerald-200/60 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[18px]">notifications_active</span>
+                    </span>
+                    <span class="faq-question text-sm sm:text-base font-bold text-on-surface">ทำอย่างไรให้ได้รับการแจ้งเตือนคิวงานใหม่และสลิปผ่าน LINE Official?</span>
+                </div>
+                <span class="material-symbols-outlined text-outline faq-icon shrink-0 text-[22px]">expand_more</span>
+            </button>
+            <div class="faq-answer">
+                <div class="px-4 sm:px-5 pb-5 pt-1 text-xs sm:text-sm text-on-surface-variant leading-relaxed border-t border-outline-variant/40 bg-surface-container-low/50">
+                    <p class="mb-2">ไปที่เมนู <a href="../owner/notification-settings.html" class="font-bold text-secondary hover:underline">"ตั้งค่าการแจ้งเตือน"</a>:</p>
+                    <ul class="list-disc pl-5 space-y-1.5 text-xs">
+                        <li>เปิดสวิตช์ <strong>"แจ้งเตือนผ่าน LINE Official"</strong></li>
+                        <li>กดปุ่ม <strong>"แอดเพื่อน LINE"</strong> แล้วสแกน QR Code หรือเปิดแอปเพื่อเพิ่มเพื่อนบัญชี <strong>@bestcarwash</strong></li>
+                        <li>เมื่อมีลูกค้าจองคิวใหม่ หรือมีสลิปเข้ามา ระบบจะส่งข้อความแจ้งเตือนเข้าแอป LINE ของร้านทันที</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Item 9: LINE - Missing Push Notifications -->
+        <div class="faq-item bg-surface border border-outline-variant/60 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:border-secondary/40" data-category="line">
+            <button type="button" class="w-full flex items-center justify-between p-4 sm:p-5 text-left focus:outline-none gap-3" aria-expanded="false">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 border border-slate-300/60 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[18px]">notifications_off</span>
+                    </span>
+                    <span class="faq-question text-sm sm:text-base font-bold text-on-surface">หากไม่ได้รับข้อความแจ้งเตือนบนเบราว์เซอร์หรือมือถือ ต้องแก้ไขอย่างไร?</span>
+                </div>
+                <span class="material-symbols-outlined text-outline faq-icon shrink-0 text-[22px]">expand_more</span>
+            </button>
+            <div class="faq-answer">
+                <div class="px-4 sm:px-5 pb-5 pt-1 text-xs sm:text-sm text-on-surface-variant leading-relaxed border-t border-outline-variant/40 bg-surface-container-low/50">
+                    <ul class="list-disc pl-5 space-y-1.5 text-xs">
+                        <li>ตรวจสอบว่าได้กด "อนุญาต (Allow)" การแจ้งเตือนที่แถบด้านบนของเบราว์เซอร์ (Chrome / Safari / Edge) แล้วหรือไม่</li>
+                        <li>ตรวจสอบว่าไม่ได้เปิดโหมด <strong>"ห้ามรบกวน (Do Not Disturb)"</strong> หรือโหมดประหยัดพลังงานในอุปกรณ์</li>
+                        <li>สามารถตรวจสอบรายการแจ้งเตือนย้อนหลังทั้งหมดได้ที่ <a href="../owner/owner-notifications-list.html" class="font-bold text-secondary hover:underline">กล่องข้อความแจ้งเตือน</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Item 10: Account - Updating Tax ID & Business Info -->
+        <div class="faq-item bg-surface border border-outline-variant/60 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:border-secondary/40" data-category="account">
+            <button type="button" class="w-full flex items-center justify-between p-4 sm:p-5 text-left focus:outline-none gap-3" aria-expanded="false">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 border border-purple-200/60 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[18px]">description</span>
+                    </span>
+                    <span class="faq-question text-sm sm:text-base font-bold text-on-surface">วิธีการอัปเดตข้อมูลภาษี หรือเอกสารนิติบุคคล (ภ.พ.20) ของร้านค้า?</span>
+                </div>
+                <span class="material-symbols-outlined text-outline faq-icon shrink-0 text-[22px]">expand_more</span>
+            </button>
+            <div class="faq-answer">
+                <div class="px-4 sm:px-5 pb-5 pt-1 text-xs sm:text-sm text-on-surface-variant leading-relaxed border-t border-outline-variant/40 bg-surface-container-low/50">
+                    หากร้านของคุณจดทะเบียนภาษีมูลค่าเพิ่มหรือเปลี่ยนชื่อนิติบุคคล กรุณาส่งสำเนาเอกสาร ภ.พ.20 หรือหนังสือรับรองบริษัท มายังอีเมล <a href="mailto:partner-billing@bestcarwash.com" class="font-mono font-bold text-secondary hover:underline">partner-billing@bestcarwash.com</a> เจ้าหน้าที่จะทำการตรวจสอบและอัปเดตระบบบัญชีหลังบ้านให้ภายใน 1-2 วันทำการ
+                </div>
+            </div>
+        </div>
+
+        <!-- Item 11: Account - Reviews & Ratings -->
+        <div class="faq-item bg-surface border border-outline-variant/60 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:border-secondary/40" data-category="account">
+            <button type="button" class="w-full flex items-center justify-between p-4 sm:p-5 text-left focus:outline-none gap-3" aria-expanded="false">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-xl bg-amber-50 text-amber-500 border border-amber-200/60 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[18px]">star</span>
+                    </span>
+                    <span class="faq-question text-sm sm:text-base font-bold text-on-surface">ลูกค้าสามารถรีวิวร้านได้อย่างไร และร้านค้าสามารถตอบกลับได้หรือไม่?</span>
+                </div>
+                <span class="material-symbols-outlined text-outline faq-icon shrink-0 text-[22px]">expand_more</span>
+            </button>
+            <div class="faq-answer">
+                <div class="px-4 sm:px-5 pb-5 pt-1 text-xs sm:text-sm text-on-surface-variant leading-relaxed border-t border-outline-variant/40 bg-surface-container-low/50">
+                    ลูกค้าที่เข้ารับบริการและมีสถานะงาน "สำเร็จ (Completed)" เท่านั้นจึงจะสามารถให้คะแนนดาวและเขียนรีวิวได้ คุณสามารถเข้าไปดูรีวิวและสถิติความพึงพอใจของลูกค้าได้ที่เมนู <a href="../owner/owner-reviews.html" class="font-bold text-secondary hover:underline">"รีวิวจากลูกค้า"</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Empty Search State -->
+    <div id="noResultsState" class="hidden py-12 flex-col items-center justify-center text-center bg-surface border border-dashed border-outline-variant rounded-2xl p-6 space-y-3">
+        <div class="w-14 h-14 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[28px]">search_off</span>
+        </div>
+        <div>
+            <h3 class="text-base font-bold text-on-surface">ไม่พบคำถามที่ตรงกับการค้นหา</h3>
+            <p class="text-xs text-on-surface-variant mt-1" id="noResultsQuery">ลองเปลี่ยนคำค้นหา หรือติดต่อทีมงานพาร์ทเนอร์เพื่อขอความช่วยเหลือโดยตรง</p>
+        </div>
+        <div class="flex gap-2 pt-2">
+            <button type="button" onclick="clearSearch()" class="px-4 py-2 bg-surface-variant text-on-surface text-xs font-semibold rounded-xl hover:bg-outline-variant transition-colors">
+                ล้างการค้นหา
+            </button>
+            <button type="button" onclick="openContactModal()" class="px-4 py-2 bg-secondary text-white text-xs font-semibold rounded-xl hover:bg-secondary/90 transition-colors shadow-xs">
+                ติดต่อเจ้าหน้าที่
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Contact Cards (3 Channels) -->
+    <div class="space-y-3 pt-4 border-t border-outline-variant/50">
+        <div class="flex items-center justify-between px-1">
+            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">ช่องทางติดต่อทีมงานพาร์ทเนอร์</span>
+            <span class="text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">เวลาทำการ 08:30 - 18:00 น.</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <!-- LINE Partner -->
+            <a href="https://line.me/ti/p/@bestcarwash" target="_blank" class="p-4 rounded-2xl bg-surface border border-outline-variant/60 hover:border-[#06C755] hover:shadow-md transition-all group flex flex-col justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-[#06C755] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-sm shadow-[#06C755]/20">
+                        LINE
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-on-surface">LINE Official</div>
+                        <div class="text-[11px] font-mono text-[#06C755] font-semibold">@bestcarwash</div>
+                    </div>
+                </div>
+                <div class="text-[11px] text-on-surface-variant flex items-center justify-between">
+                    <span>ตอบกลับไวใน 5-10 นาที</span>
+                    <span class="material-symbols-outlined text-[16px] text-outline group-hover:text-[#06C755] group-hover:translate-x-1 transition-all">chevron_right</span>
+                </div>
+            </a>
+
+            <!-- Phone Hotline -->
+            <a href="tel:021234567" class="p-4 rounded-2xl bg-surface border border-outline-variant/60 hover:border-secondary hover:shadow-md transition-all group flex flex-col justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-50 text-secondary border border-emerald-200 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[20px]">call</span>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-on-surface">สายด่วนพาร์ทเนอร์</div>
+                        <div class="text-[11px] font-mono text-secondary font-semibold">02-123-4567</div>
+                    </div>
+                </div>
+                <div class="text-[11px] text-on-surface-variant flex items-center justify-between">
+                    <span>โทรฟรีในเวลาทำการ</span>
+                    <span class="material-symbols-outlined text-[16px] text-outline group-hover:text-secondary group-hover:translate-x-1 transition-all">chevron_right</span>
+                </div>
+            </a>
+
+            <!-- Email Support -->
+            <a href="mailto:partner-support@bestcarwash.com?subject=ขอความช่วยเหลือพาร์ทเนอร์ร้านค้า%20BestCarWash" class="p-4 rounded-2xl bg-surface border border-outline-variant/60 hover:border-sky-500 hover:shadow-md transition-all group flex flex-col justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-sky-50 text-primary border border-sky-200 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[20px]">mail</span>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-on-surface">อีเมลฝ่ายสนับสนุน</div>
+                        <div class="text-[11px] font-mono text-primary font-semibold truncate max-w-[150px]">partner-support@...</div>
+                    </div>
+                </div>
+                <div class="text-[11px] text-on-surface-variant flex items-center justify-between">
+                    <span>ตอบกลับภายใน 24 ชม.</span>
+                    <span class="material-symbols-outlined text-[16px] text-outline group-hover:text-primary group-hover:translate-x-1 transition-all">chevron_right</span>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Terms and Policies Quick Link -->
+    <div class="p-4 rounded-2xl bg-surface-container-highest/60 border border-outline-variant/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-outline text-[20px]">gavel</span>
+            <span class="text-on-surface-variant">ต้องการศึกษาข้อตกลงและนโยบายการให้บริการของร้านค้า?</span>
+        </div>
+        <a href="merchant-terms.html" class="font-bold text-secondary hover:underline flex items-center gap-1 shrink-0">
+            <span>อ่านเงื่อนไขการเป็นพาร์ทเนอร์</span>
+            <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+        </a>
     </div>
 
 </main>
 
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const accordions = document.querySelectorAll('.accordion-button');
+<!-- Contact Modal / Bottom Sheet -->
+<div id="contact-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4">
+    <div id="contact-modal-content" class="bg-surface border border-outline-variant/60 rounded-3xl p-6 max-w-sm w-full flex flex-col items-center text-center shadow-2xl scale-95 transition-transform duration-300 relative">
+        <button type="button" onclick="closeContactModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-surface-variant text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors">
+            <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
 
-        accordions.forEach(button => {
+        <div class="w-14 h-14 rounded-2xl bg-secondary-container text-secondary flex items-center justify-center mb-3 shadow-md shadow-secondary/15">
+            <span class="material-symbols-outlined text-[30px]">support_agent</span>
+        </div>
+
+        <h3 class="text-lg font-bold text-on-surface">ติดต่อทีมดูแลพาร์ทเนอร์</h3>
+        <p class="text-xs text-on-surface-variant mt-1 mb-4 leading-relaxed">
+            ทีมงาน BestCarWash พร้อมดูแลและแก้ไขปัญหาให้ร้านค้าของคุณในทุกขั้นตอน
+        </p>
+
+        <div class="w-full space-y-2.5 text-left text-xs">
+            <!-- LINE Option -->
+            <a href="https://line.me/ti/p/@bestcarwash" target="_blank" class="p-3 rounded-xl bg-[#06C755]/10 border border-[#06C755]/30 hover:bg-[#06C755]/20 flex items-center justify-between transition-colors">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-[#06C755] text-white flex items-center justify-center font-black text-xs shrink-0">
+                        LINE
+                    </div>
+                    <div>
+                        <div class="font-bold text-on-surface">LINE: @bestcarwash</div>
+                        <div class="text-[10px] text-on-surface-variant">ตอบกลับไวที่สุดในเวลาทำการ</div>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-[18px] text-[#06C755]">open_in_new</span>
+            </a>
+
+            <!-- Phone Option -->
+            <a href="tel:021234567" class="p-3 rounded-xl bg-surface-variant/80 border border-outline-variant/60 hover:bg-surface-variant flex items-center justify-between transition-colors">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-secondary flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[18px]">call</span>
+                    </div>
+                    <div>
+                        <div class="font-bold text-on-surface">โทร 02-123-4567</div>
+                        <div class="text-[10px] text-on-surface-variant">จันทร์ - ศุกร์ (08:30 - 18:00 น.)</div>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-[18px] text-secondary">call</span>
+            </a>
+
+            <!-- Email Option -->
+            <a href="mailto:partner-support@bestcarwash.com" class="p-3 rounded-xl bg-surface-variant/80 border border-outline-variant/60 hover:bg-surface-variant flex items-center justify-between transition-colors">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-sky-100 text-primary flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[18px]">mail</span>
+                    </div>
+                    <div>
+                        <div class="font-bold text-on-surface truncate max-w-[170px]">partner-support@bestcarwash.com</div>
+                        <div class="text-[10px] text-on-surface-variant">สำหรับข้อสงสัยและเรื่องบัญชี</div>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-[18px] text-primary">send</span>
+            </a>
+        </div>
+
+        <button type="button" onclick="closeContactModal()" class="w-full mt-4 py-2.5 bg-surface-variant hover:bg-outline-variant/40 text-on-surface text-xs font-semibold rounded-xl transition-colors">
+            ปิดหน้าต่าง
+        </button>
+    </div>
+</div>
+
+<script>
+    let currentCategory = 'all';
+
+    function goBack() {
+        if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            window.location.href = '../owner/Owner Profile.html';
+        }
+    }
+
+    // Modal Handlers
+    function openContactModal() {
+        const modal = document.getElementById('contact-modal');
+        const content = document.getElementById('contact-modal-content');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.classList.add('opacity-100');
+            if (content) {
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }
+        }, 10);
+    }
+
+    function closeContactModal() {
+        const modal = document.getElementById('contact-modal');
+        const content = document.getElementById('contact-modal-content');
+        if (!modal) return;
+        modal.classList.remove('opacity-100');
+        modal.classList.add('opacity-0');
+        if (content) {
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+        }
+        setTimeout(() => {
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }, 300);
+    }
+
+    // Category Filter
+    function filterCategory(cat, element) {
+        currentCategory = cat;
+        document.querySelectorAll('.filter-chip').forEach(el => el.classList.remove('active'));
+        if (element) element.classList.add('active');
+        applyFilters();
+    }
+
+    // Live Search Filter
+    function clearSearch() {
+        const input = document.getElementById('faqSearchInput');
+        if (input) {
+            input.value = '';
+            document.getElementById('clearSearchBtn').classList.add('hidden');
+            document.getElementById('searchCounter').classList.add('hidden');
+        }
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const input = document.getElementById('faqSearchInput');
+        const query = (input?.value || '').trim().toLowerCase();
+        const items = document.querySelectorAll('.faq-item');
+        const noResults = document.getElementById('noResultsState');
+        const clearBtn = document.getElementById('clearSearchBtn');
+        const searchCounter = document.getElementById('searchCounter');
+        const itemsBadge = document.getElementById('itemsCountBadge');
+
+        if (query.length > 0) {
+            clearBtn?.classList.remove('hidden');
+        } else {
+            clearBtn?.classList.add('hidden');
+        }
+
+        let visibleCount = 0;
+
+        items.forEach(item => {
+            const cat = item.getAttribute('data-category');
+            const qEl = item.querySelector('.faq-question');
+            const aEl = item.querySelector('.faq-answer');
+            const questionText = qEl?.textContent.toLowerCase() || '';
+            const answerText = aEl?.textContent.toLowerCase() || '';
+
+            const matchesCategory = (currentCategory === 'all' || cat === currentCategory);
+            const matchesQuery = !query || questionText.includes(query) || answerText.includes(query);
+
+            if (matchesCategory && matchesQuery) {
+                item.style.display = '';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // Update counts and counter message
+        if (itemsBadge) {
+            itemsBadge.textContent = `แสดง ${visibleCount} คำถาม`;
+        }
+
+        if (query) {
+            if (searchCounter) {
+                searchCounter.classList.remove('hidden');
+                searchCounter.textContent = `ผลการค้นหาสำหรับ "${input.value}": พบ ${visibleCount} รายการ`;
+            }
+        } else {
+            searchCounter?.classList.add('hidden');
+        }
+
+        // Toggle No Results
+        if (visibleCount === 0) {
+            noResults?.classList.remove('hidden');
+            noResults?.classList.add('flex');
+            const querySpan = document.getElementById('noResultsQuery');
+            if (querySpan) {
+                querySpan.textContent = query 
+                    ? `ไม่พบคำถามที่ตรงกับ "${input.value}" ในหมวดหมู่นี้`
+                    : 'ไม่มีคำถามในหมวดหมู่นี้';
+            }
+        } else {
+            noResults?.classList.add('hidden');
+            noResults?.classList.remove('flex');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Accordion click toggle
+        const faqItems = document.querySelectorAll('.faq-item');
+        faqItems.forEach(item => {
+            const button = item.querySelector('button');
+            const answer = item.querySelector('.faq-answer');
+
             button.addEventListener('click', () => {
-                const isExpanded = button.getAttribute('aria-expanded') === 'true';
+                const isActive = item.classList.contains('active');
                 
-                // Optional: Close all other accordions
-                accordions.forEach(otherBtn => {
-                    if (otherBtn !== button) {
-                        otherBtn.setAttribute('aria-expanded', 'false');
-                        otherBtn.nextElementSibling.setAttribute('aria-hidden', 'true');
+                // Close other accordions
+                faqItems.forEach(other => {
+                    if (other !== item) {
+                        other.classList.remove('active');
+                        const otherBtn = other.querySelector('button');
+                        const otherAns = other.querySelector('.faq-answer');
+                        if (otherBtn) otherBtn.setAttribute('aria-expanded', 'false');
+                        if (otherAns) otherAns.style.maxHeight = null;
                     }
                 });
 
-                // Toggle current accordion
-                button.setAttribute('aria-expanded', !isExpanded);
-                button.nextElementSibling.setAttribute('aria-hidden', isExpanded);
+                if (isActive) {
+                    item.classList.remove('active');
+                    button.setAttribute('aria-expanded', 'false');
+                    answer.style.maxHeight = null;
+                } else {
+                    item.classList.add('active');
+                    button.setAttribute('aria-expanded', 'true');
+                    answer.style.maxHeight = answer.scrollHeight + 30 + "px";
+                }
             });
+        });
+
+        // Search input listener with debounce
+        const searchInput = document.getElementById('faqSearchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', applyFilters);
+        }
+
+        // Modal backdrop and ESC listeners
+        const modal = document.getElementById('contact-modal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeContactModal();
+            });
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeContactModal();
         });
     });
 </script>
 
 </body>
 </html>
-
-
-
