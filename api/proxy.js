@@ -49,7 +49,7 @@ export default async function handler(req, res) {
         const cleanEndpoint = endpoint.replace(/^\/+/, '');
         const targetUrl = cleanEndpoint.startsWith('http') 
             ? cleanEndpoint 
-            : `${SUPABASE_URL}/rest/v1/${cleanEndpoint}`;
+            : (cleanEndpoint.startsWith('auth/') ? `${SUPABASE_URL}/${cleanEndpoint}` : `${SUPABASE_URL}/rest/v1/${cleanEndpoint}`);
 
         const authHeader = token ? `Bearer ${token}` : `Bearer ${SUPABASE_ANON_KEY}`;
         const fetchHeaders = {

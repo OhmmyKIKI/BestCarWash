@@ -34,6 +34,34 @@ function getSupabaseClient() {
                     const isAuthLarge = authHeader.length > 1200;
                     const method = (options.method || 'GET').toUpperCase();
 
+                    // Proactive Guard: If header is bloated (> 1200 chars), route directly through Serverless Proxy
+                    // This guarantees ZERO HTTP 494 on Vercel and ZERO ERR_CONNECTION_RESET on Thai ISPs
+                    if (isAuthLarge && typeof window !== 'undefined' && window.location) {
+                        try {
+                            let cleanEndpoint = strUrl;
+                            if (cleanEndpoint.includes('/rest/v1/')) {
+                                cleanEndpoint = cleanEndpoint.replace(/^.*?\/rest\/v1\//, '');
+                            } else if (cleanEndpoint.includes('/auth/v1/')) {
+                                cleanEndpoint = 'auth/v1/' + cleanEndpoint.replace(/^.*?\/auth\/v1\//, '');
+                            } else {
+                                cleanEndpoint = cleanEndpoint.replace(/^https?:\/\/[^\/]+/, '').replace(/^\/+/, '');
+                            }
+                            const token = (authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '') || SUPABASE_ANON_KEY;
+                            const proxyRes = await fetch('/api/proxy', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'omit',
+                                body: JSON.stringify({
+                                    endpoint: cleanEndpoint,
+                                    method: method,
+                                    token: token,
+                                    body: options.body
+                                })
+                            });
+                            if (proxyRes.ok) return proxyRes;
+                        } catch (_) {}
+                    }
+
                     // Guard: For GET requests on proxy, never send bloated JWTs
                     if (strUrl.includes('/api/supabase') && (isAuthLarge || method === 'GET')) {
                         if (method === 'GET') {
@@ -46,7 +74,14 @@ function getSupabaseClient() {
                     // If Vercel returns 494/431 (Header Too Large) or direct connection reset, failover to Serverless Proxy
                     if (!res || !res.ok && (res.status === 494 || res.status === 431)) {
                         try {
-                            const cleanEndpoint = strUrl.replace(/^.*?\/rest\/v1\//, '');
+                            let cleanEndpoint = strUrl;
+                            if (cleanEndpoint.includes('/rest/v1/')) {
+                                cleanEndpoint = cleanEndpoint.replace(/^.*?\/rest\/v1\//, '');
+                            } else if (cleanEndpoint.includes('/auth/v1/')) {
+                                cleanEndpoint = 'auth/v1/' + cleanEndpoint.replace(/^.*?\/auth\/v1\//, '');
+                            } else {
+                                cleanEndpoint = cleanEndpoint.replace(/^https?:\/\/[^\/]+/, '').replace(/^\/+/, '');
+                            }
                             const token = (authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '') || SUPABASE_ANON_KEY;
                             return await fetch('/api/proxy', {
                                 method: 'POST',
@@ -320,10 +355,10 @@ async function safeSupabaseRest(endpoint, options = {}) {
         const isProxy = base.includes('/api/supabase');
         const url = endpoint.startsWith('http') ? endpoint : `${base}/rest/v1/${cleanEndpoint}`;
 
-        // Vercel / Nginx proxy rejects large headers with HTTP 494.
-        // For public GET requests or large tokens on proxy, use anon key to guarantee safe header size.
+        // If token is bloated (> 1200 chars), never send it directly in browser headers to avoid ERR_CONNECTION_RESET and 494.
+        // It has already been routed through /api/proxy with token in body.
         let activeAuth = defaultAuthHeader;
-        if (isProxy && (method === 'GET' || isTokenLarge)) {
+        if (isTokenLarge || (isProxy && method === 'GET')) {
             activeAuth = `Bearer ${SUPABASE_ANON_KEY}`;
         }
 
