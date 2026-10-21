@@ -1771,20 +1771,33 @@
                 }
                 if (dbShop) {
                     const dbServices = await fetcher(`services?shop_id=eq.${dbShop.id}&order=created_at.asc`);
+                    
+                    // Read existing cached details so we don't wipe out rating, reviews, images, items, etc.
+                    let existingCached = {};
+                    try {
+                        const oldRaw = localStorage.getItem('cachedShopDetails_' + dbShop.id);
+                        if (oldRaw) existingCached = JSON.parse(oldRaw) || {};
+                    } catch(_) {}
+
                     const liveShopObj = {
+                        ...existingCached,
                         id: dbShop.id,
-                        name: dbShop.name || 'ร้านคาร์แคร์',
-                        address: dbShop.address || '',
-                        phone: dbShop.phone_number || '',
-                        promptpay: dbShop.phone_number || '080-000-0000',
+                        name: dbShop.name || existingCached.name || 'ร้านคาร์แคร์',
+                        address: dbShop.address || existingCached.address || '',
+                        phone: dbShop.phone_number || existingCached.phone || '',
+                        promptpay: dbShop.phone_number || existingCached.promptpay || '080-000-0000',
+                        rating: existingCached.rating || (dbShop.rating ? Number(dbShop.rating).toFixed(1) : '5.0'),
+                        reviews: existingCached.reviews || (dbShop.review_count ? `${dbShop.review_count} รีวิว` : '0 รีวิว'),
                         services: (dbServices && dbServices.length > 0) ? dbServices.map((s, idx) => ({
                             id: s.id,
                             name: s.name,
-                            price: parseFloat(s.price) || 200,
-                            popular: idx === 0
-                        })) : [
-                            { id: 'srv1', name: 'บริการล้างรถมาตรฐาน', price: 200, popular: true }
-                        ]
+                            price: parseFloat(s.price_s || s.price) || 200,
+                            duration: s.duration_minutes ? `${s.duration_minutes} นาที` : (s.duration || '45 นาที'),
+                            popular: idx === 0,
+                            items: (Array.isArray(s.items) && s.items.length > 0) ? s.items : (s.description ? [s.description] : ['บริการล้างทำความสะอาดรถยนต์มาตรฐาน'])
+                        })) : (existingCached.services && existingCached.services.length > 0 ? existingCached.services : [
+                            { id: 'srv1', name: 'บริการล้างรถมาตรฐาน', price: 200, duration: '45 นาที', popular: true, items: ['ล้างสี ดูดฝุ่น เช็ดแห้ง'] }
+                        ])
                     };
                     SHOPS_DATA[dbShop.id] = liveShopObj;
                     localStorage.setItem('cachedShopDetails_' + dbShop.id, JSON.stringify(liveShopObj));

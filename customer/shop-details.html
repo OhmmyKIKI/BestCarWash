@@ -607,11 +607,25 @@
         if (!container) return;
 
         let html = '';
-        currentShop.services.forEach((srv, index) => {
+        const services = (currentShop && Array.isArray(currentShop.services) && currentShop.services.length > 0)
+            ? currentShop.services
+            : [
+                { id: 'srv1', name: 'บริการล้างรถมาตรฐาน', price: 200, duration: '45 นาที', popular: true, items: ['ล้างสี ดูดฝุ่น เช็ดแห้ง'] }
+            ];
+
+        services.forEach((srv, index) => {
             const isChecked = index === 0;
+            const srvItems = (Array.isArray(srv.items) && srv.items.length > 0)
+                ? srv.items
+                : (srv.items && typeof srv.items === 'string'
+                    ? [srv.items]
+                    : (srv.description ? [srv.description] : ['บริการล้างทำความสะอาดรถยนต์มาตรฐาน']));
+            const srvDuration = srv.duration || (srv.duration_minutes ? `${srv.duration_minutes} นาที` : '45 นาที');
+            const srvPrice = srv.price || srv.price_s || 200;
+
             html += `
                 <label class="cursor-pointer group relative block">
-                    <input type="radio" name="service" value="${srv.price}" data-name="${srv.name}" class="peer sr-only" ${isChecked ? 'checked' : ''}>
+                    <input type="radio" name="service" value="${srvPrice}" data-name="${srv.name}" class="peer sr-only" ${isChecked ? 'checked' : ''}>
                     <div class="rounded-2xl border-2 border-outline-variant/40 bg-surface-container-low p-4 transition-all hover:bg-surface-variant/50 peer-checked:border-primary peer-checked:bg-primary-container/10">
                         ${srv.popular ? '<div class="absolute -top-3 left-4 bg-error text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10">ขายดีสุด</div>' : ''}
                         <div class="flex justify-between items-start mb-3">
@@ -621,7 +635,7 @@
                                 </div>
                                 <div>
                                     <h4 class="font-bold text-on-surface text-base">${srv.name}</h4>
-                                    <span class="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5"><span class="material-symbols-outlined text-[14px]">schedule</span> ${srv.duration}</span>
+                                    <span class="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5"><span class="material-symbols-outlined text-[14px]">schedule</span> ${srvDuration}</span>
                                 </div>
                             </div>
                             <div class="flex flex-col items-end gap-1">
@@ -629,12 +643,12 @@
                                     <div class="w-3.5 h-3.5 rounded-full bg-primary scale-0 group-has-[:checked]:scale-100 transition-transform shadow-[0_0_8px_rgba(180,197,255,0.8)]"></div>
                                 </div>
                                 <div class="text-[10px] text-on-surface-variant text-right">เริ่มต้น</div>
-                                <div class="text-xl font-black text-primary leading-none mt-0.5">฿${srv.price}</div>
+                                <div class="text-xl font-black text-primary leading-none mt-0.5">฿${srvPrice}</div>
                                 <div class="text-[10px] bg-secondary/20 text-secondary border border-secondary/30 px-2 py-0.5 rounded-md font-bold mt-1.5">มัดจำ ฿50</div>
                             </div>
                         </div>
                         <ul class="text-sm text-on-surface-variant space-y-1.5 pl-[52px]">
-                            ${srv.items.map(item => `<li class="flex gap-2 items-start"><span class="material-symbols-outlined text-secondary text-[16px]">check_circle</span> ${item}</li>`).join('')}
+                            ${srvItems.map(item => `<li class="flex gap-2 items-start"><span class="material-symbols-outlined text-secondary text-[16px]">check_circle</span> ${item}</li>`).join('')}
                         </ul>
                     </div>
                 </label>
@@ -791,7 +805,13 @@
         const distEl = document.getElementById('shop-distance');
         if (distEl) distEl.textContent = currentShop.distance;
         const rateEl = document.getElementById('shop-rating-text');
-        if (rateEl) rateEl.textContent = `${currentShop.rating} (${currentShop.reviews})`;
+        if (rateEl) {
+            const rawRating = currentShop.rating;
+            const rawReviews = currentShop.reviews;
+            const validRating = (rawRating && rawRating !== 'undefined' && rawRating !== 'null') ? rawRating : '5.0';
+            const validReviews = (rawReviews && rawReviews !== 'undefined' && rawReviews !== 'null') ? rawReviews : '0 รีวิว';
+            rateEl.textContent = `${validRating} (${validReviews})`;
+        }
         const phoneLink = document.getElementById('shop-phone-link');
         const phoneText = document.getElementById('shop-phone-text');
         if (phoneLink) phoneLink.href = `tel:${(currentShop.phone || '').replace(/-/g, '')}`;
@@ -930,6 +950,15 @@
                 try {
                     const parsedCached = JSON.parse(directCached);
                     if (parsedCached) {
+                        parsedCached.rating = (parsedCached.rating && parsedCached.rating !== 'undefined' && parsedCached.rating !== 'null') ? parsedCached.rating : '5.0';
+                        parsedCached.reviews = (parsedCached.reviews && parsedCached.reviews !== 'undefined' && parsedCached.reviews !== 'null') ? parsedCached.reviews : '0 รีวิว';
+                        if (Array.isArray(parsedCached.services)) {
+                            parsedCached.services = parsedCached.services.map(s => ({
+                                ...s,
+                                items: (Array.isArray(s.items) && s.items.length > 0) ? s.items : (s.description ? [s.description] : ['บริการล้างทำความสะอาดรถยนต์มาตรฐาน']),
+                                duration: s.duration || (s.duration_minutes ? `${s.duration_minutes} นาที` : '45 นาที')
+                            }));
+                        }
                         parsedCached.images = buildFullGallery(parsedCached.images?.[0] || localStorage.getItem('ownerCoverImage'), parsedCached.images);
                         initialShopData = parsedCached;
                     }
