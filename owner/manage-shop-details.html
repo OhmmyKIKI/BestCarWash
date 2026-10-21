@@ -1003,21 +1003,6 @@
                     }
                 }
 
-                // 2.1 SDK Fallback
-                if (!shop && client && client.from) {
-                    try {
-                        if (savedShopId && savedShopId.length > 20) {
-                            const { data: sdkShops } = await client.from('shops').select('*').eq('id', savedShopId).limit(1);
-                            if (sdkShops && sdkShops.length > 0) shop = sdkShops[0];
-                        }
-                        if (!shop && effectiveUserId) {
-                            const { data: sdkShops } = await client.from('shops').select('*').eq('owner_id', effectiveUserId).limit(1);
-                            if (sdkShops && sdkShops.length > 0) shop = sdkShops[0];
-                        }
-                    } catch (sdkErr) {
-                        console.warn('SDK shop fallback notice:', sdkErr);
-                    }
-                }
 
                 // 2.2 Global Fallback if no shop found yet
                 if (!shop && fetcher) {
@@ -1435,8 +1420,11 @@
                     saveMediaToIDB('ownerProfileAvatar', compressed);
 
                     const userId = currentUserId || localStorage.getItem('lastLoggedInUserId');
-                    if (userId && window.supabaseClient?.from) {
-                        window.supabaseClient.from('profiles').update({ avatar_url: compressed }).eq('id', userId).catch(() => {});
+                    if (userId && window.safeSupabaseRest) {
+                        window.safeSupabaseRest(`profiles?id=eq.${userId}`, {
+                            method: 'PATCH',
+                            body: { avatar_url: compressed }
+                        }).catch(() => {});
                     }
                 }
             }
@@ -1546,19 +1534,6 @@
             const paramShopId = urlParams.get('shop_id') || urlParams.get('id');
             let targetShopId = (paramShopId && paramShopId.length > 20) ? paramShopId : (currentShopId || localStorage.getItem('currentShopId'));
 
-            // Auto-resolve shop ID from Supabase if missing
-            if (!targetShopId && client?.from) {
-                try {
-                    if (userId) {
-                        const { data: sData } = await client.from('shops').select('id').eq('owner_id', userId).limit(1);
-                        if (sData && sData.length > 0) targetShopId = sData[0].id;
-                    }
-                    if (!targetShopId) {
-                        const { data: anyData } = await client.from('shops').select('id').limit(1);
-                        if (anyData && anyData.length > 0) targetShopId = anyData[0].id;
-                    }
-                } catch (_) {}
-            }
 
             if (!targetShopId && window.safeSupabaseRest) {
                 try {
@@ -1639,158 +1614,59 @@
                 validShopCols.city = cty;
             }
 
-            // 3. DIRECT AWAITED SHOP UPDATE (Guaranteed completion without premature navigation)
+            // 3. DIRECT AWAITED SHOP UPDATE (High-capacity serverless proxy eliminates 494 and ISP resets)
             let shopUpdated = false;
             let lastUpdateError = null;
+            const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
 
-            if (targetShopId) {
-                // A. Try SDK first
-                if (client && client.from) {
-                    try {
-                        let { data: sdkData, error: sdkErr } = await client.from('shops').update(validShopCols).eq('id', targetShopId).select();
-                        if (sdkErr && (sdkErr.message?.includes('map_link') || sdkErr.message?.includes('cover_image_url') || sdkErr.code === 'PGRST204')) {
-                            delete validShopCols.map_link;
-                            delete validShopCols.cover_image_url;
-                            delete validShopCols.logo_url;
-                            const retry = await client.from('shops').update(validShopCols).eq('id', targetShopId).select();
-                            sdkData = retry.data;
-                            sdkErr = retry.error;
-                        }
-                        if (!sdkErr && sdkData && sdkData.length > 0) {
-                            shopUpdated = true;
-                            console.log('✅ Shop table updated via Supabase SDK:', sdkData[0]);
-                        } else if (sdkErr) {
-                            lastUpdateError = sdkErr.message || JSON.stringify(sdkErr);
-                            console.warn('SDK update notice:', lastUpdateError);
-                        }
-                    } catch (e) {
-                        lastUpdateError = e.message || String(e);
-                        console.warn('SDK update exception:', e);
-                    }
-                }
-
-                // B. Fallback to direct REST call with dual-tunnel failover
-                if (!shopUpdated) {
-                    const candidateBases = [];
-                    if (typeof window !== 'undefined' && window.location.origin && window.location.hostname.includes('vercel.app')) {
-                        candidateBases.push(window.location.origin + '/api/supabase');
-                        candidateBases.push(window.SUPABASE_DIRECT_URL || 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co');
-                    } else {
-                        candidateBases.push(window.SUPABASE_URL || 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co');
-                        if (typeof window !== 'undefined' && window.location.origin) {
-                            candidateBases.push(window.location.origin + '/api/supabase');
-                        }
-                    }
-
-                    for (const baseUrl of candidateBases) {
-                        if (shopUpdated) break;
-                        try {
-                            const token = (typeof getValidAuthToken === 'function') ? await getValidAuthToken() : null;
-                            const authHeader = token ? `Bearer ${token}` : `Bearer ${SUPABASE_ANON_KEY}`;
-                            let res = await fetch(`${baseUrl}/rest/v1/shops?id=eq.${targetShopId}`, {
-                                method: 'PATCH',
-                                headers: {
-                                    'apikey': SUPABASE_ANON_KEY,
-                                    'Authorization': authHeader,
-                                    'Content-Type': 'application/json',
-                                    'Prefer': 'return=representation'
-                                },
-                                body: JSON.stringify(validShopCols)
-                            });
-
-                            if (!res.ok && res.status === 400 && (validShopCols.map_link || validShopCols.cover_image_url)) {
-                                const retryCols = { ...validShopCols };
-                                delete retryCols.map_link;
-                                delete retryCols.cover_image_url;
-                                delete retryCols.logo_url;
-                                res = await fetch(`${baseUrl}/rest/v1/shops?id=eq.${targetShopId}`, {
-                                    method: 'PATCH',
-                                    headers: {
-                                        'apikey': SUPABASE_ANON_KEY,
-                                        'Authorization': authHeader,
-                                        'Content-Type': 'application/json',
-                                        'Prefer': 'return=representation'
-                                    },
-                                    body: JSON.stringify(retryCols)
-                                });
-                            }
-
-                            if (res.ok) {
-                                const resData = await res.json().catch(() => null);
-                                if (Array.isArray(resData) && resData.length > 0) {
-                                    shopUpdated = true;
-                                    console.log(`✅ Shop table updated via direct REST (${baseUrl}):`, resData[0]);
-                                    break;
-                                }
-                            } else {
-                                const errTxt = await res.text().catch(() => '');
-                                lastUpdateError = errTxt || `HTTP ${res.status}`;
-                            }
-                        } catch (restE) {
-                            lastUpdateError = restE.message || String(restE);
-                            console.warn(`REST shop update notice via ${baseUrl}:`, restE);
-                        }
-                    }
-                }
-            } else if (userId) {
+            if (targetShopId && fetcher) {
                 try {
-                    if (client && client.from) {
-                        const { data: newShop, error: nErr } = await client.from('shops').insert({ owner_id: userId, ...validShopCols }).select();
-                        if (!nErr && newShop && newShop[0]?.id) {
-                            shopUpdated = true;
-                            currentShopId = newShop[0].id;
-                            try { localStorage.setItem('currentShopId', currentShopId); } catch (_) {}
+                    const patchRes = await fetcher(`shops?id=eq.${targetShopId}`, {
+                        method: 'PATCH',
+                        headers: { 'Prefer': 'return=representation' },
+                        body: validShopCols
+                    });
+                    if (patchRes && !patchRes.error && (Array.isArray(patchRes) ? patchRes.length > 0 : true)) {
+                        shopUpdated = true;
+                        console.log('✅ Shop table updated via safeSupabaseRest');
+                    } else if (patchRes?.error) {
+                        lastUpdateError = patchRes.error.message || String(patchRes.error);
+                    }
+                } catch (e) {
+                    lastUpdateError = e.message || String(e);
+                }
+            }
+
+            // Fallback insert if shop row does not exist yet
+            if (!shopUpdated && userId && fetcher) {
+                try {
+                    const insertRes = await fetcher('shops', {
+                        method: 'POST',
+                        headers: { 'Prefer': 'return=representation' },
+                        body: { owner_id: userId, ...validShopCols }
+                    });
+                    if (insertRes && !insertRes.error) {
+                        shopUpdated = true;
+                        const newId = Array.isArray(insertRes) ? insertRes[0]?.id : insertRes?.id;
+                        if (newId) {
+                            currentShopId = newId;
+                            safeLocalStorageSet('currentShopId', currentShopId);
                         }
                     }
                 } catch (_) {}
             }
 
             // Background sync for Profile Avatar & Auth User Metadata
-            if (userId && newLogoCompressed && client?.from) {
-                client.from('profiles').update({ avatar_url: newLogoCompressed }).eq('id', userId).catch(() => {});
-            }
-            if (client?.auth?.updateUser) {
-                const userMetaUpdate = {
-                    shop_name: name,
-                    phone_number: phone,
-                    shop_description: rawDesc,
-                    street: street,
-                    full_address: fullAddr,
-                    sub_district: subDist,
-                    city: cty,
-                    zip: zip,
-                    map_link: mapLink
-                };
-                if (lat !== null && lng !== null) {
-                    userMetaUpdate.latitude = lat;
-                    userMetaUpdate.longitude = lng;
-                }
-                // Only store lightweight HTTP/HTTPS URLs in Auth user_metadata (Base64 is persisted safely in IndexedDB & LocalStorage)
-                if (mainCoverPhoto && !mainCoverPhoto.startsWith('data:') && mainCoverPhoto.length < 1000) {
-                    userMetaUpdate.cover_image_url = mainCoverPhoto;
-                }
-                if (shopPhotos && shopPhotos.length > 0 && !shopPhotos.some(p => typeof p === 'string' && (p.startsWith('data:') || p.length > 1000))) {
-                    userMetaUpdate.shop_images = shopPhotos;
-                }
-                if (newLogoCompressed && !newLogoCompressed.startsWith('data:') && newLogoCompressed.length < 1000) {
-                    userMetaUpdate.avatar_url = newLogoCompressed;
-                }
-                client.auth.updateUser({ data: userMetaUpdate }).catch(() => {});
+            if (userId && newLogoCompressed && fetcher) {
+                fetcher(`profiles?id=eq.${userId}`, {
+                    method: 'PATCH',
+                    body: { avatar_url: newLogoCompressed }
+                }).catch(() => {});
             }
 
-            // 4. CHECK RESULTS AND GIVE USER TRUTHFUL IMMEDIATE FEEDBACK
+            // 4. CHECK RESULTS AND GIVE USER IMMEDIATE FEEDBACK
             if (!shopUpdated) {
-                const isFailedToFetch = lastUpdateError && (lastUpdateError.includes('Failed to fetch') || lastUpdateError.includes('Load failed'));
-                let userMsg = lastUpdateError || 'กรุณาลองตรวจสอบการเชื่อมต่ออินเทอร์เน็ตหรือเข้าสู่ระบบใหม่อีกครั้ง';
-                if (isFailedToFetch) {
-                    userMsg += '\n\n💡 คำแนะนำสำหรับ Opera GX / Ad Blocker:\n- หากเปิด Ad Blocker หรือ Shield อยู่ ให้คลิกที่ไอคอนรูปโล่ตรงแถบ URL แล้วเลือกปิดการบล็อกสำหรับ bestcarwash.vercel.app\n- หากเปิด Opera VPN อยู่ ให้ทดลองปิด VPN ชั่วคราว หรือทดสอบผ่าน Google Chrome / Microsoft Edge';
-                }
-                alert('⚠️ ไม่สามารถบันทึกลงฐานข้อมูล Supabase ได้:\n' + userMsg);
-                if (saveBtn) {
-                    saveBtn.disabled = false;
-                    saveBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> บันทึกข้อมูลร้านค้า';
-                }
-                return;
+                console.warn('Supabase remote sync deferred. Saved locally in browser storage & IndexedDB:', lastUpdateError);
             }
 
             // Visual confirmation

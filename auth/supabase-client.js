@@ -26,6 +26,43 @@ function getSupabaseClient() {
                 persistSession: true,
                 autoRefreshToken: true,
                 detectSessionInUrl: true
+            },
+            global: {
+                fetch: async (url, options = {}) => {
+                    const strUrl = String(url);
+                    const authHeader = options.headers?.Authorization || options.headers?.authorization || '';
+                    const isAuthLarge = authHeader.length > 1200;
+                    const method = (options.method || 'GET').toUpperCase();
+
+                    // Guard: For GET requests on proxy, never send bloated JWTs
+                    if (strUrl.includes('/api/supabase') && (isAuthLarge || method === 'GET')) {
+                        if (method === 'GET') {
+                            const newHeaders = { ...options.headers, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
+                            return fetch(url, { ...options, headers: newHeaders, credentials: 'omit' });
+                        }
+                    }
+
+                    let res = await fetch(url, { ...options, credentials: 'omit' }).catch(() => null);
+                    // If Vercel returns 494/431 (Header Too Large) or direct connection reset, failover to Serverless Proxy
+                    if (!res || !res.ok && (res.status === 494 || res.status === 431)) {
+                        try {
+                            const cleanEndpoint = strUrl.replace(/^.*?\/rest\/v1\//, '');
+                            const token = (authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '') || SUPABASE_ANON_KEY;
+                            return await fetch('/api/proxy', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'omit',
+                                body: JSON.stringify({
+                                    endpoint: cleanEndpoint,
+                                    method: method,
+                                    token: token,
+                                    body: options.body
+                                })
+                            });
+                        } catch (_) {}
+                    }
+                    return res || new Response(JSON.stringify({ error: 'Connection failed' }), { status: 503 });
+                }
             }
         });
         return window.supabaseClient;
@@ -151,6 +188,21 @@ async function triggerUserMetadataCleanup() {
 
         if (foundBloat) {
             console.log('[Supabase] Purging bloated metadata keys:', Object.keys(purgedMeta));
+            // First attempt via Serverless Proxy (immune to HTTP 494 and ISP reset)
+            try {
+                const proxyPurge = await fetch('/api/proxy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'omit',
+                    body: JSON.stringify({ action: 'purge_metadata', token: data?.session?.access_token })
+                });
+                if (proxyPurge.ok) {
+                    await client.auth.refreshSession().catch(() => null);
+                    console.log('[Supabase] Auth metadata purged via Serverless Proxy successfully');
+                    return;
+                }
+            } catch (_) {}
+
             await client.auth.updateUser({ data: purgedMeta }).catch(e => console.warn('[Supabase] updateUser cleanup notice:', e));
             await client.auth.refreshSession().catch(() => null);
             console.log('[Supabase] Auth session refreshed with clean compact token');
@@ -219,21 +271,52 @@ async function safeSupabaseRest(endpoint, options = {}) {
     const isTokenLarge = token && token.length > 1200;
 
     const candidateBases = [];
-    if (typeof window !== 'undefined' && window.location.origin && window.location.hostname.includes('vercel.app')) {
-        candidateBases.push(window.location.origin + '/api/supabase');
-        candidateBases.push(SUPABASE_DIRECT_URL);
-    } else {
-        candidateBases.push(SUPABASE_URL || SUPABASE_DIRECT_URL);
-        if (typeof window !== 'undefined' && window.location.origin) {
+    if (typeof window !== 'undefined' && window.location.origin) {
+        // Primary Tunnel: Serverless Proxy (Zero-494 guarantee, payload in body)
+        candidateBases.push('/api/proxy');
+        if (window.location.hostname.includes('vercel.app')) {
             candidateBases.push(window.location.origin + '/api/supabase');
         }
     }
+    candidateBases.push(SUPABASE_URL || SUPABASE_DIRECT_URL);
+    candidateBases.push(SUPABASE_DIRECT_URL);
 
     const defaultAuthHeader = token ? `Bearer ${token}` : `Bearer ${SUPABASE_ANON_KEY}`;
     let lastErr = null;
 
     for (let i = 0; i < candidateBases.length; i++) {
         const base = candidateBases[i];
+
+        // 1. HIGH-CAPACITY SERVERLESS PROXY TUNNEL
+        if (base === '/api/proxy') {
+            try {
+                const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                let timeoutId = null;
+                if (controller) timeoutId = setTimeout(() => controller.abort(), 12000);
+
+                const proxyRes = await fetch('/api/proxy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'omit',
+                    signal: controller ? controller.signal : undefined,
+                    body: JSON.stringify({
+                        endpoint: cleanEndpoint,
+                        method: method,
+                        token: token,
+                        body: options.body
+                    })
+                });
+                if (timeoutId) clearTimeout(timeoutId);
+
+                if (proxyRes.ok) {
+                    const parsed = await proxyRes.json().catch(() => true);
+                    return formatRestResponse(parsed);
+                }
+            } catch (proxyErr) {
+                console.warn('Serverless proxy notice:', proxyErr.message || proxyErr);
+            }
+            continue;
+        }
         const isProxy = base.includes('/api/supabase');
         const url = endpoint.startsWith('http') ? endpoint : `${base}/rest/v1/${cleanEndpoint}`;
 
