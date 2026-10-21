@@ -1383,6 +1383,22 @@
             }
         }
 
+        if (Array.isArray(historyItems)) {
+            // Self-healing: if any item has generic "บริการล้างรถ", try re-matching with appBookingsList
+            historyItems.forEach(item => {
+                if (!item.serviceName || item.serviceName === 'บริการล้างรถ') {
+                    try {
+                        const allList = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
+                        const match = allList.find(b => normBookingId(b.bookingId) === normBookingId(item.bookingId));
+                        if (match?.serviceName && match.serviceName !== 'บริการล้างรถ') {
+                            item.serviceName = match.serviceName;
+                            if (match.carName && (!item.carName || item.carName.includes('{'))) item.carName = match.carName;
+                        }
+                    } catch (_) {}
+                }
+            });
+        }
+
         // Update tab header badge
         if (tabCompleted) {
             tabCompleted.innerHTML = `ประวัติที่ผ่านมา <span class="ml-1 text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-surface-container text-primary border border-outline-variant/30">${historyItems.length}</span>`;
@@ -1997,12 +2013,78 @@
                     }
                 }
 
+                // Helper to parse rich booking details (service_name, car, plate, etc.)
+                function parseBookingData(item, existingLocal = null) {
+                    let serviceName = existingLocal?.serviceName || null;
+                    let carName = existingLocal?.carName || null;
+                    let carPlate = existingLocal?.carPlate || null;
+                    let carBrand = existingLocal?.carBrand || null;
+                    let depositAmount = existingLocal?.depositAmount || '฿ 50.00';
+                    let slipUrl = existingLocal?.slipImage || null;
+
+                    if (item.service_name) {
+                        serviceName = item.service_name;
+                    }
+
+                    // Try parsing vehicle_info as JSON
+                    if (item.vehicle_info) {
+                        try {
+                            const vi = JSON.parse(item.vehicle_info);
+                            if (vi && typeof vi === 'object') {
+                                if (vi.service_name) serviceName = vi.service_name;
+                                if (vi.brand && vi.plate) carName = `${vi.brand} (${vi.plate})`;
+                                else if (vi.brand) carName = vi.brand;
+                                if (vi.plate) carPlate = vi.plate;
+                                if (vi.brand) carBrand = vi.brand;
+                                if (vi.deposit_amount) depositAmount = `฿ ${Number(vi.deposit_amount).toFixed(2)}`;
+                                if (vi.slip_url) slipUrl = vi.slip_url;
+                            } else {
+                                carName = String(item.vehicle_info);
+                            }
+                        } catch (_) {
+                            carName = String(item.vehicle_info);
+                        }
+                    }
+
+                    // Fallback: check shared appBookingsList by ID
+                    if (!serviceName || serviceName === 'บริการล้างรถ') {
+                        try {
+                            const list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
+                            const found = list.find(b => normBookingId(b.bookingId) === normBookingId(item.id) || normBookingId(b.id) === normBookingId(item.id));
+                            if (found?.serviceName) {
+                                serviceName = found.serviceName;
+                                if (!carName && found.carName) carName = found.carName;
+                            }
+                        } catch (_) {}
+                    }
+
+                    // Fallback: smart naming based on total_price
+                    if (!serviceName || serviceName === 'บริการล้างรถ') {
+                        const price = Number(item.total_price);
+                        if (price >= 500) serviceName = 'ทำความสะอาดเต็มรูปแบบ & ขัดสี';
+                        else if (price >= 400) serviceName = 'ล้างสี ดูดฝุ่น';
+                        else if (price >= 300) serviceName = 'ล้างสี & เคลือบแว็กซ์';
+                        else if (price > 0) serviceName = 'ล้างด่วนภายนอก';
+                        else serviceName = 'ล้างสี ดูดฝุ่น';
+                    }
+
+                    return {
+                        serviceName: serviceName || 'ล้างสี ดูดฝุ่น',
+                        carName: carName || 'รถยนต์',
+                        carPlate: carPlate || '-',
+                        carBrand: carBrand || 'รถยนต์',
+                        depositAmount: depositAmount,
+                        slipUrl: slipUrl
+                    };
+                }
+
                 if (dbBookings && dbBookings.length > 0) {
                     // Check if user has an active ongoing booking
                     const activeOngoing = dbBookings.find(item => ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes((item.status || '').toLowerCase()));
                     if (activeOngoing) {
                         let existingLocal = null;
                         try { existingLocal = JSON.parse(localStorage.getItem('activeCustomerBooking') || '{}'); } catch(e) {}
+                        const parsedActive = parseBookingData(activeOngoing, existingLocal);
                         const mappedActive = {
                             ...(existingLocal || {}),
                             bookingId: '#' + activeOngoing.id.substring(0, 8).toUpperCase(),
@@ -2010,11 +2092,13 @@
                             shopId: activeOngoing.shop_id,
                             shopName: activeOngoing.shops?.name || existingLocal?.shopName || 'ร้านคาร์แคร์',
                             shopPhone: activeOngoing.shops?.phone_number || existingLocal?.shopPhone || '081-234-5678',
-                            serviceName: existingLocal?.serviceName || 'บริการล้างรถ',
-                            carName: activeOngoing.vehicle_info || existingLocal?.carName || 'รถยนต์',
+                            serviceName: parsedActive.serviceName,
+                            carName: parsedActive.carName,
+                            carBrand: parsedActive.carBrand,
+                            carPlate: parsedActive.carPlate,
                             dateTime: `${activeOngoing.booking_date} ${activeOngoing.booking_time}`,
                             totalAmount: `฿ ${activeOngoing.total_price}`,
-                            depositAmount: existingLocal?.depositAmount || '฿ 50.00',
+                            depositAmount: parsedActive.depositAmount || existingLocal?.depositAmount || '฿ 50.00',
                             status: activeOngoing.status.toLowerCase()
                         };
                         localStorage.setItem('activeCustomerBooking', JSON.stringify(mappedActive));
@@ -2031,16 +2115,21 @@
                         }
                     }
 
-                    const mappedList = dbBookings.map(item => ({
-                        bookingId: '#' + item.id.substring(0, 8).toUpperCase(),
-                        shopName: item.shops?.name || 'ร้านคาร์แคร์',
-                        serviceName: 'บริการล้างรถ',
-                        carName: item.vehicle_info || 'รถยนต์',
-                        dateTime: `${item.booking_date} ${item.booking_time}`,
-                        totalAmount: `฿ ${item.total_price}`,
-                        depositAmount: '฿ 50.00',
-                        status: item.status.toLowerCase()
-                    }));
+                    const mappedList = dbBookings.map(item => {
+                        const parsed = parseBookingData(item);
+                        return {
+                            bookingId: '#' + item.id.substring(0, 8).toUpperCase(),
+                            shopName: item.shops?.name || 'ร้านคาร์แคร์',
+                            serviceName: parsed.serviceName,
+                            carName: parsed.carName,
+                            carBrand: parsed.carBrand,
+                            carPlate: parsed.carPlate,
+                            dateTime: `${item.booking_date} ${item.booking_time}`,
+                            totalAmount: `฿ ${item.total_price}`,
+                            depositAmount: parsed.depositAmount || '฿ 50.00',
+                            status: item.status.toLowerCase()
+                        };
+                    });
                     localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(mappedList));
                     renderCompletedHistory(mappedList);
                     loadActiveBooking();
