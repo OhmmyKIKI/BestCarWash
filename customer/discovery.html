@@ -990,7 +990,7 @@ tailwind.config = {
                 const currentShopId = localStorage.getItem('currentShopId');
                 const ownerShopName = localStorage.getItem('ownerShopName');
 
-                // Migrate any cached shop images to cover images (never show avatar as card thumbnail)
+                // Migrate any cached shop images to cover images & sync any cached reviews
                 cached.forEach((s, idx) => {
                     const isOwnerShop = (currentShopId && s.id === currentShopId) || (ownerShopName && s.name === ownerShopName);
                     if (isOwnerShop && localCover) {
@@ -1002,6 +1002,16 @@ tailwind.config = {
                         s.image = DEFAULT_COVER_IMAGES[idx % DEFAULT_COVER_IMAGES.length];
                         s.cover_image = s.image;
                     }
+
+                    // Sync rating from local cached reviews if available
+                    try {
+                        const cRev = JSON.parse(localStorage.getItem('cachedShopReviews_' + s.id) || '[]');
+                        if (Array.isArray(cRev) && cRev.length > 0) {
+                            const totalScore = cRev.reduce((sum, r) => sum + (parseFloat(r.rating) || 5), 0);
+                            s.rating = (totalScore / cRev.length).toFixed(1);
+                            s.reviews = `${cRev.length} รีวิว`;
+                        }
+                    } catch (_) {}
                 });
 
                 shops = [...cached];
@@ -1045,17 +1055,29 @@ tailwind.config = {
                 const shopsData = Array.isArray(shopsRes) ? shopsRes : (shopsRes?.data || null);
                 if (Array.isArray(shopsData) && shopsData.length > 0) dbShops = shopsData;
 
-                // 2. If shops are present in database, fetch related services and profiles
+                // 2. If shops are present in database, fetch related services, profiles, and live reviews in parallel
                 if (Array.isArray(dbShops) && dbShops.length > 0) {
                     let allServices = null;
-                    const srvRes = await safeSupabaseRest('services?select=*');
-                    const srvData = Array.isArray(srvRes) ? srvRes : (srvRes?.data || null);
-                    if (Array.isArray(srvData)) allServices = srvData;
-
                     let allProfiles = null;
-                    const profRes = await safeSupabaseRest('profiles?select=id,avatar_url');
-                    const profData = Array.isArray(profRes) ? profRes : (profRes?.data || null);
-                    if (Array.isArray(profData)) allProfiles = profData;
+                    let allReviews = null;
+
+                    try {
+                        const [srvRes, profRes, revRes] = await Promise.all([
+                            safeSupabaseRest('services?select=*'),
+                            safeSupabaseRest('profiles?select=id,avatar_url'),
+                            safeSupabaseRest('reviews?select=shop_id,rating')
+                        ]);
+                        const srvData = Array.isArray(srvRes) ? srvRes : (srvRes?.data || null);
+                        if (Array.isArray(srvData)) allServices = srvData;
+
+                        const profData = Array.isArray(profRes) ? profRes : (profRes?.data || null);
+                        if (Array.isArray(profData)) allProfiles = profData;
+
+                        const revData = Array.isArray(revRes) ? revRes : (revRes?.data || null);
+                        if (Array.isArray(revData)) allReviews = revData;
+                    } catch (auxErr) {
+                        console.warn('Auxiliary data fetch notice in discovery:', auxErr);
+                    }
 
                     // Retrieve local device owner cover and gallery for instant sync
                     const localCover = localStorage.getItem('ownerCoverImage');
@@ -1074,6 +1096,38 @@ tailwind.config = {
                         const minPrice = shopServices.length > 0 ? Math.min(...shopServices.map(srv => parseFloat(srv.price_s || srv.price) || 200)) : 150;
                         const ownerProf = (allProfiles || []).find(p => p.id === db.owner_id);
                         const logo = db.logo_url || ownerProf?.avatar_url || DEFAULT_COVER_IMAGES[i % DEFAULT_COVER_IMAGES.length];
+
+                        // Calculate real rating & review count from live database reviews
+                        const liveShopReviews = (allReviews || []).filter(r => r.shop_id === db.id);
+                        let realRating = null;
+                        let realReviewText = null;
+
+                        if (liveShopReviews.length > 0) {
+                            const totalScore = liveShopReviews.reduce((sum, r) => sum + (parseFloat(r.rating) || 5), 0);
+                            realRating = (totalScore / liveShopReviews.length).toFixed(1);
+                            realReviewText = `${liveShopReviews.length} รีวิว`;
+                        } else {
+                            // Check if there are cached reviews in localStorage for this shop
+                            try {
+                                const cRev = JSON.parse(localStorage.getItem('cachedShopReviews_' + db.id) || '[]');
+                                if (Array.isArray(cRev) && cRev.length > 0) {
+                                    const totalScore = cRev.reduce((sum, r) => sum + (parseFloat(r.rating) || 5), 0);
+                                    realRating = (totalScore / cRev.length).toFixed(1);
+                                    realReviewText = `${cRev.length} รีวิว`;
+                                }
+                            } catch (_) {}
+                        }
+
+                        // Fallback to db column if present, or "ใหม่"
+                        if (!realRating) {
+                            if (db.rating !== null && db.rating !== undefined && !isNaN(Number(db.rating)) && Number(db.rating) > 0) {
+                                realRating = Number(db.rating).toFixed(1);
+                                realReviewText = db.review_count ? `${db.review_count} รีวิว` : 'ใหม่';
+                            } else {
+                                realRating = '5.0';
+                                realReviewText = 'ใหม่';
+                            }
+                        }
 
                         // Identify if this shop belongs to the logged-in owner on this device
                         const isCurrentOwnerShop = (currentShopId && db.id === currentShopId) ||
@@ -1118,8 +1172,8 @@ tailwind.config = {
                             phone: db.phone_number || '',
                             map_link: db.map_link || '',
                             distance: distKm + ' กม.',
-                            rating: db.rating ? Number(db.rating).toFixed(1) : '5.0',
-                            reviews: db.review_count ? `${db.review_count} รีวิว` : 'ใหม่',
+                            rating: realRating,
+                            reviews: realReviewText,
                             tags: (db.facilities && db.facilities.length > 0) ? db.facilities : ['คาร์แคร์', 'ล้างสีดูดฝุ่น'],
                             price: '฿' + minPrice,
                             image: coverImg,        // แสดงเป็นรูปปกหลัก (Cover image, NOT avatar)
@@ -1251,8 +1305,8 @@ tailwind.config = {
             // จำลองการเรียงตามระยะทาง (ตัวเลขน้อยไปมาก)
             filteredShops.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
         } else if (filterType === 'เรตติ้ง') {
-            // จำลองการเรียงตามคะแนน (มากไปน้อย)
-            filteredShops.sort((a, b) => b.rating - a.rating);
+            // เรียงตามคะแนนรีวิวจริง (มากไปน้อย)
+            filteredShops.sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0));
         } else if (filterType === 'โปรโมชั่น') {
             // จำลองดึงเฉพาะร้านที่มีคำว่าโปรโมชั่นหรือดีลเด็ด
             filteredShops = shops.filter(s => s.badge === 'โปรโมชั่น' || s.badge === 'ดีลเด็ด');
