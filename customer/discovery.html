@@ -284,7 +284,7 @@ tailwind.config = {
     </div>
 
     <!-- Floating Action Buttons (Mobile: Zoom Controls + My Location) -->
-    <div id="mobile-my-location-container" class="md:hidden absolute right-3.5 bottom-[240px] z-40 flex flex-col items-end gap-2.5 pointer-events-auto transition-all duration-300">
+    <div id="mobile-my-location-container" class="md:hidden absolute right-3.5 bottom-[235px] z-40 flex flex-col items-end gap-2.5 pointer-events-auto transition-all duration-300">
         <!-- Zoom Controls Pill -->
         <div class="flex flex-col rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200 shadow-[0_4px_15px_rgba(15,23,42,0.1)] overflow-hidden">
             <button onclick="if(map) map.zoomIn()" class="w-12 h-11 flex items-center justify-center text-primary active:scale-95 transition-all hover:bg-slate-100" title="ซูมเข้า (+)">
@@ -581,43 +581,44 @@ tailwind.config = {
         shopsData.forEach(shop => {
             const isFav = favIds.includes(shop.id);
             const cardHtml = `
-                <div id="mobile-card-${shop.id}" class="flex-shrink-0 w-[88vw] max-w-[340px] bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200 p-3.5 shadow-xl snap-center flex items-center gap-3.5 group cursor-pointer active:scale-98 transition-all hover:border-primary" onclick="focusShop('${shop.id}')">
-                    <!-- Thumbnail with Badge & Fav (88x88px) -->
-                    <div class="relative w-22 h-22 sm:w-24 sm:h-24 rounded-2xl overflow-hidden shrink-0 shadow-md">
+                <div id="mobile-card-${shop.id}" class="flex-shrink-0 w-[84vw] max-w-[330px] bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200 p-2.5 shadow-lg snap-center flex items-center gap-2.5 group cursor-pointer active:scale-98 transition-all hover:border-primary" onclick="focusShop('${shop.id}')">
+                    <!-- Thumbnail with Badge & Fav (80x80px Fixed) -->
+                    <div class="relative w-20 h-20 min-w-[80px] min-h-[80px] rounded-xl overflow-hidden shrink-0 shadow-sm border border-slate-100 bg-slate-100">
                         <img src="${shop.image}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=800&q=80';" />
-                        <div class="absolute top-1.5 left-1.5 ${shop.badgeColor} px-2 py-0.5 rounded-md text-xs font-bold shadow-sm leading-none">${shop.badge}</div>
+                        <div class="absolute top-1 left-1 ${shop.badgeColor} px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm leading-none">${shop.badge}</div>
                         <!-- Favorite Heart Button -->
-                        <button type="button" onclick="toggleFavInDiscovery('${shop.id}', event)" title="บันทึกร้านโปรด" class="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center transition-transform hover:scale-110 active:scale-95 shadow-sm border border-slate-200">
-                            <span class="material-symbols-outlined fav-icon-${shop.id} text-[15px] transition-colors ${isFav ? 'text-error' : 'text-slate-500'}" ${isFav ? 'style="font-variation-settings: \'FILL\' 1;"' : ''}>${isFav ? 'favorite' : 'favorite_border'}</span>
+                        <button type="button" onclick="toggleFavInDiscovery('${shop.id}', event)" title="บันทึกร้านโปรด" class="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center transition-transform hover:scale-110 active:scale-95 shadow-sm border border-slate-200">
+                            <span class="material-symbols-outlined fav-icon-${shop.id} text-[13px] transition-colors ${isFav ? 'text-error' : 'text-slate-500'}" ${isFav ? 'style="font-variation-settings: \'FILL\' 1;"' : ''}>${isFav ? 'favorite' : 'favorite_border'}</span>
                         </button>
                     </div>
                     
-                    <!-- Content Area -->
-                    <div class="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                    <!-- Content Area (Clean & Proportional) -->
+                    <div class="flex-1 min-w-0 flex flex-col justify-between h-20 py-0.5">
                         <!-- Name & Rating -->
                         <div>
-                            <div class="flex items-center justify-between gap-1.5">
-                                <h3 class="font-bold text-base text-slate-900 truncate group-hover:text-primary transition-colors leading-tight">${shop.name}</h3>
-                                <div class="flex items-center gap-0.5 bg-amber-50 px-2 py-0.5 rounded-md text-xs shrink-0 font-extrabold border border-amber-200 text-amber-700">
-                                    <span class="material-symbols-outlined text-amber-500 text-[13px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                            <div class="flex items-center justify-between gap-1">
+                                <h3 class="font-bold text-sm text-slate-900 truncate group-hover:text-primary transition-colors leading-tight">${shop.name}</h3>
+                                <div class="flex items-center gap-0.5 bg-amber-50 px-1.5 py-0.5 rounded text-[11px] shrink-0 font-bold border border-amber-200 text-amber-700">
+                                    <span class="material-symbols-outlined text-amber-500 text-[11px]" style="font-variation-settings: 'FILL' 1;">star</span>
                                     <span>${shop.rating}</span>
                                 </div>
                             </div>
-                            <p class="text-xs text-slate-600 font-medium flex items-center gap-1 mt-1 truncate">
-                                <span class="material-symbols-outlined text-[14px] text-primary">location_on</span> ${shop.distance} • ${shop.tags[0] || 'คาร์แคร์'}
+                            <p class="text-[11px] text-slate-500 font-medium flex items-center gap-0.5 mt-0.5 truncate">
+                                <span class="material-symbols-outlined text-[13px] text-primary shrink-0">location_on</span>
+                                <span class="truncate">${shop.distance} • ${shop.tags[0] || 'คาร์แคร์'}</span>
                             </p>
                         </div>
 
-                        <!-- Price & Action Button -->
-                        <div class="flex justify-between items-center pt-1.5 border-t border-slate-100 mt-2">
-                            <div class="text-xs text-slate-500 font-medium">
-                                เริ่มต้น <span class="font-black text-primary text-base ml-1 font-mono">${shop.price}</span>
+                        <!-- Price & Action Buttons -->
+                        <div class="flex justify-between items-center pt-1 border-t border-slate-100">
+                            <div class="text-[11px] text-slate-500 font-medium leading-none">
+                                เริ่มต้น <span class="font-black text-primary text-sm font-mono ml-0.5">${shop.price}</span>
                             </div>
                             <div class="flex items-center gap-1.5">
-                                <button type="button" class="w-8 h-8 rounded-xl border border-slate-200 hover:border-primary/50 bg-slate-50 hover:bg-sky-50 text-slate-600 hover:text-primary flex items-center justify-center transition-all active:scale-95" title="นำทางไปยังร้านผ่าน Google Maps" onclick="event.stopPropagation(); navigateToShopMaps('${shop.id}')">
-                                    <span class="material-symbols-outlined text-[18px] text-primary">directions</span>
+                                <button type="button" class="w-7 h-7 rounded-lg border border-slate-200 hover:border-primary/50 bg-slate-50 hover:bg-sky-50 text-slate-600 hover:text-primary flex items-center justify-center transition-all active:scale-95" title="นำทางไปยังร้านผ่าน Google Maps" onclick="event.stopPropagation(); navigateToShopMaps('${shop.id}')">
+                                    <span class="material-symbols-outlined text-[15px] text-primary">directions</span>
                                 </button>
-                                <button class="bg-primary hover:bg-sky-700 text-white px-4 py-1.5 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-sky-500/20 active:scale-95 transition-transform" onclick="event.stopPropagation(); selectAndGoToShop('${shop.id}')">
+                                <button class="bg-primary hover:bg-sky-700 text-white px-3 py-1 rounded-lg text-xs font-bold shadow-sm shadow-sky-500/20 active:scale-95 transition-transform leading-tight" onclick="event.stopPropagation(); selectAndGoToShop('${shop.id}')">
                                     จอง
                                 </button>
                             </div>
@@ -1575,7 +1576,7 @@ tailwind.config = {
             if (toggleIcon) toggleIcon.innerText = 'keyboard_arrow_up';
             if (toggleText) toggleText.innerText = 'ขยาย';
             if (myLocContainer) {
-                myLocContainer.classList.remove('bottom-[240px]');
+                myLocContainer.classList.remove('bottom-[235px]');
                 myLocContainer.classList.add('bottom-[135px]');
             }
         } else {
@@ -1584,7 +1585,7 @@ tailwind.config = {
             if (toggleText) toggleText.innerText = 'ย่อ';
             if (myLocContainer) {
                 myLocContainer.classList.remove('bottom-[135px]');
-                myLocContainer.classList.add('bottom-[240px]');
+                myLocContainer.classList.add('bottom-[235px]');
             }
         }
     }
@@ -1609,7 +1610,7 @@ tailwind.config = {
             <div class="group bg-white hover:bg-slate-50/90 rounded-2xl border border-slate-200 hover:border-primary p-4 shadow-sm hover:shadow-md transition-all flex flex-col gap-3.5 cursor-pointer active:scale-[0.99]" onclick="selectAndGoToShop('${shop.id}')">
                 <div class="flex gap-4 items-start">
                     <!-- Image Container with Badges -->
-                    <div class="relative w-22 h-22 sm:w-28 sm:h-28 rounded-2xl overflow-hidden shrink-0 shadow-md">
+                    <div class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden shrink-0 shadow-md">
                         <img src="${shop.image}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="${shop.name}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=800&q=80';" />
                         <div class="absolute top-1.5 left-1.5 ${shop.badgeColor} px-2.5 py-1 rounded-lg text-xs font-bold shadow-sm leading-none">
                             ${shop.badge}
