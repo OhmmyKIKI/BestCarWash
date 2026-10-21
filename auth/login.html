@@ -529,9 +529,33 @@
 
                 // Pre-cache customer vehicles in parallel for 0ms discovery & booking flow via safeSupabaseRest
                 try {
-                    const { data: vList } = await safeSupabaseRest(`vehicles?customer_id=eq.${user.id}&order=is_default.desc`);
+                    const res = await safeSupabaseRest(`vehicles?customer_id=eq.${user.id}&order=is_default.desc`);
+                    const vList = Array.isArray(res) ? res : (res?.data && Array.isArray(res.data) ? res.data : []);
                     if (vList && vList.length > 0) {
-                        localStorage.setItem('customerCars', JSON.stringify(vList));
+                        const mapped = vList.map(v => {
+                            let sz = v.car_size || v.size || 'ไซส์ M';
+                            if (sz === 'S') sz = 'รถเก๋งเล็ก (S)';
+                            else if (sz === 'M') sz = 'รถเก๋งใหญ่ (M)';
+                            else if (sz === 'L') sz = 'SUV / PPV (L)';
+                            else if (sz === 'XL') sz = 'รถกระบะ / รถตู้ (XL)';
+                            return {
+                                id: v.id,
+                                brand: v.brand_model || v.brand || 'รถยนต์',
+                                plate: v.plate_number || v.plate || '-',
+                                size: sz,
+                                isPrimary: Boolean(v.is_default || v.isPrimary)
+                            };
+                        });
+                        localStorage.setItem('customerCars', JSON.stringify(mapped));
+                    } else if (user.user_metadata?.vehicle_model) {
+                        const defaultCar = [{
+                            id: 'car_signup',
+                            brand: user.user_metadata.vehicle_model,
+                            plate: user.user_metadata.license_plate || user.user_metadata.plate_number || '-',
+                            size: 'รถเก๋งใหญ่ (M)',
+                            isPrimary: true
+                        }];
+                        localStorage.setItem('customerCars', JSON.stringify(defaultCar));
                     }
                 } catch(_) {}
 

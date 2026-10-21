@@ -1110,12 +1110,72 @@
     // --- My Vehicles Sync (Point 3 Vehicle Sync) ---
     const DEFAULT_CARS = [];
 
+    function toDbCarSize(sizeStr) {
+        if (!sizeStr) return 'M';
+        const s = String(sizeStr).toUpperCase();
+        if (s.includes('(S)') || s.includes('เล็ก') || s === 'S') return 'S';
+        if (s.includes('(L)') || s.includes('ใหญ่') || s.includes('SUV') || s.includes('PPV') || s === 'L') return 'L';
+        if (s.includes('(XL)') || s.includes('กระบะ') || s.includes('ตู้') || s === 'XL') return 'XL';
+        return 'M';
+    }
+
+    function fromDbCarSize(sizeStr) {
+        if (!sizeStr) return 'รถเก๋งใหญ่ (M)';
+        const s = String(sizeStr).toUpperCase();
+        if (s === 'S' || s.includes('(S)')) return 'รถเก๋งเล็ก (S)';
+        if (s === 'L' || s.includes('(L)')) return 'SUV / PPV (L)';
+        if (s === 'XL' || s.includes('(XL)')) return 'รถกระบะ / รถตู้ (XL)';
+        if (s === 'M' || s.includes('(M)')) return 'รถเก๋งใหญ่ (M)';
+        return sizeStr;
+    }
+
+    function normalizeCar(c) {
+        if (!c) return null;
+        const brand = c.brand || c.brand_model || c.vehicle_model || c.car_model || c.name || '';
+        const plate = c.plate || c.plate_number || c.license_plate || '-';
+        const size = fromDbCarSize(c.size || c.car_size);
+        const isPrimary = Boolean(c.isPrimary || c.is_default);
+        if (!brand && (!plate || plate === '-')) return null;
+        return {
+            id: c.id || ('car_' + Math.random().toString(36).substr(2, 9)),
+            brand: brand || 'รถยนต์',
+            plate: plate,
+            size: size,
+            isPrimary: isPrimary
+        };
+    }
+
+    async function getCurrentUserId() {
+        const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+        if (client?.auth) {
+            try {
+                const sess = await client.auth.getSession();
+                if (sess?.data?.session?.user?.id) return sess.data.session.user.id;
+            } catch (_) {}
+        }
+        const lastId = localStorage.getItem('lastLoggedInUserId') || localStorage.getItem('currentUserId');
+        if (lastId) return lastId;
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+                    const p = JSON.parse(localStorage.getItem(k) || '{}');
+                    if (p?.user?.id) return p.user.id;
+                }
+            }
+        } catch (_) {}
+        return null;
+    }
+
     function getCars() {
         const stored = localStorage.getItem('customerCars');
         if (stored) {
             try {
                 const parsed = JSON.parse(stored);
-                if (Array.isArray(parsed)) return parsed;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    const cleaned = parsed.map(normalizeCar).filter(Boolean);
+                    if (cleaned.length > 0) return cleaned;
+                }
             } catch (e) {
                 console.error(e);
             }
@@ -1124,21 +1184,33 @@
     }
 
     function saveCarsToStorage(cars) {
-        localStorage.setItem('customerCars', JSON.stringify(cars));
+        const normalized = (cars || []).map(normalizeCar).filter(Boolean);
+        localStorage.setItem('customerCars', JSON.stringify(normalized));
     }
 
+    let hasCheckedVehicles = false;
     function renderCarsList() {
         const grid = document.getElementById('car-list-grid');
         if (!grid) return;
         const cars = getCars();
         if (!cars || cars.length === 0) {
-            grid.innerHTML = `
-                <div class="col-span-full p-6 text-center bg-surface-container rounded-xl border border-dashed border-outline-variant/40">
-                    <span class="material-symbols-outlined text-[32px] text-outline mb-2">directions_car</span>
-                    <p class="text-sm font-bold text-on-surface">ยังไม่มีข้อมูลรถยนต์ในบัญชีนี้</p>
-                    <p class="text-xs text-outline mt-1">กรุณากดปุ่ม "+ เพิ่มรถใหม่" ด้านบนเพื่อเพิ่มข้อมูลรถของคุณ</p>
-                </div>
-            `;
+            if (!hasCheckedVehicles) {
+                grid.innerHTML = `
+                    <div class="col-span-full p-6 text-center bg-surface-container rounded-xl border border-dashed border-outline-variant/40">
+                        <span class="material-symbols-outlined text-[32px] text-primary animate-pulse mb-2">directions_car</span>
+                        <p class="text-sm font-bold text-on-surface">กำลังโหลดข้อมูลรถของคุณ...</p>
+                        <p class="text-xs text-outline mt-1">หรือกดปุ่ม "+ เพิ่มรถใหม่" ด้านบนเพื่อเพิ่มข้อมูลรถคันอื่น</p>
+                    </div>
+                `;
+            } else {
+                grid.innerHTML = `
+                    <div class="col-span-full p-6 text-center bg-surface-container rounded-xl border border-dashed border-outline-variant/40">
+                        <span class="material-symbols-outlined text-[32px] text-outline mb-2">directions_car</span>
+                        <p class="text-sm font-bold text-on-surface">ยังไม่มีข้อมูลรถยนต์ในบัญชีนี้</p>
+                        <p class="text-xs text-outline mt-1">กรุณากดปุ่ม "+ เพิ่มรถใหม่" ด้านบนเพื่อเพิ่มข้อมูลรถของคุณ</p>
+                    </div>
+                `;
+            }
             updateSummary();
             return;
         }
@@ -1225,6 +1297,7 @@
         };
         cars.push(newCar);
         saveCarsToStorage(cars);
+        hasCheckedVehicles = true;
         renderCarsList();
 
         // Select the newly added car
@@ -1236,15 +1309,9 @@
         updateSummary();
         closeAddCarModal();
 
-        // Persist to Supabase
+        // Persist to Supabase with valid car_size constraint ('S', 'M', 'L', 'XL')
         try {
-            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            let uid = null;
-            if (client?.auth) {
-                const sess = await client.auth.getSession().catch(() => null);
-                uid = sess?.data?.session?.user?.id;
-            }
-            if (!uid) uid = localStorage.getItem('lastLoggedInUserId');
+            const uid = await getCurrentUserId();
             if (uid) {
                 const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
                 if (fetcher) {
@@ -1254,7 +1321,7 @@
                             customer_id: uid,
                             brand_model: brand,
                             plate_number: plate,
-                            car_size: size,
+                            car_size: toDbCarSize(size),
                             is_default: isPrimary
                         }
                     });
@@ -2040,30 +2107,80 @@
             const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
             if (!fetcher) return;
 
-            // Sync vehicles
+            // Sync vehicles with robust user ID resolution & fallback to metadata
             try {
                 let uid = null;
+                let sessUser = null;
                 if (client?.auth) {
                     const sess = await client.auth.getSession().catch(() => null);
-                    uid = sess?.data?.session?.user?.id;
+                    sessUser = sess?.data?.session?.user;
+                    uid = sessUser?.id;
                 }
-                if (!uid) uid = localStorage.getItem('lastLoggedInUserId');
+                if (!uid) uid = localStorage.getItem('lastLoggedInUserId') || localStorage.getItem('currentUserId');
+                if (!uid) {
+                    try {
+                        for (let i = 0; i < localStorage.length; i++) {
+                            const k = localStorage.key(i);
+                            if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+                                const p = JSON.parse(localStorage.getItem(k) || '{}');
+                                if (p?.user?.id) {
+                                    uid = p.user.id;
+                                    if (!sessUser) sessUser = p.user;
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (_) {}
+                }
+
                 if (uid) {
-                    const dbVehicles = await fetcher(`vehicles?customer_id=eq.${uid}&order=is_default.desc`);
-                    if (Array.isArray(dbVehicles) && dbVehicles.length > 0) {
-                        const mapped = dbVehicles.map(v => ({
-                            id: v.id,
-                            brand: v.brand_model,
-                            plate: v.plate_number,
-                            size: v.car_size || 'M',
-                            isPrimary: v.is_default || false
-                        }));
+                    const dbRes = await fetcher(`vehicles?customer_id=eq.${uid}&order=is_default.desc`);
+                    const dbVehicles = Array.isArray(dbRes) ? dbRes : (dbRes?.data && Array.isArray(dbRes.data) ? dbRes.data : []);
+                    if (dbVehicles.length > 0) {
+                        const mapped = dbVehicles.map(normalizeCar).filter(Boolean);
                         saveCarsToStorage(mapped);
+                        hasCheckedVehicles = true;
                         renderCarsList();
+                    } else {
+                        // Check if user has vehicle information in user_metadata from signup
+                        const metaModel = sessUser?.user_metadata?.vehicle_model || sessUser?.user_metadata?.car_model || sessUser?.user_metadata?.carModel;
+                        const metaPlate = sessUser?.user_metadata?.license_plate || sessUser?.user_metadata?.plate_number || sessUser?.user_metadata?.licensePlate;
+                        if (metaModel && getCars().length === 0) {
+                            const defaultCar = [{
+                                id: 'car_signup',
+                                brand: metaModel,
+                                plate: metaPlate || '-',
+                                size: 'รถเก๋งใหญ่ (M)',
+                                isPrimary: true
+                            }];
+                            saveCarsToStorage(defaultCar);
+                            hasCheckedVehicles = true;
+                            renderCarsList();
+                            // Persist to Supabase vehicles table with proper 'M' car_size
+                            fetcher('vehicles', {
+                                method: 'POST',
+                                headers: { 'Prefer': 'return=representation' },
+                                body: {
+                                    customer_id: uid,
+                                    brand_model: metaModel,
+                                    plate_number: metaPlate || '-',
+                                    car_size: 'M',
+                                    is_default: true
+                                }
+                            }).catch(() => {});
+                        } else {
+                            hasCheckedVehicles = true;
+                            renderCarsList();
+                        }
                     }
+                } else {
+                    hasCheckedVehicles = true;
+                    renderCarsList();
                 }
             } catch(e) {
                 console.warn('Book page vehicles fetch notice:', e);
+                hasCheckedVehicles = true;
+                renderCarsList();
             }
 
             // Sync live shop
