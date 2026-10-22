@@ -347,6 +347,42 @@
         }
     }
 
+    // ==========================================
+    // INDEXEDDB HELPER FOR HIGH-RES QR PERSISTENCE
+    // ==========================================
+    const IDB_NAME = 'BestCarWashMedia';
+    const IDB_STORE = 'shop_media';
+
+    function openMediaDB() {
+        return new Promise((resolve) => {
+            if (typeof indexedDB === 'undefined') return resolve(null);
+            try {
+                const req = indexedDB.open(IDB_NAME, 2);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(IDB_STORE)) {
+                        db.createObjectStore(IDB_STORE);
+                    }
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => resolve(null);
+            } catch (_) {
+                resolve(null);
+            }
+        });
+    }
+
+    async function setIDBMedia(key, val) {
+        if (!key || !val) return;
+        const db = await openMediaDB();
+        if (!db) return;
+        try {
+            const tx = db.transaction(IDB_STORE, 'readwrite');
+            const store = tx.objectStore(IDB_STORE);
+            store.put(val, key);
+        } catch (_) {}
+    }
+
     function updateQrDisplay(dataUrl) {
         const qrBox = document.getElementById('displayQrBox');
         if (qrBox) {
@@ -585,7 +621,15 @@
                         if (qrImg) localStorage.setItem('ownerQrCode_' + currentUserId, qrImg);
                     }
 
-                    // 2. Save global keys for customer booking and service screen
+                    // 2. Save shop-scoped keys
+                    if (currentShopId) {
+                        localStorage.setItem('ownerBankName_' + currentShopId, bankName);
+                        localStorage.setItem('ownerAccountNumber_' + currentShopId, accNum);
+                        localStorage.setItem('ownerAccountName_' + currentShopId, accName);
+                        if (qrImg) localStorage.setItem('ownerQrCode_' + currentShopId, qrImg);
+                    }
+
+                    // 3. Save global keys for customer booking and service screen
                     localStorage.setItem('ownerBankName', bankName);
                     localStorage.setItem('ownerAccountNumber', accNum);
                     localStorage.setItem('ownerAccountName', accName);
@@ -595,6 +639,15 @@
                     if (qrImg) {
                         localStorage.setItem('ownerQrCode', qrImg);
                         localStorage.setItem('shopPromptPayQr', qrImg);
+                        localStorage.setItem('shopQrCode', qrImg);
+                    }
+
+                    // 4. Save to IndexedDB (BestCarWashMedia / shop_media)
+                    if (qrImg) {
+                        if (currentShopId) setIDBMedia('qr_' + currentShopId, qrImg);
+                        if (currentUserId) setIDBMedia('qr_' + currentUserId, qrImg);
+                        setIDBMedia('ownerQrCode', qrImg);
+                        setIDBMedia('shopPromptPayQr', qrImg);
                     }
 
                     // 3. Update UI immediately
