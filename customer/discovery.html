@@ -159,11 +159,11 @@ tailwind.config = {
                 <span class="material-symbols-outlined text-[24px]">notifications</span>
                 <span class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-error rounded-full shadow-[0_0_5px_rgba(225,29,72,0.8)]"></span>
             </a>
-            <a href="Customer Profile.html" class="flex items-center gap-3 pl-2 pr-4 py-1.5 rounded-full bg-slate-50 hover:bg-slate-100 transition-all border border-slate-200 shadow-sm group">
+            <a href="Customer%20Profile.html" class="flex items-center gap-3 pl-2 pr-4 py-1.5 rounded-full bg-slate-50 hover:bg-slate-100 transition-all border border-slate-200 shadow-sm group" title="โปรไฟล์ของฉัน">
                 <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-slate-200 group-hover:border-primary transition-colors flex-shrink-0">
                     <img id="customer-header-avatar" alt="User profile" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
                 </div>
-                <span class="hidden md:inline-block text-base font-semibold text-slate-900" id="desktop-header-name">ผู้ใช้</span>
+                <span class="hidden md:inline-block text-base font-semibold text-slate-900 group-hover:text-primary transition-colors" id="desktop-header-name">โปรไฟล์</span>
             </a>
         </div>
     </div>
@@ -975,8 +975,35 @@ tailwind.config = {
         });
     }
 
+    // --- Helper to update Header Account Name & Avatar ---
+    function applyHeaderUserProfile(name, avatar) {
+        const nameEl = document.getElementById('desktop-header-name');
+        const avatarEl = document.getElementById('customer-header-avatar');
+        if (nameEl && name && typeof name === 'string' && name.trim()) {
+            nameEl.innerText = name.trim();
+        }
+        if (avatarEl && avatar && typeof avatar === 'string' && !avatar.includes('googleusercontent') && !avatar.startsWith('data:image/svg') && avatar !== 'null' && avatar !== 'undefined') {
+            avatarEl.src = avatar;
+        }
+    }
+
     // --- Boot (Dual-Layer: 0ms Instant Cache Display + Silent Background Sync) ---
     window.addEventListener('DOMContentLoaded', () => {
+        // 0ms Instant User Profile Sync from LocalStorage
+        try {
+            const savedCustomer = JSON.parse(localStorage.getItem('customerProfile') || 'null');
+            if (savedCustomer?.fullName) {
+                applyHeaderUserProfile(savedCustomer.fullName, savedCustomer.avatar);
+            } else {
+                const altName = localStorage.getItem('customerFullName') || 
+                                localStorage.getItem('userName') || 
+                                localStorage.getItem('ownerName');
+                const altAvatar = localStorage.getItem('customerAvatar') || 
+                                  localStorage.getItem('userAvatar');
+                if (altName) applyHeaderUserProfile(altName, altAvatar);
+            }
+        } catch (_) {}
+
         initMap();
         fetchRealTimeWeather(userLocation[0], userLocation[1]);
         getUserLiveLocation(false);
@@ -1321,6 +1348,48 @@ tailwind.config = {
                 }
             } catch (favSyncErr) {
                 console.warn('Sync favorites notice:', favSyncErr);
+            }
+
+            // Sync Current User Profile Header from Supabase
+            try {
+                let currentUserId = null;
+                let userMetaName = null;
+                let userMetaAvatar = null;
+                if (client?.auth) {
+                    const sess = await client.auth.getSession().catch(() => null);
+                    const authUser = sess?.data?.session?.user;
+                    if (authUser) {
+                        currentUserId = authUser.id;
+                        userMetaName = authUser.user_metadata?.full_name || authUser.user_metadata?.name;
+                        userMetaAvatar = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture;
+                    }
+                }
+                if (!currentUserId) {
+                    currentUserId = localStorage.getItem('lastLoggedInUserId');
+                }
+
+                if (userMetaName) {
+                    applyHeaderUserProfile(userMetaName, userMetaAvatar);
+                }
+
+                if (currentUserId) {
+                    const profRes = await safeSupabaseRest(`profiles?id=eq.${currentUserId}&select=full_name,avatar_url&limit=1`);
+                    const dbProf = Array.isArray(profRes) && profRes.length > 0 ? profRes[0] : null;
+                    if (dbProf?.full_name) {
+                        applyHeaderUserProfile(dbProf.full_name, dbProf.avatar_url);
+                        
+                        try {
+                            const cur = JSON.parse(localStorage.getItem('customerProfile') || '{}');
+                            localStorage.setItem('customerProfile', JSON.stringify({
+                                ...cur,
+                                fullName: dbProf.full_name,
+                                avatar: dbProf.avatar_url || cur.avatar
+                            }));
+                        } catch (_) {}
+                    }
+                }
+            } catch (profErr) {
+                console.warn('Sync profile header notice:', profErr);
             }
         })();
         
