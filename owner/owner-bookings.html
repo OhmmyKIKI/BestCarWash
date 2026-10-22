@@ -297,7 +297,7 @@
                             <span class="px-2.5 py-0.5 bg-blue-500/20 text-blue-400 rounded-md text-[11px] font-bold border border-blue-500/30 flex items-center gap-1 status-badge">
                                 <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> 2. รถถึงร้านแล้ว (รอเริ่มล้าง)
                             </span>
-                            <span class="text-xs text-outline">ชำระมัดจำ ฿50 แล้ว • คงเหลือหน้าร้าน: <strong class="text-on-surface">฿250.00</strong></span>
+                            <span class="text-xs text-outline">ชำระมัดจำ ฿50 แล้ว</span>
                         </div>
                     </div>
                 </div>
@@ -1231,7 +1231,7 @@
                                 </div>
                                 <div class="flex items-center gap-2 mt-1.5 flex-wrap">
                                     ${renderStageBadge(b.status)}
-                                    <span class="text-xs text-outline">ชำระมัดจำ ฿50 แล้ว • คงเหลือหน้าร้าน: <strong class="text-on-surface">${calcRemaining(b.totalAmount)}</strong></span>
+                                    <span class="text-xs text-outline">ชำระมัดจำ ${b.depositAmount || '฿50.00'} แล้ว</span>
                                 </div>
                             </div>
                         </div>
