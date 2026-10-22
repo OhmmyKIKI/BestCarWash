@@ -428,7 +428,7 @@ async function safeSupabaseRest(endpoint, options = {}) {
     const cleanEndpoint = endpoint.replace(/^\/+/, '');
 
     const token = await getValidAuthToken();
-    const isTokenLarge = token && token.length > 1200;
+    const isTokenLarge = token && token.length > 2500;
 
     const candidateBases = [];
     const isHttp = typeof window !== 'undefined' && window.location && window.location.protocol && window.location.protocol.startsWith('http') && window.location.origin && window.location.origin !== 'null';
@@ -481,10 +481,10 @@ async function safeSupabaseRest(endpoint, options = {}) {
         const isProxy = base.includes('/api/supabase');
         const url = endpoint.startsWith('http') ? endpoint : `${base}/rest/v1/${cleanEndpoint}`;
 
-        // If token is bloated (> 1200 chars), never send it directly in browser headers to avoid ERR_CONNECTION_RESET and 494.
-        // It has already been routed through /api/proxy with token in body.
+        // Only fallback to anon key on proxy GET requests when token is truly oversized (> 2500 chars).
+        // For mutations (POST, PUT, PATCH, DELETE), ALWAYS preserve the user's authenticated token!
         let activeAuth = defaultAuthHeader;
-        if (isTokenLarge || (isProxy && method === 'GET')) {
+        if ((isTokenLarge && method === 'GET') || (isProxy && method === 'GET')) {
             activeAuth = `Bearer ${SUPABASE_ANON_KEY}`;
         }
 

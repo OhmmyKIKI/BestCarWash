@@ -558,16 +558,34 @@
 
             let savedReviewId = currentExistingReviewId;
             let syncSuccess = false;
+            let lastSyncError = null;
+
+            // Get direct auth session token
+            let accessToken = null;
+            if (client?.auth) {
+                const sess = await client.auth.getSession().catch(() => null);
+                accessToken = sess?.data?.session?.access_token || null;
+            }
+            if (!accessToken) {
+                accessToken = await getValidAuthToken().catch(() => null);
+            }
 
             // 1. Safe Supabase REST call
             if (fetcher && customerId && targetShop) {
                 try {
+                    const reqHeaders = { 'Prefer': 'return=representation' };
+                    if (accessToken) {
+                        reqHeaders['Authorization'] = `Bearer ${accessToken}`;
+                    }
+
                     if (savedReviewId) {
                         const patchRes = await fetcher(`reviews?id=eq.${savedReviewId}`, {
                             method: 'PATCH',
+                            headers: reqHeaders,
                             body: JSON.stringify(payload)
                         });
                         if (patchRes && !patchRes.error) syncSuccess = true;
+                        else if (patchRes?.error) lastSyncError = patchRes.error;
                     } else {
                         // Check if review already exists in DB
                         let checkQuery = `reviews?customer_id=eq.${customerId}&shop_id=eq.${targetShop}`;
@@ -580,23 +598,28 @@
                             savedReviewId = existing.id;
                             const patchRes = await fetcher(`reviews?id=eq.${existing.id}`, {
                                 method: 'PATCH',
+                                headers: reqHeaders,
                                 body: JSON.stringify(payload)
                             });
                             if (patchRes && !patchRes.error) syncSuccess = true;
+                            else if (patchRes?.error) lastSyncError = patchRes.error;
                         } else {
                             const postRes = await fetcher('reviews', {
                                 method: 'POST',
-                                body: JSON.stringify(payload),
-                                headers: { 'Prefer': 'return=representation' }
+                                headers: reqHeaders,
+                                body: JSON.stringify(payload)
                             });
                             if (postRes && !postRes.error) {
                                 syncSuccess = true;
                                 if (Array.isArray(postRes) && postRes[0]?.id) savedReviewId = postRes[0].id;
                                 else if (postRes?.data?.[0]?.id) savedReviewId = postRes.data[0].id;
+                            } else if (postRes?.error) {
+                                lastSyncError = postRes.error;
                             }
                         }
                     }
                 } catch(restErr) {
+                    lastSyncError = restErr;
                     console.warn('[Review REST notice]:', restErr);
                 }
             }
@@ -607,16 +630,26 @@
                     if (savedReviewId) {
                         const { error } = await client.from('reviews').update(payload).eq('id', savedReviewId);
                         if (!error) syncSuccess = true;
+                        else lastSyncError = error;
                     } else {
                         const { data, error } = await client.from('reviews').insert(payload).select();
                         if (!error) {
                             syncSuccess = true;
                             if (data && data[0]?.id) savedReviewId = data[0].id;
+                        } else {
+                            lastSyncError = error;
                         }
                     }
                 } catch(sdkErr) {
+                    lastSyncError = sdkErr;
                     console.warn('[Review SDK notice]:', sdkErr);
                 }
+            }
+
+            if (!syncSuccess) {
+                console.error('❌ Supabase review save failed:', lastSyncError);
+            } else {
+                console.log('✅ Supabase review saved successfully:', savedReviewId);
             }
 
             // 3. Persist review in local storage map
@@ -666,7 +699,11 @@
                 localStorage.removeItem('cachedShopReviews_' + targetShop);
             }
 
-            showCustomerToast('ขอบคุณสำหรับรีวิว! ระบบได้บันทึกข้อมูลเรียบร้อยแล้ว ⭐', 'star');
+            if (syncSuccess) {
+                showCustomerToast('ขอบคุณสำหรับรีวิว! บันทึกข้อมูลลงฐานข้อมูลเรียบร้อยแล้ว ⭐', 'star');
+            } else {
+                showCustomerToast('บันทึกรีวิวเรียบร้อยแล้ว (กำลังรอซิงค์ฐานข้อมูล)', 'done');
+            }
         } catch (err) {
             console.error('Submit review error:', err);
             showCustomerToast('บันทึกรีวิวเรียบร้อยแล้ว', 'done');
