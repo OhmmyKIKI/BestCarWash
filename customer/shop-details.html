@@ -10,7 +10,15 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
 <script src="../supabase-client.js"></script>
+<script>
+    window.SUPABASE_URL = window.SUPABASE_URL || 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
+    window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
+    if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
+        window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+    }
+</script>
 <script>
     tailwind.config = {
         darkMode: "class",
@@ -91,7 +99,7 @@
             <!-- User Profile Chip -->
             <a href="Customer%20Profile.html" class="flex items-center gap-3 pl-1.5 pr-4 py-1.5 rounded-full bg-surface-container hover:bg-surface-variant border border-outline-variant/40 hover:border-primary transition-all shadow-md group" title="โปรไฟล์ของฉัน">
                 <div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest border border-outline-variant/40 flex-shrink-0">
-                    <img id="customer-header-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>" alt="Profile" class="w-full h-full object-cover"/>
+                    <img id="customer-header-avatar" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgZmlsbD0nI2NiZDVlMScvPjxjaXJjbGUgY3g9JzUwJyBjeT0nMzgnIHI9JzE4JyBmaWxsPScjZmZmZmZmJy8+PHBhdGggZD0nTTUwIDYyYy0yMCAwIC0zNCAxMiAtMzQgMjh2MTBoNjh2LTEwYzAtMTYtMTQtMjgtMzQtMjh6JyBmaWxsPScjZmZmZmZmJy8+PC9zdmc+" alt="Profile" class="w-full h-full object-cover"/>
                 </div>
                 <span class="hidden md:inline-block text-base font-semibold text-on-surface group-hover:text-primary transition-colors" id="desktop-header-name">โปรไฟล์</span>
             </a>
@@ -668,15 +676,20 @@
     }
 
     function shareShop() {
+        const shopTitle = currentShop?.name || 'ร้านคาร์แคร์';
         if (navigator.share) {
             navigator.share({
-                title: currentShop.name,
-                text: `มาดูร้านคาร์แคร์ ${currentShop.name} บน BestCarWash กันเถอะ!`,
+                title: shopTitle,
+                text: `มาดูร้านคาร์แคร์ ${shopTitle} บน BestCarWash กันเถอะ!`,
                 url: window.location.href,
-            }).catch(console.error);
+            }).catch(() => {});
         } else {
-            navigator.clipboard.writeText(window.location.href);
-            showToast('คัดลอกลิงก์เรียบร้อยแล้ว 🔗');
+            try {
+                navigator.clipboard.writeText(window.location.href);
+                showToast('คัดลอกลิงก์เรียบร้อยแล้ว 🔗');
+            } catch (_) {
+                showToast('ลิงก์: ' + window.location.href);
+            }
         }
     }
 
@@ -1042,7 +1055,7 @@
 
         // 1. Read URL param ?shopId=...
         const urlParams = new URLSearchParams(window.location.search);
-        let paramId = urlParams.get('shopId');
+        let paramId = urlParams.get('shopId') || urlParams.get('id') || urlParams.get('shop_id');
         if (!paramId) {
             paramId = localStorage.getItem('selectedShopId');
         }
@@ -1254,9 +1267,9 @@
 
                 if (dbShop) {
                     const [profRes, servRes, revRes] = await Promise.all([
-                        dbShop.owner_id ? fetcher(`profiles?id=eq.${dbShop.owner_id}&select=avatar_url&limit=1`) : Promise.resolve([]),
-                        fetcher(`services?shop_id=eq.${dbShop.id}&order=created_at.asc`),
-                        fetcher(`reviews?shop_id=eq.${dbShop.id}&order=created_at.desc&select=*,customer:customer_id(full_name,avatar_url)`)
+                        (dbShop.owner_id ? fetcher(`profiles?id=eq.${dbShop.owner_id}&select=avatar_url&limit=1`) : Promise.resolve([])).catch(() => []),
+                        fetcher(`services?shop_id=eq.${dbShop.id}&order=created_at.asc`).catch(() => []),
+                        fetcher(`reviews?shop_id=eq.${dbShop.id}&order=created_at.desc&select=*,customer:customer_id(full_name,avatar_url)`).catch(() => [])
                     ]);
 
                     const ownerProf = Array.isArray(profRes) && profRes.length > 0 ? profRes[0] : null;
