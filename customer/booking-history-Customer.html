@@ -906,11 +906,13 @@
     <div class="bg-surface-container rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl relative z-10 scale-95 opacity-0 transition-all duration-300 border border-outline-variant/40 flex flex-col">
         <!-- Header -->
         <div class="p-4 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-highest">
-            <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-emerald-400">receipt_long</span>
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                    <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+                </div>
                 <div>
-                    <h3 class="text-sm font-bold text-on-surface">สลิปหลักฐานการคืนเงิน</h3>
-                    <span class="text-[10px] text-on-surface-variant font-mono" id="refundSlipTxnCode">TXN: #RF-20260802-551</span>
+                    <h3 class="text-sm font-bold text-on-surface">สลิปหลักฐานการคืนเงินมัดจำ</h3>
+                    <span class="text-[10px] text-on-surface-variant font-mono" id="refundSlipTxnCode">รหัสการจอง: -</span>
                 </div>
             </div>
             <button onclick="closeRefundSlipModal()" class="w-8 h-8 rounded-full bg-surface-container hover:bg-surface-variant flex items-center justify-center text-outline hover:text-on-surface transition-colors">
@@ -918,59 +920,33 @@
             </button>
         </div>
 
-        <!-- Body: Bank Slip (Image or Card) -->
-        <div class="p-4 flex flex-col items-center gap-3 bg-surface-container-low max-h-[75vh] overflow-y-auto">
-            <!-- Actual image if available (from Canvas or upload) -->
-            <div id="refundSlipImgContainer" class="w-full hidden flex flex-col items-center">
-                <img id="refundSlipModalImg" src="" alt="สลิปโอนคืนเงิน" class="w-full rounded-2xl shadow-md border border-outline-variant/30 object-contain max-h-[58vh]">
-            </div>
-
-            <!-- Fallback Structured Bank Slip -->
-            <div id="refundSlipDetailsContainer" class="w-full bg-white text-gray-800 rounded-2xl p-4 shadow-md border border-gray-200 flex flex-col gap-2.5 text-xs font-sans">
-                <!-- Slip Top -->
-                <div class="flex items-center justify-between pb-2 border-b border-gray-100">
-                    <span class="font-bold text-green-600 text-sm flex items-center gap-1">
-                        <span class="material-symbols-outlined text-[16px]">check_circle</span> โอนเงินสำเร็จ (PromptPay)
+        <!-- Body: Real Uploaded Slip Image from Owner -->
+        <div class="p-4 flex flex-col items-center gap-3 bg-surface-container-low max-h-[78vh] overflow-y-auto">
+            <!-- Actual image from Owner -->
+            <div id="refundSlipImgContainer" class="w-full flex flex-col items-center gap-2.5">
+                <div class="w-full rounded-2xl overflow-hidden border border-outline-variant/40 bg-black/40 flex items-center justify-center shadow-inner min-h-[220px]">
+                    <img id="refundSlipModalImg" src="" alt="สลิปโอนคืนเงินมัดจำ" class="w-full max-h-[58vh] object-contain rounded-2xl">
+                </div>
+                <div class="w-full p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs">
+                    <span class="text-emerald-400 font-medium flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px]">verified</span>
+                        <span>สลิปยืนยันจากร้านค้า</span>
                     </span>
-                    <span class="text-[10px] text-gray-400" id="refundSlipDateTime">2 ส.ค. 2569, 17:15 น.</span>
+                    <span class="text-[11px] text-outline font-mono" id="refundSlipUploadTime">โอนคืนแล้ว</span>
                 </div>
-
-                <!-- Slip Amount -->
-                <div class="text-center py-2 bg-gray-50 rounded-xl">
-                    <span class="text-[10px] text-gray-500 block">จำนวนเงินที่คืน</span>
-                    <span class="text-2xl font-black text-gray-900 font-mono" id="refundSlipAmount">฿50.00</span>
-                </div>
-
-                <!-- Transfer Parties -->
-                <div class="space-y-2 text-[11px] pt-1">
-                    <div class="flex items-start justify-between">
-                        <span class="text-gray-500">จาก:</span>
-                        <div class="text-right">
-                            <span class="font-semibold text-gray-800 block" id="refundSlipFromShop">Sparkle Wash & Detailing</span>
-                            <span class="text-[10px] text-gray-400">กสิกรไทย (xxx-x-xx889-x)</span>
-                        </div>
-                    </div>
-                    <div class="flex items-start justify-between">
-                        <span class="text-gray-500">ไปยัง:</span>
-                        <div class="text-right">
-                            <span class="font-semibold text-gray-800 block" id="refundSlipToCustomer">คุณ (ลูกค้า)</span>
-                            <span class="text-[10px] text-gray-400" id="refundSlipToAccount">พร้อมเพย์ 089-123-4567</span>
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between border-t border-gray-100 pt-1.5">
-                        <span class="text-gray-500">เหตุผล:</span>
-                        <span class="font-medium text-gray-700" id="refundSlipReason">คืนเงินมัดจำคิวยกเลิก</span>
-                    </div>
-                </div>
-
-                <!-- LINE Delivery Badge -->
-                <div class="mt-1 p-2 bg-[#06C755]/10 rounded-xl flex items-center justify-center gap-1.5 text-[11px] text-[#06C755] font-semibold border border-[#06C755]/20">
-                    <span class="material-symbols-outlined text-[14px]">done_all</span>
-                    <span>ส่งสำเนาเข้าแชต LINE ลูกค้าแล้ว</span>
-                </div>
+                <button type="button" id="refundSlipFullViewBtn" class="text-xs text-secondary hover:underline flex items-center gap-1 font-medium mt-0.5">
+                    <span class="material-symbols-outlined text-[14px]">open_in_new</span> ดูรูปภาพขนาดเต็ม
+                </button>
             </div>
 
-            <button onclick="closeRefundSlipModal()" class="w-full py-2.5 bg-surface-variant hover:bg-surface-container-highest text-on-surface font-semibold text-xs rounded-xl transition-colors">
+            <!-- No Image Fallback -->
+            <div id="refundSlipNoImageContainer" class="hidden w-full py-10 px-4 text-center flex flex-col items-center gap-2 text-outline">
+                <span class="material-symbols-outlined text-4xl text-amber-400 opacity-80">image_not_supported</span>
+                <span class="text-xs font-semibold text-on-surface">ยังไม่มีรูปภาพสลิปจากร้านค้า</span>
+                <span class="text-[11px] text-on-surface-variant">ร้านค้ากำลังดำเนินการตรวจสอบและแนบสลิป</span>
+            </div>
+
+            <button onclick="closeRefundSlipModal()" class="w-full py-2.5 bg-surface-variant hover:bg-surface-container-highest text-on-surface font-semibold text-xs rounded-xl transition-colors mt-1">
                 ปิดหน้าต่าง
             </button>
         </div>
@@ -1788,7 +1764,7 @@
                                 </div>
                                 <span class="text-xs text-[#06C755] font-semibold">ร้านค้าโอนเงินคืนและแนบสลิปเรียบร้อยแล้ว</span>
                             </div>
-                            <button onclick="openRefundSlipModal('${b.refundSlip || ''}', '${b.bookingId}')" class="text-[11px] font-bold text-on-surface bg-surface-container-highest hover:bg-surface-variant px-3 py-1.5 rounded-lg border border-outline-variant/30 transition-colors flex items-center gap-1 active:scale-95 shadow-sm">
+                            <button onclick="openRefundSlipModal('', '${cleanId}')" class="text-[11px] font-bold text-on-surface bg-surface-container-highest hover:bg-surface-variant px-3 py-1.5 rounded-lg border border-outline-variant/30 transition-colors flex items-center gap-1 active:scale-95 shadow-sm">
                                 <span class="material-symbols-outlined text-[14px] text-emerald-400">receipt_long</span> ดูสลิป
                             </button>
                         </div>
@@ -1860,7 +1836,7 @@
                         <div class="mt-2 flex items-center justify-between border-t border-outline-variant/30 pt-3">
                             <div class="text-xs text-on-surface-variant">
                                 ${b.refundSlip ? `
-                                    <button onclick="openRefundSlipModal('${b.refundSlip || ''}', '${b.bookingId}')" class="text-xs text-emerald-500 hover:underline flex items-center gap-1 font-bold">
+                                    <button onclick="openRefundSlipModal('', '${cleanId}')" class="text-xs text-emerald-500 hover:underline flex items-center gap-1 font-bold">
                                         <span class="material-symbols-outlined text-[14px]">receipt_long</span> ดูสลิปคืนเงิน
                                     </button>
                                 ` : `
@@ -1897,9 +1873,17 @@
                         <div class="mt-1 text-sm text-on-surface-variant flex flex-col gap-1">
                             <p><span class="opacity-70">บริการ:</span> ${b.serviceName || 'ล้างสี ดูดฝุ่น'}</p>
                             <p><span class="opacity-70">เหตุผล:</span> ${b.refundReason || b.cancelReason || 'ลูกค้ายกเลิกคิว'}</p>
+                            ${b.refundSlip ? `<p><span class="opacity-70">สถานะมัดจำ:</span> <strong class="text-emerald-400 font-bold">คืนเงินแล้ว</strong></p>` : ''}
                         </div>
 
-                        <div class="mt-2 flex items-center justify-end border-t border-outline-variant/30 pt-3">
+                        <div class="mt-2 flex items-center justify-between border-t border-outline-variant/30 pt-3">
+                            <div>
+                                ${b.refundSlip ? `
+                                    <button onclick="openRefundSlipModal('', '${cleanId}')" class="text-xs text-emerald-500 hover:underline flex items-center gap-1 font-bold">
+                                        <span class="material-symbols-outlined text-[14px]">receipt_long</span> ดูสลิปคืนเงิน
+                                    </button>
+                                ` : ''}
+                            </div>
                             <button onclick="window.location.href = 'shop-details.html?shopId=' + encodeURIComponent(b.shopId || '')" class="px-3 py-1.5 bg-surface-container-highest border border-outline-variant text-on-surface text-xs font-medium rounded-lg hover:bg-surface-variant transition-colors flex items-center gap-1 active:scale-95">
                                 <span class="material-symbols-outlined text-[14px]">replay</span> จองใหม่
                             </button>
@@ -1916,45 +1900,57 @@
         let b = null;
         if (bookingId) {
             try {
-                const list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
-                b = list.find(item => normBookingId(item.bookingId) === normBookingId(bookingId));
+                const hist = JSON.parse(localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
+                b = hist.find(item => normBookingId(item.bookingId) === normBookingId(bookingId) || normBookingId(item.id) === normBookingId(bookingId) || (item.bookingId && item.bookingId.replace('#','') === String(bookingId).replace('#','')));
+                if (!b) {
+                    const list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
+                    b = list.find(item => normBookingId(item.bookingId) === normBookingId(bookingId) || normBookingId(item.id) === normBookingId(bookingId) || (item.bookingId && item.bookingId.replace('#','') === String(bookingId).replace('#','')));
+                }
             } catch(e) {}
             if (!b && typeof DEFAULT_CUSTOMER_HISTORY !== 'undefined') {
-                b = DEFAULT_CUSTOMER_HISTORY.find(item => normBookingId(item.bookingId) === normBookingId(bookingId));
+                b = DEFAULT_CUSTOMER_HISTORY.find(item => normBookingId(item.bookingId) === normBookingId(bookingId) || (item.bookingId && item.bookingId.replace('#','') === String(bookingId).replace('#','')));
             }
-            if (!b && normBookingId(currentActiveBooking.bookingId) === normBookingId(bookingId)) {
+            if (!b && typeof currentActiveBooking !== 'undefined' && currentActiveBooking && (normBookingId(currentActiveBooking.bookingId) === normBookingId(bookingId) || normBookingId(currentActiveBooking.id) === normBookingId(bookingId) || (currentActiveBooking.bookingId && currentActiveBooking.bookingId.replace('#','') === String(bookingId).replace('#','')))) {
                 b = currentActiveBooking;
             }
         }
-        if (!b) b = currentActiveBooking || {};
+        if (!b) b = (typeof currentActiveBooking !== 'undefined' && currentActiveBooking) ? currentActiveBooking : {};
 
         const effectiveSlip = slipUrl || b.refundSlip || '';
         const imgContainer = document.getElementById('refundSlipImgContainer');
         const imgEl = document.getElementById('refundSlipModalImg');
-        const detailsContainer = document.getElementById('refundSlipDetailsContainer');
+        const noImgContainer = document.getElementById('refundSlipNoImageContainer');
+        const txnEl = document.getElementById('refundSlipTxnCode');
+        const timeEl = document.getElementById('refundSlipUploadTime');
+        const fullViewBtn = document.getElementById('refundSlipFullViewBtn');
+
+        if (txnEl) {
+            const rawId = (b.bookingId || bookingId || '-').toString().trim();
+            txnEl.innerText = 'รหัสการจอง: ' + (rawId.startsWith('#') ? rawId : '#' + rawId);
+        }
+
+        if (timeEl) {
+            const timeStr = b.refundedAt || b.refundTime || b.updatedAt || 'โอนคืนแล้ว';
+            timeEl.innerText = timeStr;
+        }
 
         if (effectiveSlip && (effectiveSlip.startsWith('data:image') || effectiveSlip.startsWith('http') || effectiveSlip.startsWith('blob'))) {
-            if (imgEl) imgEl.src = effectiveSlip;
+            if (imgEl) {
+                imgEl.src = effectiveSlip;
+            }
             if (imgContainer) imgContainer.classList.remove('hidden');
-            if (detailsContainer) detailsContainer.classList.add('hidden');
+            if (noImgContainer) noImgContainer.classList.add('hidden');
+            if (fullViewBtn) {
+                fullViewBtn.onclick = function() {
+                    const w = window.open('');
+                    if (w) {
+                        w.document.write('<!DOCTYPE html><html><head><title>สลิปโอนเงินคืน</title><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin:0;background:#0b0f19;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="' + effectiveSlip + '" style="max-width:96%;max-height:96vh;object-fit:contain;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.5);"/></body></html>');
+                    }
+                };
+            }
         } else {
             if (imgContainer) imgContainer.classList.add('hidden');
-            if (detailsContainer) detailsContainer.classList.remove('hidden');
-            const dt = document.getElementById('refundSlipDateTime');
-            const amt = document.getElementById('refundSlipAmount');
-            const shop = document.getElementById('refundSlipFromShop');
-            const cust = document.getElementById('refundSlipToCustomer');
-            const acc = document.getElementById('refundSlipToAccount');
-            const reason = document.getElementById('refundSlipReason');
-            const txn = document.getElementById('refundSlipTxnCode');
-
-            if (dt) dt.innerText = b.refundedAt || b.dateTime || 'วันนี้';
-            if (amt) amt.innerText = b.depositAmount || '฿50.00';
-            if (shop) shop.innerText = b.shopName || 'Sparkle Wash & Detailing';
-            if (cust) cust.innerText = b.customerName || 'คุณ (ลูกค้า)';
-            if (acc) acc.innerText = b.refundPromptPay ? ('พร้อมเพย์ ' + b.refundPromptPay) : 'พร้อมเพย์ 089-123-4567';
-            if (reason) reason.innerText = b.refundReason || 'คืนเงินมัดจำคิวยกเลิก';
-            if (txn) txn.innerText = 'TXN: #RF-' + (b.bookingId || '2026').replace('#','');
+            if (noImgContainer) noImgContainer.classList.remove('hidden');
         }
 
         const modal = document.getElementById('refundSlipModal');
