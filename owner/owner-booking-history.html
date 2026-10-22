@@ -247,15 +247,15 @@
         }
         if (!Array.isArray(list)) list = [];
 
-        // Filter for completed or refunded or declined or refund_requested
-        let history = list.filter(b => ['completed', 'refunded', 'declined', 'no_show', 'refund_requested'].includes(b.status));
+        // Filter for completed or refunded or declined or cancelled or refund_requested
+        let history = list.filter(b => ['completed', 'refunded', 'declined', 'cancelled', 'no_show', 'refund_requested'].includes(b.status));
 
         // Check active customer booking
         const activeCust = localStorage.getItem('activeCustomerBooking');
         if (activeCust) {
             try {
                 const cust = JSON.parse(activeCust);
-                if (cust && ['completed', 'refunded', 'declined', 'no_show', 'refund_requested'].includes(cust.status)) {
+                if (cust && ['completed', 'refunded', 'declined', 'cancelled', 'no_show', 'refund_requested'].includes(cust.status)) {
                     const idx = history.findIndex(b => normId(b.bookingId) === normId(cust.bookingId));
                     if (idx === -1) {
                         history.unshift(cust);
@@ -614,9 +614,9 @@
                     let list = getHistoryBookings();
                     dbBookings.forEach(db => {
                         const existing = list.find(item => normId(item.bookingId) === normId(db.id) || normId(item.dbId) === normId(db.id) || normId(item.id) === normId(db.id));
-                        const normalizedStatus = (db.status || 'completed').toLowerCase();
-                        const slip = db.slip_url || db.slip_image || db.payment_slip || '';
-                        const refund = db.refund_slip || db.refund_slip_url || '';
+                        let normalizedStatus = (db.status || 'completed').toLowerCase();
+                        let slip = db.slip_url || db.slip_image || db.payment_slip || '';
+                        let refund = db.refund_slip || db.refund_slip_url || '';
 
                         // Parse vehicle_info (JSON or String)
                         let carBrand = 'รถยนต์', carPlate = '-', carSize = 'รถเก๋ง', srvName = '';
@@ -624,6 +624,8 @@
                             try {
                                 const vi = typeof db.vehicle_info === 'object' ? db.vehicle_info : JSON.parse(db.vehicle_info);
                                 if (vi && typeof vi === 'object') {
+                                    if (vi.service_status) normalizedStatus = String(vi.service_status).toLowerCase();
+                                    if (vi.refund_slip) refund = vi.refund_slip;
                                     carBrand = vi.brand || vi.brand_model || vi.model || 'รถยนต์';
                                     carPlate = vi.plate || vi.plate_number || vi.license_plate || vi.carPlate || '-';
                                     carSize = vi.size || vi.car_size || 'รถเก๋ง';

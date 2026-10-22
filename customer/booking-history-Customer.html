@@ -1498,7 +1498,23 @@
                 localStorage.setItem('appBookingsList', JSON.stringify(list));
             } catch(e) {}
 
-            // Sync with Supabase DB
+            // Immediately cache into cachedCustomerCompletedHistory so history tab shows it
+            try {
+                let cachedHist = [];
+                const histStr = localStorage.getItem('cachedCustomerCompletedHistory');
+                if (histStr) cachedHist = JSON.parse(histStr) || [];
+                const existIdx = cachedHist.findIndex(item => normBookingId(item.bookingId) === normBookingId(currentActiveBooking.bookingId));
+                if (existIdx !== -1) {
+                    cachedHist[existIdx].status = 'refund_requested';
+                    cachedHist[existIdx].refundReason = reason;
+                    cachedHist[existIdx].refundPromptPay = refundAccount;
+                } else {
+                    cachedHist.unshift({ ...currentActiveBooking });
+                }
+                localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(cachedHist));
+            } catch(_) {}
+
+            // Sync with Supabase DB (use 'CANCELLED' for DB status constraint, rich status in vehicle_info)
             const targetDbId = currentActiveBooking.rawBookingId || currentActiveBooking.id || currentActiveBooking.dbId;
             if (targetDbId) {
                 (async () => {
@@ -1515,10 +1531,13 @@
                     vi.refund_reason = reason;
                     vi.refund_promptpay = refundAccount;
                     vi.cancel_reason = reason;
+                    vi.service_name = currentActiveBooking.serviceName || vi.service_name || 'บริการล้างรถ';
+                    vi.brand = currentActiveBooking.carBrand || vi.brand || '';
+                    vi.plate = currentActiveBooking.carPlate || vi.plate || '';
                     vi.updated_at = new Date().toISOString();
 
                     const patchPayload = {
-                        status: 'refund_requested',
+                        status: 'CANCELLED',
                         vehicle_info: JSON.stringify(vi),
                         updated_at: new Date().toISOString()
                     };
@@ -1759,7 +1778,7 @@
 
                         <div class="mt-1 text-sm text-on-surface-variant flex flex-col gap-1">
                             <p><span class="opacity-70">บริการ:</span> ${b.serviceName || 'ล้างรถ'}</p>
-                            <p><span class="opacity-70">ยอดเงินที่คืน:</span> <strong class="text-emerald-400 font-mono text-base">${b.depositAmount || '฿ 50.00'}</strong> (คืนมัดจำเรียบร้อย)</p>
+                            <p><span class="opacity-70">สถานะมัดจำ:</span> <strong class="text-emerald-400 font-bold">คืนเงินแล้ว</strong> (คืนมัดจำ ${b.depositAmount || '฿ 50.00'})</p>
                         </div>
 
                         <div class="mt-1 p-2.5 rounded-xl bg-[#06C755]/10 border border-[#06C755]/30 flex items-center justify-between">
@@ -1767,7 +1786,7 @@
                                 <div class="w-5 h-5 rounded-full bg-[#06C755] flex items-center justify-center text-white text-[9px] font-black shrink-0 shadow-sm">
                                     LINE
                                 </div>
-                                <span class="text-xs text-[#06C755] font-semibold">ส่งสลิปหลักฐานคืนเงินเข้า LINE แล้ว</span>
+                                <span class="text-xs text-[#06C755] font-semibold">ร้านค้าโอนเงินคืนและแนบสลิปเรียบร้อยแล้ว</span>
                             </div>
                             <button onclick="openRefundSlipModal('${b.refundSlip || ''}', '${b.bookingId}')" class="text-[11px] font-bold text-on-surface bg-surface-container-highest hover:bg-surface-variant px-3 py-1.5 rounded-lg border border-outline-variant/30 transition-colors flex items-center gap-1 active:scale-95 shadow-sm">
                                 <span class="material-symbols-outlined text-[14px] text-emerald-400">receipt_long</span> ดูสลิป
@@ -1797,8 +1816,9 @@
                         </div>
 
                         <div class="mt-1 text-sm text-on-surface-variant flex flex-col gap-1">
+                            <p><span class="opacity-70">บริการ:</span> ${b.serviceName || 'ล้างรถ'}</p>
+                            <p><span class="opacity-70">สถานะมัดจำ:</span> <strong class="text-amber-400 font-bold">รอร้านโอนคืนมัดจำ</strong> (${b.depositAmount || '฿ 50.00'})</p>
                             <p><span class="opacity-70">เหตุผลที่ยกเลิก:</span> ${b.refundReason || 'ติดธุระด่วน'}</p>
-                            <p><span class="opacity-70">ยอดเงินมัดจำ:</span> <strong class="text-amber-300 font-mono text-base">${b.depositAmount || '฿ 50.00'}</strong> (ร้านค้าจะตรวจสอบและโอนคืนภายใน 24 ชม.)</p>
                         </div>
 
                         <div class="mt-1 p-2.5 rounded-xl bg-surface-container-highest/60 border border-outline-variant/30 flex items-center justify-between text-xs">
@@ -2149,7 +2169,7 @@
             try {
                 const list = JSON.parse(listStr);
                 if (Array.isArray(list) && list.length > 0) {
-                    const activeInList = list.find(item => ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes((item.status || '').toLowerCase()));
+                    const activeInList = list.find(item => ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready'].includes((item.status || '').toLowerCase()));
                     if (activeInList) {
                         b = activeInList;
                         localStorage.setItem('activeCustomerBooking', JSON.stringify(b));
@@ -2162,7 +2182,7 @@
         renderCompletedHistory();
 
         // Check whether there is an active car wash queue
-        const hasActiveQueue = !!(b && ['incoming', 'pending', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes((b.status || '').toLowerCase()));
+        const hasActiveQueue = !!(b && ['incoming', 'pending', 'confirmed', 'arrived', 'washing', 'ready'].includes((b.status || '').toLowerCase()));
 
         // Update tab label indicator
         const tabUpEl = document.getElementById('tabUpcoming');
@@ -2225,53 +2245,13 @@
         }
         prevCustomerStatus = b.status;
 
-        // Check if completed or refunded or cancelled or declined
-        if (['completed', 'refunded', 'declined', 'rejected', 'cancelled', 'no_show'].includes(b.status)) {
+        // Check if completed or refunded or cancelled or declined or refund_requested
+        if (['completed', 'refunded', 'declined', 'rejected', 'cancelled', 'no_show', 'refund_requested'].includes((b.status || '').toLowerCase())) {
             currentActiveBooking = null;
             if (upcomingCard) upcomingCard.classList.add('hidden');
             if (emptyUpcoming) {
                 emptyUpcoming.classList.remove('hidden');
                 emptyUpcoming.classList.add('flex');
-            }
-            return;
-        }
-
-        // Check if refund requested (still waiting for merchant to process refund)
-        if (b.status === 'refund_requested') {
-            if (upcomingCard) upcomingCard.classList.remove('hidden');
-            if (emptyUpcoming) {
-                emptyUpcoming.classList.add('hidden');
-                emptyUpcoming.classList.remove('flex');
-            }
-            const idEl = document.getElementById('upcomingBookingIdBadge');
-            const dtEl = document.getElementById('upcomingDateTimeText');
-            const servEl = document.getElementById('upcomingServiceText');
-            const carEl = document.getElementById('upcomingCarText');
-            const shopEl = document.getElementById('upcomingShopTitle');
-            const upcomingBadge = document.getElementById('upcomingBadge');
-            const upcomingBadgeText = document.getElementById('upcomingBadgeText');
-            const titleEl = document.getElementById('currentStepTitle');
-
-            if (idEl && b.bookingId) idEl.innerText = b.bookingId;
-            if (dtEl && b.dateTime) dtEl.innerText = b.dateTime;
-            if (servEl && b.serviceName) servEl.innerText = b.serviceName;
-            if (carEl) carEl.innerText = b.carName || `${b.carBrand || 'รถของคุณ'} (${b.carPlate || ''})`;
-            if (shopEl && b.shopName) shopEl.innerText = b.shopName;
-            if (titleEl) titleEl.innerText = 'ยื่นขอยกเลิกแล้ว (รอร้านค้าโอนมัดจำคืน ฿50)';
-            if (upcomingBadgeText) upcomingBadgeText.innerText = 'รอร้านคืนเงิน';
-            if (upcomingBadge) {
-                upcomingBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-bold border flex items-center gap-1.5 shadow-sm bg-amber-500/20 text-amber-300 border-amber-500/30';
-            }
-            const upcomingButtons = document.getElementById('upcomingButtons');
-            if (upcomingButtons) {
-                upcomingButtons.innerHTML = `
-                    <button type="button" onclick="callCurrentShop()" class="px-3 py-1.5 bg-surface-container-highest hover:bg-surface-variant border border-outline-variant/40 text-on-surface text-xs font-medium rounded-lg transition-colors flex items-center gap-1 active:scale-95" title="โทรสอบถามร้าน">
-                        <span class="material-symbols-outlined text-[15px] text-[#4edea3]">call</span> โทรสอบถามร้าน
-                    </button>
-                    <span class="text-xs text-amber-300 font-medium flex items-center gap-1">
-                        <span class="material-symbols-outlined text-[14px]">hourglass_top</span> กำลังรอร้านโอนเงินคืน
-                    </span>
-                `;
             }
             return;
         }
@@ -2501,7 +2481,12 @@
 
                 if (dbBookings && dbBookings.length > 0) {
                     // Check if user has an active ongoing booking
-                    const activeOngoing = dbBookings.find(item => ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes((item.status || '').toLowerCase()));
+                    const activeOngoing = dbBookings.find(item => {
+                        let vi = null;
+                        try { vi = typeof item.vehicle_info === 'string' ? JSON.parse(item.vehicle_info) : item.vehicle_info; } catch(_) {}
+                        const s = (vi?.service_status || item.status || '').toLowerCase();
+                        return ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready'].includes(s) && !['refund_requested', 'declined', 'cancelled', 'refunded', 'completed', 'no_show'].includes(s);
+                    });
                     if (activeOngoing) {
                         let existingLocal = null;
                         try { existingLocal = JSON.parse(localStorage.getItem('activeCustomerBooking') || '{}'); } catch(e) {}
@@ -2549,7 +2534,7 @@
                         if (activeCustStr) {
                             try {
                                 const ac = JSON.parse(activeCustStr);
-                                if (!['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes((ac.status || '').toLowerCase())) {
+                                if (!['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready'].includes((ac.status || '').toLowerCase())) {
                                     localStorage.removeItem('activeCustomerBooking');
                                 }
                             } catch(e) {}
@@ -2660,7 +2645,7 @@
                     if (activeCustStr) {
                         try {
                             const ac = JSON.parse(activeCustStr);
-                            if (ac && ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes((ac.status || '').toLowerCase())) {
+                            if (ac && ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready'].includes((ac.status || '').toLowerCase())) {
                                 hasLocalActive = true;
                             }
                         } catch(e) {}
@@ -2670,7 +2655,7 @@
                         if (listStr) {
                             try {
                                 const l = JSON.parse(listStr);
-                                if (Array.isArray(l) && l.some(item => ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes((item.status || '').toLowerCase()))) {
+                                if (Array.isArray(l) && l.some(item => ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready'].includes((item.status || '').toLowerCase()))) {
                                     hasLocalActive = true;
                                 }
                             } catch(_) {}
@@ -2679,8 +2664,6 @@
 
                     if (!hasLocalActive) {
                         localStorage.removeItem('activeCustomerBooking');
-                        localStorage.removeItem('cachedCustomerCompletedHistory');
-                        renderCompletedHistory([]);
                     }
                     loadActiveBooking();
                 }
@@ -2692,8 +2675,9 @@
 
     // Realtime Cross-Tab Synchronization
     window.addEventListener('storage', (e) => {
-        if (e.key === 'appBookingsList' || e.key === 'activeCustomerBooking') {
+        if (e.key === 'appBookingsList' || e.key === 'activeCustomerBooking' || e.key === 'cachedCustomerCompletedHistory') {
             loadActiveBooking();
+            renderCompletedHistory();
         }
     });
 
@@ -2710,10 +2694,46 @@
                             if (matchBookingId(ac.bookingId, ev.data.bookingId) || matchBookingId(ac.id, ev.data.bookingId) || matchBookingId(ac.rawBookingId, ev.data.bookingId)) {
                                 ac.status = ev.data.status;
                                 if (ev.data.step) ac.step = ev.data.step;
-                                localStorage.setItem('activeCustomerBooking', JSON.stringify(ac));
-                                loadActiveBooking();
+                                if (ev.data.refundSlip) ac.refundSlip = ev.data.refundSlip;
+                                if (ev.data.refundedAt) ac.refundedAt = ev.data.refundedAt;
+                                if (['completed', 'refunded', 'declined', 'cancelled', 'refund_requested'].includes((ev.data.status || '').toLowerCase())) {
+                                    localStorage.removeItem('activeCustomerBooking');
+                                } else {
+                                    localStorage.setItem('activeCustomerBooking', JSON.stringify(ac));
+                                }
                             }
                         } catch(_) {}
+                    }
+
+                    // Update cachedCustomerCompletedHistory so history cards reflect the new status immediately
+                    try {
+                        let hist = JSON.parse(localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
+                        if (Array.isArray(hist)) {
+                            const matchIdx = hist.findIndex(item =>
+                                matchBookingId(item.bookingId, ev.data.bookingId) ||
+                                matchBookingId(item.id, ev.data.bookingId) ||
+                                matchBookingId(item.rawBookingId, ev.data.bookingId)
+                            );
+                            if (matchIdx !== -1) {
+                                hist[matchIdx].status = ev.data.status;
+                                if (ev.data.refundSlip) hist[matchIdx].refundSlip = ev.data.refundSlip;
+                                if (ev.data.refundedAt) hist[matchIdx].refundedAt = ev.data.refundedAt;
+                                if (ev.data.declineReason) hist[matchIdx].declineReason = ev.data.declineReason;
+                            } else if (['completed', 'refunded', 'declined', 'cancelled'].includes(ev.data.status)) {
+                                const allList = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
+                                const foundInApp = allList.find(item => matchBookingId(item.bookingId, ev.data.bookingId) || matchBookingId(item.id, ev.data.bookingId));
+                                if (foundInApp) hist.unshift({ ...foundInApp, status: ev.data.status, refundSlip: ev.data.refundSlip || '', refundedAt: ev.data.refundedAt || '' });
+                            }
+                            localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(hist));
+                        }
+                    } catch(_) {}
+
+                    loadActiveBooking();
+                    renderCompletedHistory();
+
+                    if (ev.data.status === 'refunded') {
+                        showCustomerToast('💰 ร้านค้าโอนเงินคืนมัดจำ ฿50 ให้คุณเรียบร้อยแล้ว! แตะดูสลิปได้เลย');
+                        switchTab('completed');
                     }
                     syncCustomerActiveQueue();
                 }
@@ -2768,7 +2788,7 @@
                 }
 
                 if (!b) {
-                    if (['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes(cloudStatus)) {
+                    if (['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready'].includes(cloudStatus) && !['refund_requested', 'declined', 'cancelled', 'refunded', 'completed', 'no_show'].includes(cloudStatus)) {
                         b = {
                             bookingId: '#' + dbRow.id.substring(0, 8).toUpperCase(),
                             rawBookingId: dbRow.id,
@@ -2797,11 +2817,42 @@
                     const currentSt = (b.status || '').toLowerCase();
                     const currentSp = b.step;
 
-                    if ((cloudStatus && cloudStatus !== currentSt) || (cloudStep !== null && cloudStep !== currentSp)) {
+                    if ((cloudStatus && cloudStatus !== currentSt) || (cloudStep !== null && cloudStep !== currentSp) || vi?.refund_slip) {
                         b.status = cloudStatus;
                         if (cloudStep !== null) b.step = cloudStep;
-                        localStorage.setItem('activeCustomerBooking', JSON.stringify(b));
+                        if (vi?.refund_slip) b.refundSlip = vi.refund_slip;
+                        if (vi?.refunded_at) b.refundedAt = vi.refunded_at;
+                        if (vi?.decline_reason) b.declineReason = vi.decline_reason;
+
+                        if (['completed', 'refunded', 'declined', 'cancelled', 'refund_requested'].includes(cloudStatus)) {
+                            localStorage.removeItem('activeCustomerBooking');
+                        } else {
+                            localStorage.setItem('activeCustomerBooking', JSON.stringify(b));
+                        }
+
+                        // Also sync to cachedCustomerCompletedHistory so history cards reflect the new status
+                        try {
+                            let hist = JSON.parse(localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
+                            if (Array.isArray(hist)) {
+                                const idx = hist.findIndex(item =>
+                                    matchBookingId(item.bookingId, b.bookingId) ||
+                                    matchBookingId(item.id, b.id) ||
+                                    matchBookingId(item.rawBookingId, b.rawBookingId)
+                                );
+                                if (idx !== -1) {
+                                    hist[idx].status = cloudStatus;
+                                    if (vi?.refund_slip) hist[idx].refundSlip = vi.refund_slip;
+                                    if (vi?.refunded_at) hist[idx].refundedAt = vi.refunded_at;
+                                    if (vi?.decline_reason) hist[idx].declineReason = vi.decline_reason;
+                                } else if (['completed', 'refunded', 'declined', 'cancelled', 'refund_requested'].includes(cloudStatus)) {
+                                    hist.unshift({ ...b, status: cloudStatus, refundSlip: vi?.refund_slip || '', refundedAt: vi?.refunded_at || '' });
+                                }
+                                localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(hist));
+                            }
+                        } catch(_) {}
+
                         loadActiveBooking();
+                        renderCompletedHistory();
                     }
                 }
             }

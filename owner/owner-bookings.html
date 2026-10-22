@@ -126,83 +126,7 @@
         </div>
 
         <div id="incomingBookingsList" class="flex flex-col gap-stack-sm">
-            <!-- Booking Item 1 -->
-            <div class="bg-surface-container-low rounded-xl p-stack-md border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-stack-md transition-all duration-300">
-                <div class="flex items-start md:items-center gap-stack-md">
-                    <div class="w-12 h-12 rounded-full overflow-hidden border border-outline-variant bg-surface-bright flex items-center justify-center shrink-0">
-                        <span class="material-symbols-outlined text-outline">person</span>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-lg font-semibold text-on-surface">ทำความสะอาดเต็มรูปแบบ &amp; ขัดสี</span>
-                            <span class="px-2 py-0.5 bg-surface-bright text-on-surface rounded text-xs font-mono border border-outline-variant/50 tracking-wider">กท 9999</span>
-                            <span class="text-xs text-outline bg-surface-container-highest px-2 py-0.5 rounded">รถเอสยูวี</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-sm text-outline flex-wrap">
-                            <span class="flex items-center gap-1 text-secondary font-medium"><span class="material-symbols-outlined text-[16px]">schedule</span> วันนี้ 14:00 น.</span>
-                            <span>•</span>
-                            <span>Sarah J.</span>
-                            <span>•</span>
-                            <span class="text-primary-container font-mono">081-999-8888</span>
-                        </div>
-                        <div class="flex items-center gap-2 mt-1.5 flex-wrap">
-                            <span class="px-2.5 py-0.5 bg-green-500/20 text-green-400 rounded-md text-[11px] font-bold border border-green-500/30 flex items-center gap-1 w-fit">
-                                <span class="material-symbols-outlined" style="font-size: 13px; font-variation-settings: 'FILL' 1;">check_circle</span> โอนมัดจำแล้ว ฿50.00
-                            </span>
-                            <button onclick="openSlipModal('Sarah J.', '฿50.00', '14 ก.ย. 13:45 น.', 'SCB')" class="text-secondary hover:text-secondary-fixed text-xs font-medium flex items-center gap-0.5 group px-2 py-1 bg-surface-container rounded border border-secondary/20">
-                                <span class="material-symbols-outlined text-[14px] group-hover:scale-110 transition-transform">receipt</span> ตรวจสอบสลิป
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-stack-sm self-end md:self-center shrink-0">
-                    <button onclick="openConfirmModal('confirmDeclineModal', this)" class="h-11 px-4 rounded-xl bg-surface-bright border border-outline-variant text-on-surface hover:text-error hover:border-error/50 transition-colors flex items-center gap-1.5 text-sm font-bold">
-                        <span class="material-symbols-outlined text-[18px]">close</span> ปฏิเสธ
-                    </button>
-                    <button onclick="acceptBooking(this)" class="h-11 px-6 rounded-xl bg-secondary-container text-on-secondary-container hover:bg-secondary transition-colors flex items-center gap-1.5 text-sm font-bold shadow-md shadow-secondary/20 active:scale-95 duration-150">
-                        <span class="material-symbols-outlined text-[20px]">check</span> ยืนยันรับคิว
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Booking Item 2 -->
-            <div class="bg-surface-container-low rounded-xl p-stack-md border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-stack-md transition-all duration-300">
-                <div class="flex items-start md:items-center gap-stack-md">
-                    <div class="w-12 h-12 rounded-full overflow-hidden border border-outline-variant bg-surface-bright flex items-center justify-center shrink-0">
-                        <span class="material-symbols-outlined text-outline">person</span>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-lg font-semibold text-on-surface">ล้างด่วนภายนอก &amp; ดูดฝุ่น</span>
-                            <span class="px-2 py-0.5 bg-surface-bright text-on-surface rounded text-xs font-mono border border-outline-variant/50 tracking-wider">ขข 1234</span>
-                            <span class="text-xs text-outline bg-surface-container-highest px-2 py-0.5 rounded">รถเก๋ง</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-sm text-outline flex-wrap">
-                            <span class="flex items-center gap-1 text-secondary font-medium"><span class="material-symbols-outlined text-[16px]">schedule</span> วันนี้ 15:30 น.</span>
-                            <span>•</span>
-                            <span>Mike T.</span>
-                            <span>•</span>
-                            <span class="text-primary-container font-mono">082-345-6789</span>
-                        </div>
-                        <div class="flex items-center gap-2 mt-1.5 flex-wrap">
-                            <span class="px-2.5 py-0.5 bg-green-500/20 text-green-400 rounded-md text-[11px] font-bold border border-green-500/30 flex items-center gap-1 w-fit">
-                                <span class="material-symbols-outlined" style="font-size: 13px; font-variation-settings: 'FILL' 1;">check_circle</span> โอนมัดจำแล้ว ฿50.00
-                            </span>
-                            <button onclick="openSlipModal('Mike T.', '฿50.00', '14 ก.ย. 14:10 น.', 'KBANK')" class="text-secondary hover:text-secondary-fixed text-xs font-medium flex items-center gap-0.5 group px-2 py-1 bg-surface-container rounded border border-secondary/20">
-                                <span class="material-symbols-outlined text-[14px] group-hover:scale-110 transition-transform">receipt</span> ตรวจสอบสลิป
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-stack-sm self-end md:self-center shrink-0">
-                    <button onclick="openConfirmModal('confirmDeclineModal', this)" class="h-11 px-4 rounded-xl bg-surface-bright border border-outline-variant text-on-surface hover:text-error hover:border-error/50 transition-colors flex items-center gap-1.5 text-sm font-bold">
-                        <span class="material-symbols-outlined text-[18px]">close</span> ปฏิเสธ
-                    </button>
-                    <button onclick="acceptBooking(this)" class="h-11 px-6 rounded-xl bg-secondary-container text-on-secondary-container hover:bg-secondary transition-colors flex items-center gap-1.5 text-sm font-bold shadow-md shadow-secondary/20 active:scale-95 duration-150">
-                        <span class="material-symbols-outlined text-[20px]">check</span> ยืนยันรับคิว
-                    </button>
-                </div>
-            </div>
+            <div class="empty-state text-outline text-center py-8 bg-surface-container-highest rounded-xl border border-dashed border-outline-variant/50">ไม่มีรายการจองใหม่</div>
         </div>
     </section>
 
@@ -573,7 +497,7 @@
         if (activeCust) {
             try {
                 const cust = JSON.parse(activeCust);
-                if (cust && (cust.bookingId || cust.id || cust.dbId)) {
+                if (cust && (cust.bookingId || cust.id || cust.dbId || cust.rawBookingId)) {
                     const idx = list.findIndex(b =>
                         matchBookingId(b.bookingId, cust.bookingId) ||
                         matchBookingId(b.id, cust.id) ||
@@ -587,11 +511,59 @@
                             list[idx].status = 'refund_requested';
                             list[idx].refundReason = cust.refundReason || list[idx].refundReason;
                             list[idx].refundPromptPay = cust.refundPromptPay || list[idx].refundPromptPay;
+                        } else if (cust.status && cust.status !== list[idx].status && list[idx].status !== 'refunded') {
+                            list[idx].status = cust.status;
                         }
                     }
                 }
             } catch(e) { console.error(e); }
         }
+
+        // Merge cachedCustomerCompletedHistory for customer refund/cancelled status sync
+        const cachedCompletedStr = localStorage.getItem('cachedCustomerCompletedHistory');
+        if (cachedCompletedStr) {
+            try {
+                const completedHist = JSON.parse(cachedCompletedStr);
+                if (Array.isArray(completedHist)) {
+                    completedHist.forEach(item => {
+                        const idx = list.findIndex(b =>
+                            matchBookingId(b.bookingId, item.bookingId) ||
+                            matchBookingId(b.id, item.id) ||
+                            matchBookingId(b.dbId, item.dbId) ||
+                            matchBookingId(b.rawBookingId, item.rawBookingId)
+                        );
+                        if (idx !== -1) {
+                            if (item.status === 'refund_requested' && list[idx].status !== 'refunded') {
+                                list[idx].status = 'refund_requested';
+                                if (item.refundReason) list[idx].refundReason = item.refundReason;
+                                if (item.refundPromptPay) list[idx].refundPromptPay = item.refundPromptPay;
+                            } else if (item.status === 'refunded') {
+                                list[idx].status = 'refunded';
+                                if (item.refundSlip) list[idx].refundSlip = item.refundSlip;
+                                if (item.refundedAt) list[idx].refundedAt = item.refundedAt;
+                            }
+                        } else if (['refund_requested', 'declined', 'cancelled'].includes(item.status)) {
+                            list.unshift(item);
+                        }
+                    });
+                }
+            } catch(e) {}
+        }
+
+        // Deduplicate list by matched booking ID so no duplicates ever exist across sections!
+        const uniqueList = [];
+        list.forEach(item => {
+            const exists = uniqueList.some(u =>
+                matchBookingId(u.bookingId, item.bookingId) ||
+                matchBookingId(u.id, item.id) ||
+                matchBookingId(u.dbId, item.dbId) ||
+                matchBookingId(u.rawBookingId, item.rawBookingId)
+            );
+            if (!exists) {
+                uniqueList.push(item);
+            }
+        });
+        list = uniqueList;
 
         localStorage.setItem('appBookingsList', JSON.stringify(list));
         return list;
@@ -965,7 +937,7 @@
                     // Sync accurate status and step from DB
                     const localStatus = list[idx].status;
                     const dbStatus = mapped.status;
-                    const localOverrides = ['arrived', 'washing', 'ready', 'refund_requested', 'refunded', 'no_show'];
+                    const localOverrides = ['arrived', 'washing', 'ready', 'refund_requested', 'refunded', 'declined', 'cancelled', 'no_show'];
                     const shouldKeepLocal = localOverrides.includes(localStatus);
 
                     // Preserve accurate local carPlate and serviceName if DB mapping returned defaults!
@@ -990,7 +962,7 @@
                         list[idx].carSize = oldSize;
                     }
 
-                    if (shouldKeepLocal && ['incoming', 'confirmed'].includes(dbStatus) && !['arrived', 'washing', 'ready', 'completed'].includes(dbStatus)) {
+                    if (shouldKeepLocal && ['incoming', 'pending'].includes(dbStatus) && !['arrived', 'washing', 'ready', 'completed'].includes(dbStatus)) {
                         list[idx].status = localStatus;
                     }
                     if (!list[idx].slipImage && mapped.slipImage) list[idx].slipImage = mapped.slipImage;
@@ -1046,17 +1018,53 @@
                                     matchBookingId(cust.dbId, bookingId) ||
                                     matchBookingId(cust.id, bookingId);
                 if (isCustMatch) {
-                    Object.assign(cust, updates);
-                    if (updates.step) cust.step = updates.step;
-                    localStorage.setItem('activeCustomerBooking', JSON.stringify(cust));
+                    if (['completed', 'refunded', 'declined', 'cancelled'].includes(updates.status)) {
+                        localStorage.removeItem('activeCustomerBooking');
+                    } else {
+                        Object.assign(cust, updates);
+                        if (updates.step) cust.step = updates.step;
+                        localStorage.setItem('activeCustomerBooking', JSON.stringify(cust));
+                    }
                 }
             } catch(e) {}
         }
+
+        // Sync with cachedCustomerCompletedHistory so history cards reflect the new status immediately
+        try {
+            let hist = JSON.parse(localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
+            if (Array.isArray(hist)) {
+                let histUpdated = false;
+                hist.forEach(h => {
+                    if (matchBookingId(h.bookingId, bookingId) || matchBookingId(h.rawBookingId, bookingId) || matchBookingId(h.id, bookingId) || matchBookingId(h.dbId, bookingId)) {
+                        Object.assign(h, updates);
+                        histUpdated = true;
+                    }
+                });
+                if (!histUpdated && ['refunded', 'declined', 'cancelled', 'completed'].includes(updates.status)) {
+                    if (b) {
+                        hist.unshift({ ...b, ...updates });
+                        histUpdated = true;
+                    }
+                }
+                if (histUpdated) {
+                    localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(hist));
+                }
+            }
+        } catch(_) {}
+
         try { window.dispatchEvent(new Event('storage')); } catch (_) {}
         try {
             if (typeof BroadcastChannel !== 'undefined') {
                 const bc = new BroadcastChannel('carwash_booking_sync');
-                bc.postMessage({ type: 'STATUS_UPDATE', bookingId, status: updates.status, step: updates.step });
+                bc.postMessage({ 
+                    type: 'STATUS_UPDATE', 
+                    bookingId, 
+                    status: updates.status, 
+                    step: updates.step,
+                    refundSlip: updates.refundSlip || '',
+                    refundedAt: updates.refundedAt || '',
+                    declineReason: updates.declineReason || ''
+                });
                 bc.close();
             }
         } catch (_) {}
@@ -1078,10 +1086,10 @@
                 'washing': 'CONFIRMED',
                 'ready': 'CONFIRMED',
                 'completed': 'COMPLETED',
-                'declined': 'DECLINED',
+                'declined': 'CANCELLED',
                 'no_show': 'CANCELLED',
-                'refund_requested': 'refund_requested',
-                'refunded': 'refunded',
+                'refund_requested': 'CANCELLED',
+                'refunded': 'CANCELLED',
                 'cancelled': 'CANCELLED'
             };
             const dbStatus = dbStatusMap[updates.status] || 'CONFIRMED';
@@ -1150,7 +1158,8 @@
         const incomingCountBadge = document.getElementById('incomingCountBadge');
         const incomingBookings = list.filter(b => {
             const s = (b.status || '').toLowerCase();
-            return s === 'incoming' || s === 'pending';
+            return (s === 'incoming' || s === 'pending') &&
+                   !['declined', 'cancelled', 'refund_requested', 'refunded', 'completed', 'no_show', 'confirmed', 'arrived', 'washing', 'ready'].includes(s);
         });
 
         if (incomingCountBadge) incomingCountBadge.innerText = incomingBookings.length;
@@ -1207,7 +1216,7 @@
         const refundCountBadge = document.getElementById('refundCountBadge');
         const refundBookings = list.filter(b => {
             const s = (b.status || '').toLowerCase();
-            return s === 'refund_requested' || s === 'declined' || s === 'cancelled';
+            return (s === 'refund_requested' || s === 'declined' || s === 'cancelled') && s !== 'refunded';
         });
 
         if (refundCountBadge) refundCountBadge.innerText = refundBookings.length + ' คำขอ';
@@ -1399,8 +1408,11 @@
     }
 
     /* Actions with Live State Updates */
-    function acceptBooking(bookingId) {
-        updateBooking(bookingId, { status: 'confirmed', step: 1, isNew: false });
+    async function acceptBooking(bookingId) {
+        const list = getBookingsList();
+        const found = list.find(b => matchBookingId(b.bookingId, bookingId) || matchBookingId(b.id, bookingId) || matchBookingId(b.dbId, bookingId));
+        const targetId = (found && (found.dbId || found.id || found.rawBookingId)) ? (found.dbId || found.id || found.rawBookingId) : bookingId;
+        await updateBooking(targetId, { status: 'confirmed', step: 1, isNew: false });
         renderAllBookings();
         showToast('ยืนยันรับคิวสำเร็จ! ย้ายไปที่ Service Pipeline เรียบร้อย');
     }
@@ -1434,8 +1446,11 @@
         showToast('ส่งมอบรถสำเร็จ! บันทึกเข้าสู่ประวัติการให้บริการเรียบร้อย');
     }
 
-    function declineBooking(bookingId) {
-        updateBooking(bookingId, { 
+    async function declineBooking(bookingId) {
+        const list = getBookingsList();
+        const found = list.find(b => matchBookingId(b.bookingId, bookingId) || matchBookingId(b.id, bookingId) || matchBookingId(b.dbId, bookingId));
+        const targetId = (found && (found.dbId || found.id || found.rawBookingId)) ? (found.dbId || found.id || found.rawBookingId) : bookingId;
+        await updateBooking(targetId, { 
             status: 'declined', 
             isNew: false,
             declineReason: 'ร้านค้าไม่สะดวกรับคิวในเวลาดังกล่าว'
@@ -1446,16 +1461,25 @@
 
     /* Modal Handlers */
     function openConfirmModal(modalId, bookingId = null) {
-        if (bookingId) currentActionButtonId = bookingId;
+        if (bookingId) {
+            const list = getBookingsList();
+            const found = list.find(b => matchBookingId(b.bookingId, bookingId) || matchBookingId(b.id, bookingId) || matchBookingId(b.dbId, bookingId));
+            currentActionButtonId = (found && (found.dbId || found.id || found.rawBookingId)) ? (found.dbId || found.id || found.rawBookingId) : bookingId;
+        }
         const modal = document.getElementById(modalId);
+        if (!modal) return;
         modal.classList.remove('hidden');
         void modal.offsetWidth;
         const backdrop = modal.querySelector('.absolute.inset-0');
         const content = modal.querySelector('.bg-surface-container-high');
-        backdrop.classList.remove('opacity-0');
-        backdrop.classList.add('opacity-100');
-        content.classList.remove('scale-95', 'opacity-0');
-        content.classList.add('scale-100', 'opacity-100');
+        if (backdrop) {
+            backdrop.classList.remove('opacity-0');
+            backdrop.classList.add('opacity-100');
+        }
+        if (content) {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }
     }
 
     function closeConfirmModal(modalId) {
@@ -1671,11 +1695,11 @@
         showToast('⚡ สร้างสลิปโอนคืน PromptPay อัตโนมัติแล้ว!');
     }
 
-    function confirmRefund(btn) {
+    async function confirmRefund(btn) {
         btn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">refresh</span> กำลังบันทึก...';
         btn.disabled = true;
         
-        setTimeout(() => {
+        try {
             const preview = document.getElementById('refundSlipPreview');
             let slipImg = preview ? preview.src : '';
             if (!slipImg) {
@@ -1684,7 +1708,7 @@
             }
             if (currentRefundBookingId) {
                 const nowTime = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
-                updateBooking(currentRefundBookingId, { 
+                await updateBooking(currentRefundBookingId, { 
                     status: 'refunded', 
                     refundSlip: slipImg,
                     refundedAt: 'วันนี้, ' + nowTime
@@ -1693,9 +1717,13 @@
             closeRefundModal();
             renderAllBookings();
             showToast('โอนเงินคืนและแนบสลิปสำเร็จ! ย้ายไปที่ประวัติเรียบร้อย');
+        } catch(err) {
+            console.error('Refund save error:', err);
+            showToast('เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่อีกครั้ง');
+        } finally {
             btn.innerHTML = 'ยืนยันการโอนคืน';
             btn.disabled = false;
-        }, 800);
+        }
     }
 
     // =========================================================
