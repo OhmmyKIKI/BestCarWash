@@ -522,31 +522,68 @@
         return { lat: null, lng: null };
     }
 
-    // IndexedDB Media Helper (for reading owner shop photos & covers)
-    async function getIDBMedia(key) {
-        if (typeof indexedDB === 'undefined') return null;
+    const IDB_NAME = 'BestCarWashMedia';
+    const IDB_STORE = 'shop_media';
+
+    function openMediaDB() {
         return new Promise((resolve) => {
+            if (typeof indexedDB === 'undefined') return resolve(null);
             try {
-                const req = indexedDB.open('BestCarWashMedia', 1);
+                const req = indexedDB.open(IDB_NAME, 2);
                 req.onupgradeneeded = (e) => {
-                    const db = e.target.result;
-                    if (!db.objectStoreNames.contains('shop_media')) {
-                        db.createObjectStore('shop_media');
-                    }
+                    try {
+                        const db = e.target.result;
+                        if (db && !db.objectStoreNames.contains(IDB_STORE)) {
+                            db.createObjectStore(IDB_STORE);
+                        }
+                    } catch (_) {}
                 };
                 req.onsuccess = (e) => {
                     const db = e.target.result;
-                    if (!db || !db.objectStoreNames || !db.objectStoreNames.contains('shop_media')) return resolve(null);
-                    const tx = db.transaction('shop_media', 'readonly');
-                    const gReq = tx.objectStore('shop_media').get(key);
-                    gReq.onsuccess = () => resolve(gReq.result || null);
-                    gReq.onerror = () => resolve(null);
+                    if (!db || !db.objectStoreNames || !db.objectStoreNames.contains(IDB_STORE)) return resolve(null);
+                    resolve(db);
                 };
                 req.onerror = () => resolve(null);
+                req.onblocked = () => resolve(null);
             } catch (_) {
                 resolve(null);
             }
         });
+    }
+
+    // IndexedDB Media Helper (for reading owner shop photos & covers)
+    async function getIDBMedia(key) {
+        if (!key) return null;
+        try {
+            const db = await openMediaDB().catch(() => null);
+            if (!db || !db.objectStoreNames || !db.objectStoreNames.contains(IDB_STORE)) return null;
+            return new Promise((resolve) => {
+                try {
+                    const tx = db.transaction(IDB_STORE, 'readonly');
+                    const req = tx.objectStore(IDB_STORE).get(key);
+                    req.onsuccess = () => resolve(req.result || null);
+                    req.onerror = () => resolve(null);
+                } catch (_) {
+                    resolve(null);
+                }
+            });
+        } catch (_) {
+            return null;
+        }
+    }
+
+    // Helper: Extract embedded JSON metadata from shop description
+    function extractShopMetadata(description) {
+        if (!description || typeof description !== 'string') return { cleanDesc: description || '', meta: null };
+        const match = description.match(/<!--BCW_META:([\s\S]*?)-->/);
+        if (match) {
+            try {
+                const meta = JSON.parse(match[1]);
+                const cleanDesc = description.replace(/<!--BCW_META:[\s\S]*?-->/g, '').trim();
+                return { cleanDesc, meta };
+            } catch (_) {}
+        }
+        return { cleanDesc: description, meta: null };
     }
 
     // --- Favorites Synchronization ---
@@ -1030,7 +1067,10 @@
                                 duration: s.duration || (s.duration_minutes ? `${s.duration_minutes} นาที` : '45 นาที')
                             }));
                         }
-                        parsedCached.images = buildFullGallery(parsedCached.images?.[0] || localStorage.getItem('ownerCoverImage'), parsedCached.images);
+                        let localCover = localStorage.getItem('ownerCoverImage_' + paramId) || localStorage.getItem('ownerCoverImage');
+                        if (localCover && isStockPhoto(localCover)) localCover = null;
+                        const bestCover = localCover || (!isStockPhoto(parsedCached.cover_image) ? parsedCached.cover_image : null) || (!isStockPhoto(parsedCached.images?.[0]) ? parsedCached.images[0] : null);
+                        parsedCached.images = buildFullGallery(bestCover, parsedCached.images);
                         initialShopData = parsedCached;
                     }
                 } catch(_) {}
@@ -1042,6 +1082,7 @@
                     const found = disc.find(s => s.id === paramId);
                     if (found) {
                         let localCover = localStorage.getItem('ownerCoverImage_' + paramId) || localStorage.getItem('ownerCoverImage') || found.image;
+                        if (localCover && isStockPhoto(localCover)) localCover = null;
                         let localGallery = null;
                         try {
                             localGallery = JSON.parse(localStorage.getItem('ownerShopGallery_' + paramId) || 'null');
@@ -1090,8 +1131,9 @@
             const localName = localStorage.getItem('ownerShopName');
             const localAddress = localStorage.getItem('ownerShopAddress') || '';
             const localPhone = localStorage.getItem('ownerShopPhone') || '080-000-0000';
-            const localAbout = localStorage.getItem('ownerShopAbout') || '';
-            const localCover = localStorage.getItem('ownerCoverImage');
+            const localAbout = localStorage.getItem('ownerShopDesc') || localStorage.getItem('ownerShopAbout') || '';
+            let localCover = localStorage.getItem('ownerCoverImage');
+            if (localCover && isStockPhoto(localCover)) localCover = null;
             let localGallery = null;
             try { localGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null'); } catch(_) {}
             const initialImages = buildFullGallery(localCover, localGallery);
@@ -1119,6 +1161,24 @@
         if (initialShopData) {
             SHOPS_DATA[initialShopData.id] = initialShopData;
             applyShopDataToUI(initialShopData, initialReviews, null);
+
+            // Layer 1 Async Enhancement: Quick check of IndexedDB to swap hero and gallery with owner's real cover immediately
+            (async () => {
+                const idbC = (paramId ? await getIDBMedia('ownerCoverImage_' + paramId) : null) || await getIDBMedia('ownerCoverImage');
+                if (idbC && !isStockPhoto(idbC)) {
+                    const heroImg = document.querySelector('.md\\:hidden img[alt="Shop"]');
+                    if (heroImg && isStockPhoto(heroImg.src)) heroImg.src = idbC;
+                    const deskGrid = document.querySelector('.hidden.md\\:grid');
+                    if (deskGrid) {
+                        const imgs = deskGrid.querySelectorAll('img');
+                        if (imgs[0] && isStockPhoto(imgs[0].src)) imgs[0].src = idbC;
+                    }
+                    if (Array.isArray(galleryImages)) {
+                        galleryImages = buildFullGallery(idbC, galleryImages);
+                        renderMobileGalleryStrip();
+                    }
+                }
+            })();
         }
 
         // Dynamic Mobile Header scroll effect
@@ -1201,17 +1261,26 @@
                     let dbServices = Array.isArray(servRes) ? servRes : [];
                     const liveReviews = Array.isArray(revRes) ? revRes : [];
 
-                    const shopLogo = dbShop.logo_url || ownerProf?.avatar_url || null;
+                    // Extract cloud-persisted metadata from description if present
+                    const { cleanDesc, meta: cloudMeta } = extractShopMetadata(dbShop.description);
+                    const displayDescription = cleanDesc || dbShop.description || 'บริการคาร์แคร์ระดับพรีเมียม ล้างสี ดูดฝุ่น และเคลือบเงาสีรถด้วยมาตรฐานระดับมืออาชีพ';
+
+                    const shopLogo = dbShop.logo_url || cloudMeta?.logo || ownerProf?.avatar_url || null;
                     const avgRating = (liveReviews && liveReviews.length > 0)
                         ? (liveReviews.reduce((sum, r) => sum + (parseFloat(r.rating) || 5), 0) / liveReviews.length).toFixed(1)
                         : 'ใหม่';
 
                     // Resolve Shop Images with IndexedDB + LocalStorage + Supabase support
-                    // 1. Resolve custom gallery photos from IndexedDB & LocalStorage
+                    // 1. Resolve custom gallery photos from Cloud Meta, IndexedDB & LocalStorage
                     let localGallery = null;
-                    try {
-                        localGallery = JSON.parse(localStorage.getItem('ownerShopGallery_' + dbShop.id) || 'null');
-                    } catch (_) {}
+                    if (Array.isArray(cloudMeta?.gallery) && cloudMeta.gallery.length > 0) {
+                        localGallery = cloudMeta.gallery;
+                    }
+                    if (!localGallery || !localGallery.length) {
+                        try {
+                            localGallery = JSON.parse(localStorage.getItem('ownerShopGallery_' + dbShop.id) || 'null');
+                        } catch (_) {}
+                    }
                     if (!localGallery || !localGallery.length) {
                         localGallery = await getIDBMedia('ownerShopGallery_' + dbShop.id).catch(() => null);
                     }
@@ -1237,24 +1306,50 @@
                         dbGallery = dbShop.images;
                     }
 
-                    // 3. Resolve Cover Image
+                    // 3. Resolve Cover Image (รูปปกร้านหลัก)
                     const idbCover = await getIDBMedia('ownerCoverImage_' + dbShop.id).catch(() => null) ||
                                      await getIDBMedia('ownerCoverImage').catch(() => null);
                     const localCover = localStorage.getItem('ownerCoverImage_' + dbShop.id) ||
-                                       localStorage.getItem('ownerCoverImage') ||
-                                       idbCover;
+                                       localStorage.getItem('ownerCoverImage');
 
                     // Check discovery cached shop image
                     let discoveryShopImg = null;
                     try {
                         const discShops = JSON.parse(localStorage.getItem('cachedDiscoveryShops') || '[]');
                         const discItem = discShops.find(s => s.id === dbShop.id);
-                        if (discItem && discItem.image && discItem.image !== 'undefined' && !discItem.image.includes('avatar')) {
+                        if (discItem && discItem.image && !isStockPhoto(discItem.image)) {
                             discoveryShopImg = discItem.image;
                         }
                     } catch (_) {}
 
-                    const resolvedCover = dbShop.cover_image_url || dbShop.cover_image || dbShop.cover_url || localCover || discoveryShopImg || null;
+                    let resolvedCover = null;
+                    // Priority 1: Cloud-persisted metadata from shop description (works across all browsers/devices)
+                    if (cloudMeta?.cover_image && !isStockPhoto(cloudMeta.cover_image)) {
+                        resolvedCover = cloudMeta.cover_image;
+                    }
+                    // Priority 2: IndexedDB (Version 2)
+                    if (!resolvedCover && idbCover && !isStockPhoto(idbCover)) {
+                        resolvedCover = idbCover;
+                    }
+                    // Priority 3: LocalStorage
+                    if (!resolvedCover && localCover && !isStockPhoto(localCover)) {
+                        resolvedCover = localCover;
+                    }
+                    // Priority 4: Supabase columns
+                    if (!resolvedCover && dbShop.cover_image_url && !isStockPhoto(dbShop.cover_image_url)) {
+                        resolvedCover = dbShop.cover_image_url;
+                    }
+                    if (!resolvedCover && dbShop.cover_image && !isStockPhoto(dbShop.cover_image)) {
+                        resolvedCover = dbShop.cover_image;
+                    }
+                    // Priority 5: Discovery cache
+                    if (!resolvedCover && discoveryShopImg && !isStockPhoto(discoveryShopImg)) {
+                        resolvedCover = discoveryShopImg;
+                    }
+                    // Priority 6: First image of gallery
+                    if (!resolvedCover && Array.isArray(localGallery) && localGallery.length > 0 && !isStockPhoto(localGallery[0])) {
+                        resolvedCover = localGallery[0];
+                    }
 
                     const candidateGallery = (Array.isArray(localGallery) && localGallery.length > 0)
                         ? localGallery
@@ -1300,7 +1395,7 @@
                         reviews: `${liveReviews.length} รีวิว`,
                         phone: dbShop.phone_number || '080-000-0000',
                         promptpay: dbShop.phone_number || '080-000-0000',
-                        about: dbShop.description || 'บริการคาร์แคร์ระดับพรีเมียม ล้างสี ดูดฝุ่น และเคลือบเงาสีรถด้วยมาตรฐานระดับมืออาชีพ',
+                        about: displayDescription || 'บริการคาร์แคร์ระดับพรีเมียม ล้างสี ดูดฝุ่น และเคลือบเงาสีรถด้วยมาตรฐานระดับมืออาชีพ',
                         lat: finalLat,
                         lng: finalLng,
                         map_link: targetMapLink || dbShop.map_link || '',

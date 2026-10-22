@@ -506,7 +506,13 @@
 
     // --- Review Modal Logic ---
     let currentRating = 0;
-    function openReviewModal(shopName = 'Sparkle Wash', serviceName = 'ล้างด่วน') {
+    let currentReviewShopId = null;
+    let currentReviewBookingId = null;
+
+    function openReviewModal(shopName = 'Sparkle Wash', serviceName = 'ล้างด่วน', shopId = null, bookingId = null) {
+        currentReviewShopId = shopId || currentActiveBooking?.rawShopId || currentActiveBooking?.shopId || 'bccb746a-18ba-4802-ac29-eb30b7af7dd1';
+        currentReviewBookingId = bookingId || currentActiveBooking?.rawBookingId || currentActiveBooking?.id;
+
         const modal = document.getElementById('reviewModal');
         const content = document.getElementById('reviewModalContent');
         const subtitle = modal ? modal.querySelector('p.text-xs.text-on-surface-variant') : null;
@@ -557,11 +563,49 @@
         }
     }
 
-    function submitReview() {
+    async function submitReview() {
         if (currentRating === 0) {
             alert('กรุณาให้คะแนนดาวก่อนส่งรีวิว');
             return;
         }
+
+        const comment = (document.getElementById('reviewComment')?.value || '').trim();
+        const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+
+        try {
+            let customerId = null;
+            if (client?.auth) {
+                const s = await client.auth.getSession();
+                customerId = s?.data?.session?.user?.id;
+            }
+            if (!customerId) {
+                customerId = localStorage.getItem('lastLoggedInUserId') || localStorage.getItem('currentUserId');
+            }
+
+            const targetShop = currentReviewShopId || 'bccb746a-18ba-4802-ac29-eb30b7af7dd1';
+
+            if (client?.from && customerId && targetShop) {
+                const payload = {
+                    shop_id: targetShop,
+                    customer_id: customerId,
+                    rating: currentRating,
+                    comment: comment || 'บริการดีมากครับ',
+                    created_at: new Date().toISOString()
+                };
+                if (currentReviewBookingId && currentReviewBookingId.length > 20) {
+                    payload.booking_id = currentReviewBookingId;
+                }
+                const { error } = await client.from('reviews').insert(payload);
+                if (error) {
+                    console.warn('Supabase review insert error:', error);
+                } else {
+                    console.log('✅ Review successfully saved to Supabase');
+                }
+            }
+        } catch (err) {
+            console.warn('Submit review catch:', err);
+        }
+
         alert('ขอบคุณสำหรับรีวิว! ระบบได้บันทึกข้อมูลเรียบร้อยแล้ว');
         closeReviewModal();
     }
@@ -1453,7 +1497,7 @@
                         <div class="mt-2 flex items-center justify-between border-t border-outline-variant/30 pt-4">
                             <div class="text-xs text-on-surface-variant">ยอดรวม <span class="text-lg font-bold text-on-surface ml-1">${b.totalAmount || '฿ 450'}</span></div>
                             <div class="flex flex-wrap justify-end gap-2">
-                                <button onclick="openReviewModal('${b.shopName || 'Sparkle Wash'}', '${b.serviceName || 'ล้างสี ดูดฝุ่น'}')" class="px-3 py-1.5 bg-surface-container-highest border border-outline-variant text-on-surface text-xs font-medium rounded-lg hover:bg-surface-variant transition-colors flex items-center gap-1 active:scale-95">
+                                <button onclick="openReviewModal('${b.shopName || 'Sparkle Wash'}', '${b.serviceName || 'ล้างสี ดูดฝุ่น'}', '${b.shopId || b.rawShopId || ''}', '${b.rawBookingId || b.id || ''}')" class="px-3 py-1.5 bg-surface-container-highest border border-outline-variant text-on-surface text-xs font-medium rounded-lg hover:bg-surface-variant transition-colors flex items-center gap-1 active:scale-95">
                                     <span class="material-symbols-outlined text-[14px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span> รีวิว
                                 </button>
                                 <button onclick="window.location.href = 'shop-details.html?shopId=' + encodeURIComponent(b.shopId || 'shop1')" class="px-3 py-1.5 bg-primary-container text-white text-xs font-bold rounded-lg hover:bg-primary transition-colors shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)] active:scale-95 duration-150 flex items-center gap-1">

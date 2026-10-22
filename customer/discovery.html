@@ -1042,24 +1042,67 @@ tailwind.config = {
         return { lat: null, lng: null };
     }
 
-    async function getIDBMedia(key) {
-        if (typeof indexedDB === 'undefined') return null;
+    const IDB_NAME = 'BestCarWashMedia';
+    const IDB_STORE = 'shop_media';
+
+    function openMediaDB() {
         return new Promise((resolve) => {
+            if (typeof indexedDB === 'undefined') return resolve(null);
             try {
-                const req = indexedDB.open('BestCarWashMedia', 1);
+                const req = indexedDB.open(IDB_NAME, 2);
+                req.onupgradeneeded = (e) => {
+                    try {
+                        const db = e.target.result;
+                        if (db && !db.objectStoreNames.contains(IDB_STORE)) {
+                            db.createObjectStore(IDB_STORE);
+                        }
+                    } catch (_) {}
+                };
                 req.onsuccess = (e) => {
                     const db = e.target.result;
-                    if (!db || !db.objectStoreNames || !db.objectStoreNames.contains('shop_media')) return resolve(null);
-                    const tx = db.transaction('shop_media', 'readonly');
-                    const gReq = tx.objectStore('shop_media').get(key);
-                    gReq.onsuccess = () => resolve(gReq.result || null);
-                    gReq.onerror = () => resolve(null);
+                    if (!db || !db.objectStoreNames || !db.objectStoreNames.contains(IDB_STORE)) return resolve(null);
+                    resolve(db);
                 };
                 req.onerror = () => resolve(null);
+                req.onblocked = () => resolve(null);
             } catch (_) {
                 resolve(null);
             }
         });
+    }
+
+    async function getIDBMedia(key) {
+        if (!key) return null;
+        try {
+            const db = await openMediaDB().catch(() => null);
+            if (!db || !db.objectStoreNames || !db.objectStoreNames.contains(IDB_STORE)) return null;
+            return new Promise((resolve) => {
+                try {
+                    const tx = db.transaction(IDB_STORE, 'readonly');
+                    const req = tx.objectStore(IDB_STORE).get(key);
+                    req.onsuccess = () => resolve(req.result || null);
+                    req.onerror = () => resolve(null);
+                } catch (_) {
+                    resolve(null);
+                }
+            });
+        } catch (_) {
+            return null;
+        }
+    }
+
+    // Helper: Extract embedded JSON metadata from shop description
+    function extractShopMetadata(description) {
+        if (!description || typeof description !== 'string') return { cleanDesc: description || '', meta: null };
+        const match = description.match(/<!--BCW_META:([\s\S]*?)-->/);
+        if (match) {
+            try {
+                const meta = JSON.parse(match[1]);
+                const cleanDesc = description.replace(/<!--BCW_META:[\s\S]*?-->/g, '').trim();
+                return { cleanDesc, meta };
+            } catch (_) {}
+        }
+        return { cleanDesc: description, meta: null };
     }
 
     // --- Helper to update Header Account Name & Avatar ---
@@ -1205,6 +1248,25 @@ tailwind.config = {
                     fitMapToPoints(false);
                 }
                 hasCachedShops = true;
+
+                // Async quick check of IndexedDB to immediately replace stock photos if owner cover is cached in IDB
+                (async () => {
+                    const idbC = await getIDBMedia('ownerCoverImage');
+                    if (idbC && !isStockPhoto(idbC) && Array.isArray(shops) && shops.length > 0) {
+                        let updated = false;
+                        shops.forEach(s => {
+                            if (isStockPhoto(s.image) || isStockPhoto(s.cover_image)) {
+                                s.image = idbC;
+                                s.cover_image = idbC;
+                                updated = true;
+                            }
+                        });
+                        if (updated) {
+                            renderDesktopCards(shops);
+                            renderMobileCards(shops);
+                        }
+                    }
+                })();
             }
         } catch (_) {}
 
@@ -1281,6 +1343,10 @@ tailwind.config = {
                         const ownerProf = (allProfiles || []).find(p => p.id === db.owner_id);
                         const logo = db.logo_url || ownerProf?.avatar_url || DEFAULT_COVER_IMAGES[i % DEFAULT_COVER_IMAGES.length];
 
+                        // Extract cloud-persisted metadata from description if present
+                        const { cleanDesc, meta: cloudMeta } = extractShopMetadata(db.description);
+                        if (cleanDesc) db.description = cleanDesc;
+
                         // Calculate real rating & review count from live database reviews
                         const liveShopReviews = (allReviews || []).filter(r => r.shop_id === db.id);
                         let realRating = null;
@@ -1322,13 +1388,22 @@ tailwind.config = {
                         // --- 1. RESOLVE SHOP MAIN COVER IMAGE (รูปปกร้านหลักที่เจ้าของร้านเลือก) ---
                         let coverImg = null;
 
+                        // Priority 0: Cloud-persisted metadata from shop description (Guaranteed across browsers/devices)
+                        if (cloudMeta?.cover_image && !isStockPhoto(cloudMeta.cover_image)) {
+                            coverImg = cloudMeta.cover_image;
+                        }
+
                         // Priority 1: Shop-specific IndexedDB by shop ID or owner ID
-                        if (db.id) {
+                        if (!coverImg && db.id) {
                             const idbC = await getIDBMedia('ownerCoverImage_' + db.id).catch(() => null);
                             if (idbC && !isStockPhoto(idbC)) coverImg = idbC;
                         }
                         if (!coverImg && db.owner_id) {
                             const idbC = await getIDBMedia('ownerCoverImage_' + db.owner_id).catch(() => null);
+                            if (idbC && !isStockPhoto(idbC)) coverImg = idbC;
+                        }
+                        if (!coverImg && isCurrentOwnerShop) {
+                            const idbC = await getIDBMedia('ownerCoverImage').catch(() => null);
                             if (idbC && !isStockPhoto(idbC)) coverImg = idbC;
                         }
 
@@ -1341,10 +1416,16 @@ tailwind.config = {
                             const lsC = localStorage.getItem('ownerCoverImage_' + db.owner_id);
                             if (lsC && !isStockPhoto(lsC)) coverImg = lsC;
                         }
+                        if (!coverImg && isCurrentOwnerShop && localCover && !isStockPhoto(localCover)) {
+                            coverImg = localCover;
+                        }
 
-                        // Priority 3: Shop-specific gallery in IDB/LocalStorage (first image is chosen cover)
+                        // Priority 3: Shop-specific gallery in Cloud Meta, IDB or LocalStorage (first image is chosen cover)
                         let shopGallery = null;
-                        if (db.id) {
+                        if (Array.isArray(cloudMeta?.gallery) && cloudMeta.gallery.length > 0) {
+                            shopGallery = cloudMeta.gallery;
+                        }
+                        if (!shopGallery && db.id) {
                             try {
                                 shopGallery = JSON.parse(localStorage.getItem('ownerShopGallery_' + db.id) || 'null') ||
                                               await getIDBMedia('ownerShopGallery_' + db.id).catch(() => null);
@@ -1355,6 +1436,9 @@ tailwind.config = {
                                 shopGallery = JSON.parse(localStorage.getItem('ownerShopGallery_' + db.owner_id) || 'null') ||
                                               await getIDBMedia('ownerShopGallery_' + db.owner_id).catch(() => null);
                             } catch (_) {}
+                        }
+                        if ((!shopGallery || !shopGallery.length) && isCurrentOwnerShop) {
+                            shopGallery = localGallery;
                         }
                         if (!coverImg && Array.isArray(shopGallery) && shopGallery.length > 0 && !isStockPhoto(shopGallery[0])) {
                             coverImg = shopGallery[0];
@@ -1389,18 +1473,7 @@ tailwind.config = {
                             coverImg = db.gallery[0];
                         }
 
-                        // Priority 7: Device owner cover / gallery (ownerCoverImage / IDB)
-                        if (!coverImg && localCover && !isStockPhoto(localCover)) {
-                            coverImg = localCover;
-                        }
-                        if (!coverImg && idbCover && !isStockPhoto(idbCover)) {
-                            coverImg = idbCover;
-                        }
-                        if (!coverImg && Array.isArray(localGallery) && localGallery.length > 0 && !isStockPhoto(localGallery[0])) {
-                            coverImg = localGallery[0];
-                        }
-
-                        // Priority 8: Existing valid cover image from discovery cache
+                        // Priority 7: Existing valid cover image from discovery cache
                         if (!coverImg && hasCachedShops) {
                             try {
                                 const cDisc = JSON.parse(localStorage.getItem('cachedDiscoveryShops') || '[]');

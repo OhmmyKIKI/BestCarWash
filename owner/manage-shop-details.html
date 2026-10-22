@@ -544,6 +544,20 @@
             }
         }
 
+        // Helper: Extract embedded JSON metadata from shop description
+        function extractShopMetadata(description) {
+            if (!description || typeof description !== 'string') return { cleanDesc: description || '', meta: null };
+            const match = description.match(/<!--BCW_META:([\s\S]*?)-->/);
+            if (match) {
+                try {
+                    const meta = JSON.parse(match[1]);
+                    const cleanDesc = description.replace(/<!--BCW_META:[\s\S]*?-->/g, '').trim();
+                    return { cleanDesc, meta };
+                } catch (_) {}
+            }
+            return { cleanDesc: description, meta: null };
+        }
+
         // Render Multi-Photo Gallery Grid
         function renderPhotoGallery() {
             if (!galleryGrid) return;
@@ -1184,7 +1198,9 @@
                     safeLocalStorageSet('ownerShopPhone', finalPhone);
                 }
 
-                const fullDesc = shop?.description || meta.shop_description || meta.description || meta.about || localStorage.getItem('ownerShopDesc') || localStorage.getItem('shopDescription') || '';
+                const rawFullDesc = shop?.description || meta.shop_description || meta.description || meta.about || localStorage.getItem('ownerShopDesc') || localStorage.getItem('shopDescription') || '';
+                const { cleanDesc, meta: descMeta } = extractShopMetadata(rawFullDesc);
+                const fullDesc = cleanDesc;
                 if (fullDesc && shopDescInput) {
                     shopDescInput.value = fullDesc;
                     if (charCount) charCount.textContent = `${fullDesc.length}/500`;
@@ -1345,7 +1361,8 @@
                 // 5. LOAD COVER & GALLERY SAFELY (Strictly prioritizing latest saved media for THIS ID)
                 try {
                     // Resolve user's latest cover photo
-                    let finalCover = (effectiveUserId ? await getMediaFromIDB('ownerCoverImage_' + effectiveUserId) : null) ||
+                    let finalCover = (descMeta?.cover_image && !isStockPhoto(descMeta.cover_image) ? descMeta.cover_image : null) ||
+                                     (effectiveUserId ? await getMediaFromIDB('ownerCoverImage_' + effectiveUserId) : null) ||
                                      (effectiveUserId ? localStorage.getItem('ownerCoverImage_' + effectiveUserId) : null) ||
                                      meta.cover_image_url || 
                                      meta.shop_cover || 
@@ -1356,7 +1373,10 @@
                                      shop?.cover_image_url;
 
                     let rawGallery = null;
-                    if (effectiveUserId) {
+                    if (Array.isArray(descMeta?.gallery) && descMeta.gallery.length > 0) {
+                        rawGallery = descMeta.gallery;
+                    }
+                    if (!rawGallery && effectiveUserId) {
                         rawGallery = await getMediaFromIDB('ownerShopGallery_' + effectiveUserId) || 
                                      JSON.parse(localStorage.getItem('ownerShopGallery_' + effectiveUserId) || 'null');
                     }
@@ -1531,11 +1551,51 @@
                 }
 
                 safeLocalStorageSet('ownerShopGallery', JSON.stringify(shopPhotos));
+                saveMediaToIDB('ownerShopGallery', shopPhotos);
+
+                const targetShopId = currentShopId || localStorage.getItem('currentShopId') || 'bccb746a-18ba-4802-ac29-eb30b7af7dd1';
+                const uId = currentUserId || localStorage.getItem('lastLoggedInUserId');
                 if (shopPhotos.length > 0) {
                     safeLocalStorageSet('ownerCoverImage', shopPhotos[0]);
                     saveMediaToIDB('ownerCoverImage', shopPhotos[0]);
+                    if (targetShopId) {
+                        safeLocalStorageSet('ownerCoverImage_' + targetShopId, shopPhotos[0]);
+                        saveMediaToIDB('ownerCoverImage_' + targetShopId, shopPhotos[0]).catch(() => {});
+                        safeLocalStorageSet('ownerShopGallery_' + targetShopId, JSON.stringify(shopPhotos));
+                        saveMediaToIDB('ownerShopGallery_' + targetShopId, shopPhotos).catch(() => {});
+                    }
+                    if (uId) {
+                        safeLocalStorageSet('ownerCoverImage_' + uId, shopPhotos[0]);
+                        saveMediaToIDB('ownerCoverImage_' + uId, shopPhotos[0]).catch(() => {});
+                        safeLocalStorageSet('ownerShopGallery_' + uId, JSON.stringify(shopPhotos));
+                        saveMediaToIDB('ownerShopGallery_' + uId, shopPhotos).catch(() => {});
+                    }
                 }
-                saveMediaToIDB('ownerShopGallery', shopPhotos);
+
+                // Sync immediately to cachedDiscoveryShops and cachedShopDetails
+                try {
+                    const cDisc = JSON.parse(localStorage.getItem('cachedDiscoveryShops') || '[]');
+                    if (Array.isArray(cDisc) && cDisc.length > 0) {
+                        cDisc.forEach(s => {
+                            if (s.id === targetShopId || !targetShopId || cDisc.length === 1) {
+                                if (shopPhotos[0]) {
+                                    s.image = shopPhotos[0];
+                                    s.cover_image = shopPhotos[0];
+                                }
+                                s.images = shopPhotos;
+                            }
+                        });
+                        localStorage.setItem('cachedDiscoveryShops', JSON.stringify(cDisc));
+                    }
+                    if (targetShopId) {
+                        const cDetails = JSON.parse(localStorage.getItem('cachedShopDetails_' + targetShopId) || 'null');
+                        if (cDetails) {
+                            if (shopPhotos[0]) cDetails.cover_image = shopPhotos[0];
+                            cDetails.images = shopPhotos;
+                            localStorage.setItem('cachedShopDetails_' + targetShopId, JSON.stringify(cDetails));
+                        }
+                    }
+                } catch (_) {}
 
                 if (openUploadBtn) {
                     openUploadBtn.disabled = false;
@@ -1784,11 +1844,27 @@
                 } catch (_) {}
             }
 
+            // Embed cover photo & gallery metadata bridge into description so it persists in Supabase Cloud
+            let descToSave = rawDesc;
+            try {
+                const metaPayload = {};
+                if (mainCoverPhoto) {
+                    metaPayload.cover_image = mainCoverPhoto;
+                }
+                if (shopPhotos && shopPhotos.length > 0) {
+                    metaPayload.gallery = shopPhotos.slice(0, 8);
+                }
+                if (Object.keys(metaPayload).length > 0) {
+                    const clean = (rawDesc || '').replace(/<!--BCW_META:[\s\S]*?-->/g, '').trim();
+                    descToSave = (clean ? clean + '\n\n' : '') + `<!--BCW_META:${JSON.stringify(metaPayload)}-->`;
+                }
+            } catch (_) {}
+
             // Core guaranteed columns in standard shops table
             const coreShopCols = {
                 name: name,
                 phone_number: phone,
-                description: rawDesc,
+                description: descToSave,
                 address: fullAddr,
                 updated_at: new Date().toISOString()
             };

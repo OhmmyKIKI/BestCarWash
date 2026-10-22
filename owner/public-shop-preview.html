@@ -559,22 +559,50 @@
         }
     }
 
-    async function getIDBMedia(key) {
-        if (typeof indexedDB === 'undefined') return null;
-        return new Promise((resolve) => {
-            try {
-                const req = indexedDB.open('BestCarWashMedia', 1);
-                req.onsuccess = (e) => {
-                    const db = e.target.result;
-                    if (!db.objectStoreNames.contains('shop_media')) return resolve(null);
-                    const tx = db.transaction('shop_media', 'readonly');
-                    const gReq = tx.objectStore('shop_media').get(key);
-                    gReq.onsuccess = () => resolve(gReq.result || null);
-                    gReq.onerror = () => resolve(null);
-                };
-                req.onerror = () => resolve(null);
-            } catch (_) { resolve(null); }
+    function openMediaDB() {
+        if (typeof indexedDB === 'undefined') return Promise.reject(new Error('IndexedDB not supported'));
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open('BestCarWashMedia', 2);
+            req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('shop_media')) {
+                    db.createObjectStore('shop_media');
+                }
+            };
+            req.onsuccess = (e) => resolve(e.target.result);
+            req.onerror = (e) => reject(e.target.error || new Error('Failed to open BestCarWashMedia'));
         });
+    }
+
+    async function getIDBMedia(key) {
+        try {
+            const db = await openMediaDB();
+            return new Promise((resolve) => {
+                if (!db.objectStoreNames.contains('shop_media')) return resolve(null);
+                const tx = db.transaction('shop_media', 'readonly');
+                const store = tx.objectStore('shop_media');
+                const req = store.get(key);
+                req.onsuccess = () => resolve(req.result || null);
+                req.onerror = () => resolve(null);
+            });
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function extractShopMetadata(description) {
+        if (!description || typeof description !== 'string') {
+            return { cleanDesc: description || '', meta: {} };
+        }
+        const match = description.match(/<!--BCW_META:([\s\S]*?)-->/);
+        if (match) {
+            try {
+                const meta = JSON.parse(match[1]);
+                const cleanDesc = description.replace(/<!--BCW_META:[\s\S]*?-->/g, '').trim();
+                return { cleanDesc, meta };
+            } catch (_) {}
+        }
+        return { cleanDesc: description.trim(), meta: {} };
     }
 
     // --- Master Data (Defaults, dynamically updated from localStorage & Supabase) ---
@@ -781,6 +809,20 @@
         syncFavoriteUI();
 
         updateGalleryDOM(galleryImages);
+
+        // Async check IDB to immediately swap stock images if user has custom cover/gallery
+        getIDBMedia('ownerCoverImage').then(cover => {
+            if (cover) {
+                galleryImages[0] = cover;
+                updateGalleryDOM(galleryImages);
+            }
+        }).catch(() => {});
+        getIDBMedia('ownerShopGallery').then(gal => {
+            if (Array.isArray(gal) && gal.length > 0) {
+                galleryImages = [...gal];
+                updateGalleryDOM(galleryImages);
+            }
+        }).catch(() => {});
     }
 
     // --- Render Operating Hours ---
@@ -1181,10 +1223,11 @@
                 if (phoneText) phoneText.textContent = shop.phone_number;
             }
 
-            const finalDesc = shop.description || user?.user_metadata?.shop_description || user?.user_metadata?.description || user?.user_metadata?.about || localStorage.getItem('ownerShopDesc') || localStorage.getItem('shopDescription');
+            const rawShopDesc = shop.description || user?.user_metadata?.shop_description || user?.user_metadata?.description || user?.user_metadata?.about || localStorage.getItem('ownerShopDesc') || localStorage.getItem('shopDescription');
+            const { cleanDesc, meta: cloudMeta } = extractShopMetadata(rawShopDesc);
             const aboutEl = document.getElementById('shop-about');
             if (aboutEl) {
-                aboutEl.textContent = finalDesc || 'บริการดูแลรักษาและทำความสะอาดรถยนต์ระดับมืออาชีพ พร้อมดูแลรถของคุณด้วยมาตรฐานสูงสุด';
+                aboutEl.textContent = cleanDesc || 'บริการดูแลรักษาและทำความสะอาดรถยนต์ระดับมืออาชีพ พร้อมดูแลรถของคุณด้วยมาตรฐานสูงสุด';
             }
 
             // Update Real Customer Link button
@@ -1194,7 +1237,7 @@
             }
 
             // Multi-Photo Gallery & Cover Sync
-            let customGallery = user?.user_metadata?.shop_images;
+            let customGallery = cloudMeta?.gallery || user?.user_metadata?.shop_images;
             if (!customGallery || !Array.isArray(customGallery) || customGallery.length === 0) {
                 try {
                     customGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null');
@@ -1202,17 +1245,21 @@
             }
             if (!customGallery || !customGallery.length) {
                 try {
-                    customGallery = await getIDBMedia('ownerShopGallery');
+                    customGallery = await getIDBMedia('ownerShopGallery_' + shop.id) || await getIDBMedia('ownerShopGallery');
                 } catch(_) {}
             }
-            let cover = shop.cover_image_url || user?.user_metadata?.cover_image_url || localStorage.getItem('ownerCoverImage');
+            let cover = cloudMeta?.cover_image || shop.cover_image_url || user?.user_metadata?.cover_image_url || localStorage.getItem('ownerCoverImage');
             if (!cover) {
                 try {
-                    cover = await getIDBMedia('ownerCoverImage');
+                    cover = await getIDBMedia('ownerCoverImage_' + shop.id) || await getIDBMedia('ownerCoverImage');
                 } catch(_) {}
             }
             if (cover && (!customGallery || !customGallery.length)) {
                 customGallery = [cover];
+            } else if (cover && customGallery && customGallery.length > 0 && customGallery[0] !== cover) {
+                const cIdx = customGallery.indexOf(cover);
+                if (cIdx > 0) customGallery.splice(cIdx, 1);
+                customGallery.unshift(cover);
             }
 
             if (customGallery && customGallery.length > 0) {
