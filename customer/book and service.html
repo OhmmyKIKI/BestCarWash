@@ -1570,16 +1570,28 @@
         const idbGlobal = await getIDBMedia('ownerQrCode') || await getIDBMedia('shopPromptPayQr');
         if (idbGlobal) return idbGlobal;
 
-        // 7. Check if shop.description contains JSON metadata
-        if (shop?.description && shop.description.includes('{')) {
-            try {
-                const metaMatch = shop.description.match(/\{[\s\S]*\}/);
-                if (metaMatch) {
-                    const meta = JSON.parse(metaMatch[0]);
-                    if (meta?.qr_code) return meta.qr_code;
-                    if (meta?.promptpay_qr) return meta.promptpay_qr;
-                }
-            } catch (_) {}
+        // 7. Check if shop.description contains metadata bridge
+        if (shop?.description) {
+            const bcwMatch = shop.description.match(/<!--BCW_META:([\s\S]*?)-->/);
+            if (bcwMatch && bcwMatch[1]) {
+                try {
+                    const parsed = JSON.parse(bcwMatch[1]);
+                    if (parsed?.promptpay_qr) return parsed.promptpay_qr;
+                    if (parsed?.qr_code) return parsed.qr_code;
+                    if (parsed?.bank_info?.qr_code) return parsed.bank_info.qr_code;
+                } catch (_) {}
+            }
+            if (shop.description.includes('{')) {
+                try {
+                    const metaMatch = shop.description.match(/\{[\s\S]*\}/);
+                    if (metaMatch) {
+                        const meta = JSON.parse(metaMatch[0]);
+                        if (meta?.promptpay_qr) return meta.promptpay_qr;
+                        if (meta?.qr_code) return meta.qr_code;
+                        if (meta?.bank_info?.qr_code) return meta.bank_info.qr_code;
+                    }
+                } catch (_) {}
+            }
         }
 
         return null;
@@ -1637,10 +1649,24 @@
             if (noQrFallback) noQrFallback.classList.remove('hidden');
         }
 
+        // Resolve Bank Info from shop metadata bridge if saved by owner
+        let metaBank = null;
+        if (currentShop?.description) {
+            const bcwMatch = currentShop.description.match(/<!--BCW_META:([\s\S]*?)-->/);
+            if (bcwMatch && bcwMatch[1]) {
+                try {
+                    const parsed = JSON.parse(bcwMatch[1]);
+                    metaBank = parsed?.bank_info || null;
+                } catch (_) {}
+            }
+        }
+
         // Load Shop PromptPay number from current shop or customized
-        const shopPhone = (currentShop?.id ? localStorage.getItem('ownerAccountNumber_' + currentShop.id) : null) ||
+        const shopPhone = metaBank?.account_number ||
+                          currentShop?.promptpay ||
+                          (currentShop?.id ? localStorage.getItem('ownerAccountNumber_' + currentShop.id) : null) ||
                           (currentShop?.owner_id ? localStorage.getItem('ownerAccountNumber_' + currentShop.owner_id) : null) ||
-                          currentShop?.promptpay || currentShop?.phone || 
+                          currentShop?.phone || 
                           localStorage.getItem('ownerAccountNumber') || localStorage.getItem('ownerPromptPay') || 
                           localStorage.getItem('shopPromptPay') || '080-000-0000';
         const promptPayEl = document.getElementById('promptpay-number');
@@ -1649,7 +1675,9 @@
         }
 
         // Load Shop Name / Account Name from current shop
-        const shopName = (currentShop?.id ? localStorage.getItem('ownerAccountName_' + currentShop.id) : null) ||
+        const shopName = metaBank?.account_name ||
+                         currentShop?.account_name ||
+                         (currentShop?.id ? localStorage.getItem('ownerAccountName_' + currentShop.id) : null) ||
                          (currentShop?.owner_id ? localStorage.getItem('ownerAccountName_' + currentShop.owner_id) : null) ||
                          localStorage.getItem('ownerAccountName') || localStorage.getItem('shopAccountName') || 
                          currentShop?.name || 'ร้านคาร์แคร์';
@@ -2565,6 +2593,14 @@
                         if (oldRaw) existingCached = JSON.parse(oldRaw) || {};
                     } catch(_) {}
 
+                    let metaFromDesc = {};
+                    if (dbShop.description) {
+                        const match = dbShop.description.match(/<!--BCW_META:([\s\S]*?)-->/);
+                        if (match && match[1]) {
+                            try { metaFromDesc = JSON.parse(match[1]); } catch (_) {}
+                        }
+                    }
+
                     const liveShopObj = {
                         ...existingCached,
                         id: dbShop.id,
@@ -2573,8 +2609,9 @@
                         description: dbShop.description || existingCached.description || '',
                         address: dbShop.address || existingCached.address || '',
                         phone: dbShop.phone_number || existingCached.phone || '',
-                        promptpay: dbShop.phone_number || existingCached.promptpay || '080-000-0000',
-                        promptpay_qr: dbShop.promptpay_qr || existingCached.promptpay_qr || null,
+                        promptpay: metaFromDesc.bank_info?.account_number || dbShop.phone_number || existingCached.promptpay || '080-000-0000',
+                        promptpay_qr: metaFromDesc.promptpay_qr || metaFromDesc.qr_code || metaFromDesc.bank_info?.qr_code || dbShop.promptpay_qr || existingCached.promptpay_qr || null,
+                        account_name: metaFromDesc.bank_info?.account_name || existingCached.account_name || dbShop.name || 'ร้านคาร์แคร์',
                         rating: existingCached.rating || (dbShop.rating ? Number(dbShop.rating).toFixed(1) : '5.0'),
                         reviews: existingCached.reviews || (dbShop.review_count ? `${dbShop.review_count} รีวิว` : '0 รีวิว'),
                         services: (dbServices && dbServices.length > 0) ? dbServices.map((s, idx) => ({

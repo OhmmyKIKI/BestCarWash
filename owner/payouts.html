@@ -667,7 +667,7 @@
                                 bank_name: bankName,
                                 account_number: accNum,
                                 account_name: accName,
-                                qr_code: (qrImg && !qrImg.startsWith('data:') && qrImg.length < 1000) ? qrImg : null
+                                qr_code: qrImg || null
                             };
                             await client.auth.updateUser({
                                 data: {
@@ -679,23 +679,82 @@
                         }
                     }
 
-                    // 5. If shop exists, also update phone_number / payment info in shops table via safeSupabaseRest
-                    if (currentShopId && currentShopId !== 'local-shop') {
+                    // 5. Save QR Code & Bank Info to Supabase Database (shops.description metadata bridge)
+                    let targetShopId = (currentShopId && currentShopId !== 'local-shop') ? currentShopId : null;
+                    if (!targetShopId && currentUserId) {
                         try {
+                            const { data: userShops } = await safeSupabaseRest(`shops?select=id,description&owner_id=eq.${currentUserId}&limit=1`);
+                            if (userShops && userShops.length > 0) {
+                                targetShopId = userShops[0].id;
+                                currentShopId = targetShopId;
+                            }
+                        } catch (_) {}
+                    }
+
+                    if (targetShopId) {
+                        try {
+                            let existingDesc = '';
+                            let existingMeta = {};
+                            const { data: sData } = await safeSupabaseRest(`shops?select=id,description&id=eq.${targetShopId}&limit=1`);
+                            if (sData && sData.length > 0) {
+                                existingDesc = sData[0].description || '';
+                                const match = existingDesc.match(/<!--BCW_META:([\s\S]*?)-->/);
+                                if (match && match[1]) {
+                                    try { existingMeta = JSON.parse(match[1]); } catch (_) {}
+                                }
+                            }
+
+                            // Embed real QR Code image & Bank Info into metadata payload
+                            if (qrImg) {
+                                existingMeta.qr_code = qrImg;
+                                existingMeta.promptpay_qr = qrImg;
+                            }
+                            existingMeta.bank_info = {
+                                bank_name: bankName,
+                                account_number: accNum,
+                                account_name: accName,
+                                qr_code: qrImg || existingMeta.qr_code || null
+                            };
+
+                            const cleanDesc = (existingDesc || '').replace(/<!--BCW_META:[\s\S]*?-->/g, '').trim();
+                            const newDescWithMeta = (cleanDesc ? cleanDesc + '\n\n' : '') + `<!--BCW_META:${JSON.stringify(existingMeta)}-->`;
+
+                            const patchPayload = {
+                                description: newDescWithMeta,
+                                updated_at: new Date().toISOString()
+                            };
                             const digits = accNum.replace(/[^0-9]/g, '');
                             if (digits.length >= 9 && digits.length <= 13) {
-                                await safeSupabaseRest(`shops?id=eq.${currentShopId}`, {
-                                    method: 'PATCH',
-                                    body: JSON.stringify({ phone_number: digits })
-                                });
+                                patchPayload.phone_number = digits;
                             }
+
+                            await safeSupabaseRest(`shops?id=eq.${targetShopId}`, {
+                                method: 'PATCH',
+                                headers: { 'Prefer': 'return=representation' },
+                                body: JSON.stringify(patchPayload)
+                            });
+
+                            // Also sync to cached shop details in browser
+                            try {
+                                const cDetails = JSON.parse(localStorage.getItem('cachedShopDetails_' + targetShopId) || '{}');
+                                if (qrImg) {
+                                    cDetails.promptpay_qr = qrImg;
+                                    cDetails.qr_code = qrImg;
+                                }
+                                cDetails.account_name = accName;
+                                cDetails.promptpay = accNum;
+                                cDetails.description = newDescWithMeta;
+                                localStorage.setItem('cachedShopDetails_' + targetShopId, JSON.stringify(cDetails));
+                            } catch (_) {}
+
+                            console.log('✅ QR Code & Bank Info saved to database shops table');
                         } catch(shopErr) {
-                            console.warn('Shop phone_number sync notice:', shopErr);
+                            console.warn('Shop database sync notice:', shopErr);
                         }
                     }
 
                     closeModal();
-                    showToast('บันทึกข้อมูลบัญชีและพร้อมเพย์เรียบร้อยแล้ว');
+                    showToast('บันทึกข้อมูลบัญชีและ QR Code ลงฐานข้อมูลเรียบร้อยแล้ว');
                 } catch (err) {
                     console.error('Save bank error:', err);
                     closeModal();
@@ -718,7 +777,7 @@
 
             // Step 1: Lookup shop by owner_id in Supabase via safeSupabaseRest
             if (userId) {
-                const { data } = await safeSupabaseRest(`shops?select=id,name&owner_id=eq.${userId}&limit=1`);
+                const { data } = await safeSupabaseRest(`shops?select=id,name,description,phone_number&owner_id=eq.${userId}&limit=1`);
                 if (data && data.length > 0) shop = data[0];
             }
 
@@ -726,7 +785,7 @@
             if (!shop) {
                 const storedShopId = localStorage.getItem('currentShopId') || localStorage.getItem('selectedShopId') || localStorage.getItem('ownerShopId');
                 if (storedShopId) {
-                    const { data } = await safeSupabaseRest(`shops?select=id,name&id=eq.${storedShopId}&limit=1`);
+                    const { data } = await safeSupabaseRest(`shops?select=id,name,description,phone_number&id=eq.${storedShopId}&limit=1`);
                     if (data && data.length > 0) shop = data[0];
                 }
             }
@@ -735,7 +794,7 @@
             if (!shop) {
                 const storedShopName = localStorage.getItem('ownerShopName') || localStorage.getItem('userShopName');
                 if (storedShopName) {
-                    const { data } = await safeSupabaseRest(`shops?select=id,name&name=ilike.*${encodeURIComponent(storedShopName)}*&limit=1`);
+                    const { data } = await safeSupabaseRest(`shops?select=id,name,description,phone_number&name=ilike.*${encodeURIComponent(storedShopName)}*&limit=1`);
                     if (data && data.length > 0) shop = data[0];
                 }
             }
@@ -749,6 +808,53 @@
                         id: localShopId || 'local-shop',
                         name: localShopName || 'ร้านคาร์แคร์ของฉัน'
                     };
+                }
+            }
+
+            // Restore QR Code and Bank info from database if present in shop description
+            if (shop && shop.description) {
+                const match = shop.description.match(/<!--BCW_META:([\s\S]*?)-->/);
+                if (match && match[1]) {
+                    try {
+                        const meta = JSON.parse(match[1]);
+                        const dbQr = meta.qr_code || meta.promptpay_qr || meta.bank_info?.qr_code;
+                        if (dbQr) {
+                            currentQrBase64 = dbQr;
+                            if (userId) localStorage.setItem('ownerQrCode_' + userId, dbQr);
+                            if (shop.id) localStorage.setItem('ownerQrCode_' + shop.id, dbQr);
+                            localStorage.setItem('ownerQrCode', dbQr);
+                            localStorage.setItem('shopPromptPayQr', dbQr);
+                            updateQrDisplay(dbQr);
+                            const preview = document.getElementById('qrPreview');
+                            const placeholder = document.getElementById('qrPlaceholder');
+                            if (preview && placeholder) {
+                                preview.src = dbQr;
+                                preview.classList.remove('hidden');
+                                placeholder.classList.add('hidden');
+                            }
+                        }
+                        if (meta.bank_info) {
+                            if (meta.bank_info.bank_name) {
+                                const dispTitle = document.getElementById('displayBankTitle');
+                                if (dispTitle) dispTitle.textContent = meta.bank_info.bank_name;
+                                const bankSelect = document.getElementById('bankName');
+                                if (bankSelect) bankSelect.value = meta.bank_info.bank_name;
+                                updateBankBrandStyle(meta.bank_info.bank_name);
+                            }
+                            if (meta.bank_info.account_number) {
+                                const dispAcc = document.getElementById('displayAccountNumber');
+                                if (dispAcc) dispAcc.textContent = meta.bank_info.account_number;
+                                const accInput = document.getElementById('accountNumber');
+                                if (accInput) accInput.value = meta.bank_info.account_number;
+                            }
+                            if (meta.bank_info.account_name) {
+                                const dispName = document.getElementById('displayAccountName');
+                                if (dispName) dispName.textContent = meta.bank_info.account_name;
+                                const nameInput = document.getElementById('accountName');
+                                if (nameInput) nameInput.value = meta.bank_info.account_name;
+                            }
+                        }
+                    } catch (_) {}
                 }
             }
 
@@ -844,29 +950,81 @@
             return;
         }
 
-        // Render live booking deposit transactions
+        // Render live booking deposit transactions (Clean Service & Date/Time display)
         if (container) {
             container.innerHTML = validDeposits.map(b => {
-                const isRefunded = b.status === 'refunded';
-                const dateStr = b.booking_date || (b.created_at ? new Date(b.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : 'วันนี้');
-                const timeStr = b.booking_time ? `${b.booking_time} น.` : '';
-                const shortTxn = b.id ? String(b.id).slice(0, 8).toUpperCase() : Math.random().toString(36).slice(2, 10).toUpperCase();
+                const isRefunded = String(b.status || '').toLowerCase() === 'refunded';
+                
+                // 1. Resolve clean Service Name (parse JSON vehicle_info safely)
+                let serviceTitle = b.service_name || b.service || '';
+                if (b.vehicle_info) {
+                    let vi = b.vehicle_info;
+                    if (typeof vi === 'string') {
+                        try { vi = JSON.parse(vi); } catch (_) {}
+                    }
+                    if (typeof vi === 'object' && vi !== null) {
+                        serviceTitle = vi.service_name || vi.serviceName || vi.service || serviceTitle;
+                    }
+                }
+                if (!serviceTitle && b.notes && !b.notes.startsWith('{') && !b.notes.startsWith('[')) {
+                    serviceTitle = b.notes;
+                }
+                if (!serviceTitle) {
+                    serviceTitle = 'บริการล้างรถมาตรฐาน';
+                }
+
+                // 2. Resolve clean Thai Date & Time
+                let dateText = 'วันนี้';
+                if (b.booking_date) {
+                    try {
+                        const parts = b.booking_date.split('-');
+                        if (parts.length === 3) {
+                            const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+                            const day = parseInt(parts[2], 10);
+                            const mIdx = parseInt(parts[1], 10) - 1;
+                            const month = months[mIdx] || parts[1];
+                            const year = parseInt(parts[0], 10) + (parseInt(parts[0], 10) < 2500 ? 543 : 0);
+                            dateText = `${day} ${month} ${year}`;
+                        } else {
+                            dateText = b.booking_date;
+                        }
+                    } catch (_) {
+                        dateText = b.booking_date;
+                    }
+                } else if (b.created_at) {
+                    try {
+                        dateText = new Date(b.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+                    } catch (_) {}
+                }
+
+                let timeText = '';
+                if (b.booking_time) {
+                    const cleanT = b.booking_time.slice(0, 5);
+                    timeText = `เวลา ${cleanT} น.`;
+                }
+                const formattedDateTime = timeText ? `${dateText} • ${timeText}` : dateText;
+
                 const depAmount = parseFloat(b.deposit_amount) || 50;
 
                 return `
-                    <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 p-4 rounded-2xl shadow-sm flex flex-col gap-2 transition-all hover:bg-surface-container">
-                        <div class="flex justify-between items-start">
-                            <div class="flex flex-col">
-                                <span class="text-sm font-bold text-on-surface">มัดจำ - ${escapeHtml(b.service_name || b.service || b.notes || 'บริการล้างรถ')} (${escapeHtml(b.customer_name || b.vehicle_info || b.plate_number || 'ลูกค้า')})</span>
-                                <span class="text-xs text-on-surface-variant">${dateStr} ${timeStr}</span>
+                    <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 p-4 rounded-2xl shadow-sm flex items-center justify-between gap-3 transition-all hover:bg-surface-container">
+                        <div class="flex items-center gap-3.5 min-w-0">
+                            <div class="w-11 h-11 rounded-xl ${isRefunded ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : 'bg-secondary/10 text-secondary border border-secondary/30'} flex items-center justify-center shrink-0 shadow-inner">
+                                <span class="material-symbols-outlined text-[22px]">${isRefunded ? 'assignment_return' : 'local_car_wash'}</span>
                             </div>
-                            <span class="text-base font-bold ${isRefunded ? 'text-amber-400' : 'text-secondary'}">
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-sm font-bold text-on-surface truncate">${escapeHtml(serviceTitle)}</span>
+                                <div class="flex items-center gap-1.5 text-xs text-on-surface-variant mt-0.5">
+                                    <span class="material-symbols-outlined text-[14px] text-outline">calendar_today</span>
+                                    <span class="truncate">${escapeHtml(formattedDateTime)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end shrink-0">
+                            <span class="text-sm sm:text-base font-bold font-mono ${isRefunded ? 'text-amber-400' : 'text-secondary'}">
                                 ${isRefunded ? 'คืนมัดจำ -฿' + depAmount.toFixed(2) : '+฿' + depAmount.toFixed(2)}
                             </span>
-                        </div>
-                        <div class="flex justify-between items-end mt-1 border-t border-outline-variant/20 pt-2">
-                            <span class="text-[10px] text-outline font-mono">TXN: #DEP-${shortTxn}</span>
-                            <span class="px-2 py-0.5 rounded ${isRefunded ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-secondary-container/30 text-[#4edea3] border border-secondary/30'} text-[10px] font-bold tracking-wide">
+                            <span class="mt-1 px-2.5 py-0.5 rounded text-[10px] font-bold tracking-wide ${isRefunded ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-secondary-container/30 text-[#4edea3] border border-secondary/30'}">
                                 ${isRefunded ? 'คืนเงินแล้ว' : 'มัดจำสำเร็จ'}
                             </span>
                         </div>
