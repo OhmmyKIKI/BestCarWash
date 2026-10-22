@@ -510,12 +510,13 @@
         }
 
         async function getMediaFromIDB(key) {
-            return new Promise(async (resolve) => {
-                try {
-                    const db = await openMediaDB().catch(() => null);
-                    if (!db || !db.objectStoreNames || !db.objectStoreNames.contains(IDB_STORE)) {
-                        return resolve(null);
-                    }
+            if (!key) return null;
+            try {
+                const db = await openMediaDB().catch(() => null);
+                if (!db || !db.objectStoreNames || !db.objectStoreNames.contains(IDB_STORE)) {
+                    return null;
+                }
+                return new Promise((resolve) => {
                     try {
                         const tx = db.transaction(IDB_STORE, 'readonly');
                         tx.onerror = () => resolve(null);
@@ -525,10 +526,10 @@
                     } catch (txErr) {
                         resolve(null);
                     }
-                } catch (_) {
-                    resolve(null);
-                }
-            });
+                });
+            } catch (_) {
+                return null;
+            }
         }
 
         function safeLocalStorageSet(key, val) {
@@ -1898,18 +1899,8 @@
                     let patchRes = await fetcher(`shops?id=eq.${targetShopId}`, {
                         method: 'PATCH',
                         headers: { 'Prefer': 'return=representation' },
-                        body: extendedShopCols
+                        body: coreShopCols
                     });
-
-                    // If patch failed because columns don't exist in Supabase schema cache (PGRST204)
-                    if (patchRes?.error && (String(patchRes.error).includes('column') || String(patchRes.error).includes('PGRST204'))) {
-                        console.warn('⚠️ Retrying with core columns...');
-                        patchRes = await fetcher(`shops?id=eq.${targetShopId}`, {
-                            method: 'PATCH',
-                            headers: { 'Prefer': 'return=representation' },
-                            body: coreShopCols
-                        });
-                    }
 
                     if (patchRes && !patchRes.error && (Array.isArray(patchRes) ? patchRes.length > 0 : true)) {
                         shopUpdated = true;
@@ -1928,16 +1919,8 @@
                     let insertRes = await fetcher('shops', {
                         method: 'POST',
                         headers: { 'Prefer': 'return=representation' },
-                        body: { owner_id: userId, ...extendedShopCols }
+                        body: { owner_id: userId, ...coreShopCols }
                     });
-
-                    if (insertRes?.error && (String(insertRes.error).includes('column') || String(insertRes.error).includes('PGRST204'))) {
-                        insertRes = await fetcher('shops', {
-                            method: 'POST',
-                            headers: { 'Prefer': 'return=representation' },
-                            body: { owner_id: userId, ...coreShopCols }
-                        });
-                    }
 
                     if (insertRes && !insertRes.error) {
                         shopUpdated = true;
@@ -1947,6 +1930,8 @@
                             safeLocalStorageSet('currentShopId', currentShopId);
                         }
                     }
+
+
                 } catch (_) {}
             }
 
