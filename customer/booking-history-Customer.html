@@ -1120,7 +1120,7 @@
             }
         }
 
-        // เมื่ออยู่ใน Step 4 (พร้อมรับรถ) ให้ค้างไว้ที่หน้านี้ พร้อมแสดงแบนเนอร์แจ้งเตือน และปุ่มจำลองส่งมอบ
+        // เมื่ออยู่ใน Step 4 (พร้อมรับรถ) ให้ค้างไว้ที่หน้านี้ พร้อมแสดงแบนเนอร์แจ้งเตือนให้ลูกค้ามารับรถ
         const readyBanner = document.getElementById('readyForPickupBanner');
         const upcomingButtons = document.getElementById('upcomingButtons');
         if (step === 4) {
@@ -1135,10 +1135,6 @@
                     </button>
                     <button type="button" onclick="navigateCurrentShop()" class="px-3 py-1.5 bg-surface-container-highest hover:bg-surface-variant border border-outline-variant/40 text-on-surface text-xs font-medium rounded-lg transition-colors flex items-center gap-1 active:scale-95">
                         <span class="material-symbols-outlined text-[15px] text-primary">near_me</span> นำทาง
-                    </button>
-                    <button onclick="shopConfirmHandover()" class="px-3 py-1.5 bg-secondary text-background font-bold text-xs rounded-lg hover:bg-secondary/90 transition-all shadow-md shadow-secondary/20 active:scale-95 duration-150 flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-[16px]">how_to_reg</span>
-                        <span>จำลอง: รับรถเรียบร้อย</span>
                     </button>
                 `;
             }
