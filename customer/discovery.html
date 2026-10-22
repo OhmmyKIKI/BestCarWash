@@ -1554,7 +1554,11 @@ tailwind.config = {
                     }));
 
                     // Cache fresh shops for next instant 0ms load
-                    localStorage.setItem('cachedDiscoveryShops', JSON.stringify(shops));
+                    try {
+                        localStorage.setItem('cachedDiscoveryShops', JSON.stringify(shops));
+                    } catch (storageErr) {
+                        console.warn('Discovery shops cache notice (quota):', storageErr);
+                    }
                     renderDesktopCards(shops);
                     renderMobileCards(shops);
                     if (map) {

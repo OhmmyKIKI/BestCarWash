@@ -630,7 +630,9 @@
             ids.push(currentShopId);
             isAdded = true;
         }
-        localStorage.setItem('favoriteShopIds', JSON.stringify(ids));
+        try {
+            localStorage.setItem('favoriteShopIds', JSON.stringify(ids));
+        } catch (_) {}
         updateFavoriteUI();
         showToast(isAdded ? 'บันทึกร้านโปรดแล้ว ❤️' : 'นำออกจากรายการโปรด');
 
@@ -881,7 +883,7 @@
         if (!shop) return;
         currentShop = shop;
         currentShopId = shop.id;
-        localStorage.setItem('selectedShopId', currentShopId);
+        try { localStorage.setItem('selectedShopId', currentShopId); } catch (_) {}
 
         // Sync dynamic mock coordinates if updated from discovery.html
         const storedCoords = localStorage.getItem('mockShopsCoordinates');
@@ -1413,8 +1415,12 @@
                     };
 
                     SHOPS_DATA[dbShop.id] = liveShopObj;
-                    localStorage.setItem('cachedShopDetails_' + dbShop.id, JSON.stringify(liveShopObj));
-                    localStorage.setItem('cachedShopReviews_' + dbShop.id, JSON.stringify(liveReviews));
+                    try {
+                        localStorage.setItem('cachedShopDetails_' + dbShop.id, JSON.stringify(liveShopObj));
+                        localStorage.setItem('cachedShopReviews_' + dbShop.id, JSON.stringify(liveReviews));
+                    } catch (storageErr) {
+                        console.warn('Cache details storage notice (quota exceeded):', storageErr);
+                    }
 
                     applyShopDataToUI(liveShopObj, liveReviews, client);
                 } else if (!initialShopData) {
