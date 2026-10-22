@@ -60,11 +60,6 @@
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(141, 144, 160, 0.2);
         }
-        .bento-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 1rem;
-        }
     </style>
 </head>
 <body class="bg-background text-on-background min-h-screen pb-24 md:pb-12 font-sans">
@@ -151,39 +146,7 @@
         </div>
     </section>
 
-    <!-- Quick Stats Bento -->
-    <section class="bento-grid">
-        <a href="owner-booking-history.html" class="glass-panel p-4 rounded-xl flex flex-col justify-between active:scale-[0.98] transition-transform cursor-pointer block hover:border-secondary/30">
-            <div class="flex items-center justify-between mb-2">
-                <span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">task_alt</span>
-                <span id="owner-stat-completed-tag" class="text-secondary text-xs font-bold">สัปดาห์นี้</span>
-            </div>
-            <div>
-                <p class="text-xs font-medium text-on-surface-variant">บริการสำเร็จสัปดาห์นี้</p>
-                <p id="owner-stat-completed" class="text-xl font-bold text-on-surface">0 คัน</p>
-            </div>
-        </a>
-        <a href="owner-bookings.html" class="glass-panel p-4 rounded-xl flex flex-col justify-between active:scale-[0.98] transition-transform cursor-pointer block hover:border-secondary/30">
-            <div class="flex items-center justify-between mb-2">
-                <span class="material-symbols-outlined text-primary">calendar_month</span>
-                <span id="owner-stat-pending-tag" class="text-primary text-xs font-bold">คิววันนี้</span>
-            </div>
-            <div>
-                <p class="text-xs font-medium text-on-surface-variant">ยอดจองวันนี้</p>
-                <p id="owner-stat-today" class="text-xl font-bold text-on-surface">0 คิว</p>
-            </div>
-        </a>
-        <a href="owner-reviews.html" class="glass-panel p-4 rounded-xl flex flex-col justify-between active:scale-[0.98] transition-transform cursor-pointer block hover:border-secondary/30">
-            <div class="flex items-center justify-between mb-2">
-                <span class="material-symbols-outlined text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span>
-                <span id="owner-stat-rating-badge" class="text-yellow-400 text-xs font-bold">ใหม่</span>
-            </div>
-            <div>
-                <p class="text-xs font-medium text-on-surface-variant">คะแนนรีวิวร้าน</p>
-                <p id="owner-stat-reviews" class="text-xl font-bold text-on-surface">0 รีวิว</p>
-            </div>
-        </a>
-    </section>
+
 
     <!-- My Business Section -->
     <section>
@@ -520,42 +483,8 @@
             localStorage.setItem('ownerShopName', initialShopName);
         }
 
-        // Layer 1: Instant 0ms Render of Cached Profile Stats & Hours Summary
+        // Layer 1: Instant 0ms Render of Cached Hours Summary
         updateHoursSummaryOnProfile();
-        const savedStats = localStorage.getItem('ownerProfileStats');
-        const savedKPI = localStorage.getItem('ownerDashboardKPI');
-        if (savedStats) {
-            try {
-                const s = JSON.parse(savedStats);
-                if (s) {
-                    const statCompleted = document.getElementById('owner-stat-completed');
-                    if (statCompleted && s.completed !== undefined) statCompleted.textContent = `${s.completed} คัน`;
-                    const statToday = document.getElementById('owner-stat-today');
-                    if (statToday && s.today !== undefined) statToday.textContent = `${s.today} คิว`;
-                }
-            } catch(e) {}
-        } else if (savedKPI) {
-            try {
-                const kpi = JSON.parse(savedKPI);
-                if (kpi) {
-                    const statCompleted = document.getElementById('owner-stat-completed');
-                    if (statCompleted && kpi.delivered !== undefined) statCompleted.textContent = `${kpi.delivered} คัน`;
-                    const statToday = document.getElementById('owner-stat-today');
-                    if (statToday && kpi.inService !== undefined) statToday.textContent = `${kpi.inService} คิว`;
-                }
-            } catch(e) {}
-        }
-
-        const savedReviews = localStorage.getItem('ownerReviewsSummary');
-        if (savedReviews) {
-            try {
-                const r = JSON.parse(savedReviews);
-                const statReviews = document.getElementById('owner-stat-reviews');
-                if (statReviews && r.count !== undefined) statReviews.textContent = `${r.count} รีวิว`;
-                const statRating = document.getElementById('owner-stat-rating-badge');
-                if (statRating && r.rating) statRating.textContent = `${r.rating} ★`;
-            } catch(_) {}
-        }
 
         // Layer 2: Fast-Track Background Sync from Supabase (Robust & Cascade-Protected)
         (async () => {
@@ -706,40 +635,12 @@
                         }
                     }
 
-                    // 4. Fetch Bookings stats cleanly via safeSupabaseRest
-                    try {
-                        const { data: bookings, error: bErr } = await safeSupabaseRest(`bookings?select=id,status&shop_id=eq.${targetShopId}`);
-                        if (!bErr && bookings && bookings.length > 0) {
-                            const completedCount = bookings.filter(b => b.status === 'completed').length;
-                            const todayCount = bookings.filter(b => ['confirmed', 'arrived', 'washing', 'ready'].includes(b.status)).length;
-                            const statCompleted = document.getElementById('owner-stat-completed');
-                            if (statCompleted) statCompleted.textContent = `${completedCount} คัน`;
-                            const statToday = document.getElementById('owner-stat-today');
-                            if (statToday) statToday.textContent = `${todayCount} คิว`;
-                            localStorage.setItem('ownerProfileStats', JSON.stringify({ completed: completedCount, today: todayCount }));
-                        }
-                    } catch (_) {}
-
-                    // 5. Fetch Operating Hours summary cleanly via safeSupabaseRest
+                    // 4. Fetch Operating Hours summary cleanly via safeSupabaseRest
                     try {
                         const { data: dbHours, error: hErr } = await safeSupabaseRest(`shop_operating_hours?select=*&shop_id=eq.${targetShopId}&order=day_of_week.asc`);
                         if (!hErr && dbHours && dbHours.length > 0) {
                             localStorage.setItem('ownerOperatingHours', JSON.stringify(dbHours));
                             updateHoursSummaryOnProfile();
-                        }
-                    } catch (_) {}
-
-                    // 6. Fetch Reviews summary cleanly via safeSupabaseRest
-                    try {
-                        const { data: dbReviews, error: rErr } = await safeSupabaseRest(`reviews?select=rating&shop_id=eq.${targetShopId}`);
-                        if (!rErr && dbReviews && dbReviews.length > 0) {
-                            const revCount = dbReviews.length;
-                            const avgRating = (dbReviews.reduce((sum, r) => sum + (parseFloat(r.rating) || 5), 0) / revCount).toFixed(1);
-                            const statReviews = document.getElementById('owner-stat-reviews');
-                            if (statReviews) statReviews.textContent = `${revCount} รีวิว`;
-                            const statRating = document.getElementById('owner-stat-rating-badge');
-                            if (statRating) statRating.textContent = `${avgRating} ★`;
-                            localStorage.setItem('ownerReviewsSummary', JSON.stringify({ count: revCount, rating: avgRating }));
                         }
                     } catch (_) {}
                 }
