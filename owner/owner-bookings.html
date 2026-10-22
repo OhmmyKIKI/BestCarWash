@@ -212,41 +212,13 @@
             <div class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-amber-400 text-[24px]">currency_exchange</span>
                 <h2 class="text-xl font-semibold text-on-surface">คำขอยกเลิก &amp; คืนเงินมัดจำ</h2>
-                <span id="refundCountBadge" class="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">1 คำขอ</span>
+                <span id="refundCountBadge" class="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">0 คำขอ</span>
             </div>
-            <span class="text-xs text-outline hidden sm:inline">ลูกค้ายกเลิกล่วงหน้าเกิน 1 ชม. ตามเงื่อนไขระบบ</span>
+            <span class="text-xs text-outline hidden sm:inline">ลูกค้ายกเลิกล่วงหน้าเกิน 1 ชม. ตามเงื่อนไขระบบ หรือร้านค้าปฏิเสธรับคิว</span>
         </div>
 
         <div id="refundRequestsList" class="flex flex-col gap-stack-sm">
-            <!-- Refund Item -->
-            <div class="bg-surface-container-low rounded-xl p-stack-md border border-amber-500/30 flex flex-col md:flex-row md:items-center justify-between gap-stack-md transition-all duration-300">
-                <div class="flex items-start md:items-center gap-stack-md">
-                    <div class="w-12 h-12 rounded-full overflow-hidden bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
-                        <span class="material-symbols-outlined text-[24px]">replay</span>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-lg font-semibold text-on-surface">กิตติศักดิ์ พ.</span>
-                            <span class="px-2 py-0.5 bg-surface-bright text-on-surface rounded text-xs font-mono border border-outline-variant/50">1กข 7788</span>
-                            <span class="text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">แจ้งล่วงหน้า 3 ชม. (มีสิทธิ์คืนมัดจำ)</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-sm text-outline flex-wrap">
-                            <span>เหตุผล: ติดธุระด่วน</span>
-                            <span>•</span>
-                            <span class="text-on-surface-variant font-medium">พร้อมเพย์: <strong class="text-secondary font-mono">089-123-4567</strong> (กิตติศักดิ์)</span>
-                        </div>
-                        <div class="flex items-center gap-2 mt-1">
-                            <span class="text-xs text-outline">ยอดมัดจำที่ต้องโอนคืน:</span>
-                            <span class="text-sm font-bold text-secondary">฿50.00</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-stack-sm self-end md:self-center shrink-0">
-                    <button onclick="openRefundModal(this, 'กิตติศักดิ์ พ.', '089-123-4567', 'พร้อมเพย์', '50.00')" class="h-11 px-5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors flex items-center gap-1.5 text-sm font-bold shadow-md shadow-amber-500/10 active:scale-95 duration-150">
-                        <span class="material-symbols-outlined text-[18px]">upload_file</span> โอนเงินคืน &amp; แนบสลิป
-                    </button>
-                </div>
-            </div>
+            <div class="empty-state text-outline text-center py-6 bg-surface-container-highest rounded-xl border border-dashed border-outline-variant/50 text-sm">ไม่มีคำขอยกเลิกและคืนเงินค้างอยู่</div>
         </div>
     </section>
 
@@ -804,7 +776,9 @@
             'pending':   'incoming',
             'confirmed': 'confirmed',
             'completed': 'completed',
-            'cancelled': 'declined',
+            'cancelled': 'cancelled',
+            'declined':  'declined',
+            'rejected':  'declined',
             // Extended statuses stored in DB
             'arrived':   'arrived',
             'washing':   'washing',
@@ -857,8 +831,11 @@
             depositAmount: '฿' + Number(parsed.depositAmount).toFixed(2),
             totalAmount: '฿' + Number(totalPrice).toFixed(2),
             slipImage: parsed.slipImage,
-            refundReason: db.cancel_reason || db.refund_reason || '',
-            refundPromptPay: db.refund_promptpay || parsed.customerPhone,
+            refundReason: vi?.refund_reason || vi?.cancel_reason || db.cancel_reason || db.refund_reason || existingItem?.refundReason || '',
+            refundPromptPay: vi?.refund_promptpay || vi?.refundPromptPay || db.refund_promptpay || existingItem?.refundPromptPay || parsed.customerPhone,
+            refundSlip: vi?.refund_slip || vi?.refundSlip || existingItem?.refundSlip || '',
+            refundedAt: vi?.refunded_at || vi?.refundedAt || existingItem?.refundedAt || '',
+            declineReason: vi?.decline_reason || vi?.declineReason || existingItem?.declineReason || '',
             status: mappedStatus,
             step: step,
             raw_vehicle_info: db.vehicle_info,
@@ -1101,10 +1078,11 @@
                 'washing': 'CONFIRMED',
                 'ready': 'CONFIRMED',
                 'completed': 'COMPLETED',
-                'declined': 'CANCELLED',
+                'declined': 'DECLINED',
                 'no_show': 'CANCELLED',
-                'refund_requested': 'CANCELLED',
-                'refunded': 'CANCELLED'
+                'refund_requested': 'refund_requested',
+                'refunded': 'refunded',
+                'cancelled': 'CANCELLED'
             };
             const dbStatus = dbStatusMap[updates.status] || 'CONFIRMED';
 
@@ -1118,6 +1096,11 @@
             }
             vi.service_step = updates.step || (updates.status === 'confirmed' ? 1 : (updates.status === 'arrived' ? 2 : (updates.status === 'washing' ? 3 : (updates.status === 'ready' ? 4 : (updates.status === 'completed' ? 5 : 0)))));
             vi.service_status = updates.status;
+            if (updates.refundReason) vi.refund_reason = updates.refundReason;
+            if (updates.refundPromptPay) vi.refund_promptpay = updates.refundPromptPay;
+            if (updates.refundSlip) vi.refund_slip = updates.refundSlip;
+            if (updates.refundedAt) vi.refunded_at = updates.refundedAt;
+            if (updates.declineReason) vi.decline_reason = updates.declineReason;
             vi.updated_at = new Date().toISOString();
 
             if (b) b.raw_vehicle_info = vi;
@@ -1219,16 +1202,19 @@
             }
         }
 
-        // 2. Refund Requests (status: 'refund_requested')
+        // 2. Refund Requests (status: 'refund_requested', 'declined', 'cancelled')
         const refundContainer = document.getElementById('refundRequestsList');
         const refundCountBadge = document.getElementById('refundCountBadge');
-        const refundBookings = list.filter(b => (b.status || '').toLowerCase() === 'refund_requested');
+        const refundBookings = list.filter(b => {
+            const s = (b.status || '').toLowerCase();
+            return s === 'refund_requested' || s === 'declined' || s === 'cancelled';
+        });
 
         if (refundCountBadge) refundCountBadge.innerText = refundBookings.length + ' คำขอ';
 
         // Check if a new refund request came in from customer
         if (prevRefundCount !== -1 && refundBookings.length > prevRefundCount) {
-            showToast('⚠️ มีลูกค้ายื่นคำขอยกเลิกและขอคืนเงินมัดจำใหม่!');
+            showToast('⚠️ มีรายการขอยกเลิกหรือคืนเงินมัดจำใหม่!');
         }
         prevRefundCount = refundBookings.length;
 
@@ -1236,36 +1222,69 @@
             if (refundBookings.length === 0) {
                 refundContainer.innerHTML = '<div class="empty-state text-outline text-center py-6 bg-surface-container-highest rounded-xl border border-dashed border-outline-variant/50 text-sm">ไม่มีคำขอยกเลิกและคืนเงินค้างอยู่</div>';
             } else {
-                refundContainer.innerHTML = refundBookings.map(b => `
-                    <div class="bg-surface-container-low rounded-xl p-stack-md border border-amber-500/50 shadow-md shadow-amber-500/5 flex flex-col md:flex-row md:items-center justify-between gap-stack-md transition-all duration-300" id="card-${b.bookingId.replace('#','')}">
-                        <div class="flex items-start md:items-center gap-stack-md">
-                            <div class="w-12 h-12 rounded-full overflow-hidden bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
-                                <span class="material-symbols-outlined text-[24px]">replay</span>
+                refundContainer.innerHTML = refundBookings.map(b => {
+                    const isDeclined = (b.status || '').toLowerCase() === 'declined';
+                    const isCancelled = (b.status || '').toLowerCase() === 'cancelled';
+                    const isCustRefundReq = (b.status || '').toLowerCase() === 'refund_requested';
+
+                    const badgeHtml = isDeclined
+                        ? `<span class="text-xs text-rose-300 bg-rose-500/15 px-2.5 py-0.5 rounded-full border border-rose-500/30 font-bold">🚫 ร้านปฏิเสธคิว (รอโอนคืนมัดจำ)</span>`
+                        : (isCustRefundReq
+                            ? `<span class="text-xs text-amber-300 bg-amber-500/15 px-2.5 py-0.5 rounded-full border border-amber-500/30 font-bold animate-pulse">⚡ ลูกค้าขอยกเลิก</span>`
+                            : `<span class="text-xs text-rose-300 bg-rose-500/15 px-2.5 py-0.5 rounded-full border border-rose-500/30 font-bold">❌ ยกเลิกการจอง</span>`);
+
+                    const reasonHtml = isDeclined
+                        ? `<span class="text-on-surface font-medium">เหตุผล: <strong class="text-rose-300">${b.declineReason || 'ร้านค้าไม่สะดวกรับบริการในเวลาดังกล่าว'}</strong></span>`
+                        : `<span class="text-on-surface font-medium">เหตุผล: <strong class="text-amber-300">${b.refundReason || b.cancelReason || 'ติดธุระด่วน'}</strong></span>`;
+
+                    const iconHtml = isDeclined
+                        ? `<span class="material-symbols-outlined text-[24px] text-rose-400">block</span>`
+                        : `<span class="material-symbols-outlined text-[24px] text-amber-400">replay</span>`;
+
+                    const iconBg = isDeclined
+                        ? `bg-rose-500/15 border border-rose-500/30`
+                        : `bg-amber-500/15 border border-amber-500/30`;
+
+                    const cardBorder = isDeclined
+                        ? `border-rose-500/40 shadow-rose-500/5`
+                        : `border-amber-500/50 shadow-amber-500/5`;
+
+                    return `
+                        <div class="bg-surface-container-low rounded-xl p-stack-md border ${cardBorder} shadow-md flex flex-col md:flex-row md:items-center justify-between gap-stack-md transition-all duration-300" id="card-${(b.bookingId || 'bk').replace('#','')}">
+                            <div class="flex items-start md:items-center gap-stack-md">
+                                <div class="w-12 h-12 rounded-full overflow-hidden ${iconBg} flex items-center justify-center shrink-0">
+                                    ${iconHtml}
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="text-lg font-semibold text-on-surface">${b.customerName || 'ลูกค้า'}</span>
+                                        <span class="px-2 py-0.5 bg-surface-bright text-on-surface rounded text-xs font-mono border border-outline-variant/50">${b.carPlate || '1กข 7788'}</span>
+                                        ${badgeHtml}
+                                    </div>
+                                    <div class="flex items-center gap-2 text-sm text-outline flex-wrap">
+                                        ${reasonHtml}
+                                        <span>•</span>
+                                        <span class="text-on-surface-variant font-medium">พร้อมเพย์: <strong class="text-secondary font-mono">${b.refundPromptPay || b.customerPhone || '089-123-4567'}</strong></span>
+                                    </div>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-xs text-outline">ยอดมัดจำที่ต้องโอนคืน:</span>
+                                        <span class="text-sm font-bold text-secondary">${b.depositAmount || '฿50.00'}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flex flex-col gap-1">
-                                <div class="flex items-center gap-2 flex-wrap">
-                                    <span class="text-lg font-semibold text-on-surface">${b.customerName || 'ลูกค้า'}</span>
-                                    <span class="px-2 py-0.5 bg-surface-bright text-on-surface rounded text-xs font-mono border border-outline-variant/50">${b.carPlate || '1กข 7788'}</span>
-                                    <span class="text-xs text-amber-300 bg-amber-500/15 px-2.5 py-0.5 rounded-full border border-amber-500/30 font-bold animate-pulse">⚡ ลูกค้าขอยกเลิก</span>
-                                </div>
-                                <div class="flex items-center gap-2 text-sm text-outline flex-wrap">
-                                    <span class="text-on-surface font-medium">เหตุผล: <strong class="text-amber-300">${b.refundReason || 'ติดธุระด่วน'}</strong></span>
-                                    <span>•</span>
-                                    <span class="text-on-surface-variant font-medium">พร้อมเพย์: <strong class="text-secondary font-mono">${b.refundPromptPay || b.customerPhone || '089-123-4567'}</strong></span>
-                                </div>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-xs text-outline">ยอดมัดจำที่ต้องโอนคืน:</span>
-                                    <span class="text-sm font-bold text-secondary">${b.depositAmount || '฿50.00'}</span>
-                                </div>
+                            <div class="flex items-center gap-stack-sm self-end md:self-center shrink-0">
+                                ${b.slipImage ? `
+                                    <button onclick="openSlipModal('${(b.customerName || 'ลูกค้า').replace(/'/g, "\\'")}', '${b.depositAmount || '฿50.00'}', '${b.dateTime || 'วันนี้'}', 'สลิปมัดจำเดิม', '${b.slipImage}')" class="h-11 px-3.5 rounded-xl bg-surface-bright border border-outline-variant text-on-surface hover:border-secondary/50 transition-colors flex items-center gap-1.5 text-xs font-bold" title="ตรวจสอบสลิปที่ลูกค้าโอนมัดจำมา">
+                                        <span class="material-symbols-outlined text-[16px] text-secondary">receipt</span> สลิปมัดจำ
+                                    </button>
+                                ` : ''}
+                                <button onclick="openRefundModal('${b.bookingId}', '${(b.customerName || 'ลูกค้า').replace(/'/g, "\\'")}', '${b.refundPromptPay || b.customerPhone || '089-123-4567'}', 'พร้อมเพย์', '${(b.depositAmount || '50.00').replace(/[^\d.]/g,'') || '50.00'}')" class="h-11 px-5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors flex items-center gap-1.5 text-sm font-bold shadow-md shadow-amber-500/10 active:scale-95 duration-150">
+                                    <span class="material-symbols-outlined text-[18px]">upload_file</span> โอนเงินคืน &amp; แนบสลิป
+                                </button>
                             </div>
                         </div>
-                        <div class="flex items-center gap-stack-sm self-end md:self-center shrink-0">
-                            <button onclick="openRefundModal('${b.bookingId}', '${b.customerName || 'ลูกค้า'}', '${b.refundPromptPay || b.customerPhone || '089-123-4567'}', 'พร้อมเพย์', '${(b.depositAmount || '50.00').replace(/[^\d.]/g,'') || '50.00'}')" class="h-11 px-5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors flex items-center gap-1.5 text-sm font-bold shadow-md shadow-amber-500/10 active:scale-95 duration-150">
-                                <span class="material-symbols-outlined text-[18px]">upload_file</span> โอนเงินคืน &amp; แนบสลิป
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             }
         }
 
@@ -1416,9 +1435,13 @@
     }
 
     function declineBooking(bookingId) {
-        updateBooking(bookingId, { status: 'declined', isNew: false });
+        updateBooking(bookingId, { 
+            status: 'declined', 
+            isNew: false,
+            declineReason: 'ร้านค้าไม่สะดวกรับคิวในเวลาดังกล่าว'
+        });
         renderAllBookings();
-        showToast('ปฏิเสธการจองเรียบร้อย');
+        showToast('ปฏิเสธการจองแล้ว ย้ายไปที่ "คำขอยกเลิก & คืนเงินมัดจำ" เพื่อโอนคืนมัดจำให้ลูกค้า');
     }
 
     /* Modal Handlers */
@@ -1500,6 +1523,14 @@
 
     function openRefundModal(bookingId, name = 'กิตติศักดิ์ พ.', number = '089-123-4567', bank = 'พร้อมเพย์', amount = '50.00') {
         currentRefundBookingId = bookingId;
+        const list = getBookingsList();
+        const found = list.find(b => matchBookingId(b.bookingId, bookingId) || matchBookingId(b.id, bookingId) || matchBookingId(b.dbId, bookingId));
+        if (found) {
+            name = found.customerName || name;
+            number = found.refundPromptPay || found.customerPhone || number;
+            amount = (found.depositAmount || amount).replace(/[^\d.]/g, '') || '50.00';
+            currentRefundBookingId = found.dbId || found.id || found.rawBookingId || bookingId;
+        }
         document.getElementById('refundTargetName').innerText = name;
         document.getElementById('refundTargetNumber').innerText = number;
         document.getElementById('refundDisplayAmount').innerText = '฿' + amount;
