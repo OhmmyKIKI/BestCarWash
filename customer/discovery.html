@@ -992,16 +992,43 @@ tailwind.config = {
 
                 // Migrate any cached shop images to cover images & sync any cached reviews
                 cached.forEach((s, idx) => {
-                    const isOwnerShop = (currentShopId && s.id === currentShopId) || (ownerShopName && s.name === ownerShopName);
-                    if (isOwnerShop && localCover) {
-                        s.image = localCover;
-                        s.cover_image = localCover;
-                    } else if (s.cover_image && !s.cover_image.includes('avatar') && !s.cover_image.startsWith('data:image/svg')) {
-                        s.image = s.cover_image;
-                    } else if (!s.image || s.image.includes('avatar') || s.image.startsWith('data:image/svg')) {
-                        s.image = DEFAULT_COVER_IMAGES[idx % DEFAULT_COVER_IMAGES.length];
-                        s.cover_image = s.image;
+                    const isOwnerShop = (currentShopId && s.id === currentShopId) || 
+                                       (ownerShopName && s.name === ownerShopName) ||
+                                       (cached.length === 1 && localCover);
+
+                    // Comprehensive synchronous cover check for this specific shop
+                    let resolvedCover = null;
+                    if (s.id) {
+                        resolvedCover = localStorage.getItem('ownerCoverImage_' + s.id);
                     }
+                    if (!resolvedCover && s.owner_id) {
+                        resolvedCover = localStorage.getItem('ownerCoverImage_' + s.owner_id);
+                    }
+                    if (!resolvedCover && s.id) {
+                        try {
+                            const cDetails = JSON.parse(localStorage.getItem('cachedShopDetails_' + s.id) || 'null');
+                            if (cDetails?.cover_image && !cDetails.cover_image.includes('avatar') && !cDetails.cover_image.startsWith('data:image/svg')) {
+                                resolvedCover = cDetails.cover_image;
+                            } else if (Array.isArray(cDetails?.images) && cDetails.images.length > 0 && !cDetails.images[0].includes('avatar')) {
+                                resolvedCover = cDetails.images[0];
+                            }
+                        } catch (_) {}
+                    }
+                    if (!resolvedCover && isOwnerShop && localCover) {
+                        resolvedCover = localCover;
+                    }
+                    if (!resolvedCover && s.cover_image && !s.cover_image.includes('avatar') && !s.cover_image.startsWith('data:image/svg')) {
+                        resolvedCover = s.cover_image;
+                    }
+                    if (!resolvedCover && s.image && !s.image.includes('avatar') && !s.image.startsWith('data:image/svg')) {
+                        resolvedCover = s.image;
+                    }
+                    if (!resolvedCover) {
+                        resolvedCover = DEFAULT_COVER_IMAGES[idx % DEFAULT_COVER_IMAGES.length];
+                    }
+
+                    s.image = resolvedCover;
+                    s.cover_image = resolvedCover;
 
                     // Sync rating from local cached reviews if available
                     let hasReviews = false;
@@ -1071,7 +1098,7 @@ tailwind.config = {
                     try {
                         const [srvRes, profRes, revRes] = await Promise.all([
                             safeSupabaseRest('services?select=*'),
-                            safeSupabaseRest('profiles?select=id,avatar_url'),
+                            safeSupabaseRest('profiles?select=*'),
                             safeSupabaseRest('reviews?select=shop_id,rating')
                         ]);
                         const srvData = Array.isArray(srvRes) ? srvRes : (srvRes?.data || null);
@@ -1098,7 +1125,7 @@ tailwind.config = {
                     const currentUserId = localStorage.getItem('lastLoggedInUserId');
                     const ownerShopName = localStorage.getItem('ownerShopName');
 
-                    shops = dbShops.map((db, i) => {
+                    shops = await Promise.all(dbShops.map(async (db, i) => {
                         const shopServices = (allServices || []).filter(srv => srv.shop_id === db.id);
                         const minPrice = shopServices.length > 0 ? Math.min(...shopServices.map(srv => parseFloat(srv.price_s || srv.price) || 200)) : 150;
                         const ownerProf = (allProfiles || []).find(p => p.id === db.owner_id);
@@ -1142,12 +1169,14 @@ tailwind.config = {
                                                    (ownerShopName && db.name === ownerShopName) ||
                                                    (dbShops.length === 1 && (localCover || idbCover || (localGallery && localGallery.length > 0)));
 
-                        // Resolve Cover Image (รูปปกหลัก - NOT Profile/Avatar)
+                        // --- 1. RESOLVE SHOP MAIN COVER IMAGE (รูปปกร้านหลัก) ---
+                        // Priority 1: Direct database cover image columns
                         let coverImg = db.cover_image_url || db.cover_image || db.cover_url || db.banner_url || null;
 
+                        // Priority 2: Photos or gallery array/JSON from database
                         if (!coverImg && Array.isArray(db.photos) && db.photos.length > 0) {
                             coverImg = db.photos[0];
-                        } else if (!coverImg && typeof db.photos === 'string' && db.photos.startsWith('[')) {
+                        } else if (!coverImg && typeof db.photos === 'string' && db.photos.trim().startsWith('[')) {
                             try {
                                 const parsedP = JSON.parse(db.photos);
                                 if (Array.isArray(parsedP) && parsedP.length > 0) coverImg = parsedP[0];
@@ -1158,12 +1187,71 @@ tailwind.config = {
                             coverImg = db.gallery[0];
                         }
 
-                        if (!coverImg && isCurrentOwnerShop) {
-                            coverImg = localCover || idbCover || (localGallery && localGallery.length > 0 ? localGallery[0] : null);
+                        // Priority 3: Shop-specific IndexedDB by shop ID or owner ID
+                        if (!coverImg && db.id) {
+                            coverImg = await getIDBMedia('ownerCoverImage_' + db.id).catch(() => null);
+                        }
+                        if (!coverImg && db.owner_id) {
+                            coverImg = await getIDBMedia('ownerCoverImage_' + db.owner_id).catch(() => null);
                         }
 
-                        // Fallback to high quality car wash cover photo (NEVER use profile avatar as cover)
-                        if (!coverImg || coverImg.includes('avatar') || coverImg.startsWith('data:image/svg')) {
+                        // Priority 4: Shop-specific LocalStorage by shop ID or owner ID
+                        if (!coverImg && db.id) {
+                            coverImg = localStorage.getItem('ownerCoverImage_' + db.id);
+                        }
+                        if (!coverImg && db.owner_id) {
+                            coverImg = localStorage.getItem('ownerCoverImage_' + db.owner_id);
+                        }
+
+                        // Priority 5: Cached shop details (cachedShopDetails_{id})
+                        if (!coverImg && db.id) {
+                            try {
+                                const sDetails = JSON.parse(localStorage.getItem('cachedShopDetails_' + db.id) || 'null');
+                                if (sDetails) {
+                                    const c = sDetails.cover_image || (Array.isArray(sDetails.images) ? sDetails.images[0] : null);
+                                    if (c && !c.includes('avatar') && !c.startsWith('data:image/svg')) coverImg = c;
+                                }
+                            } catch (_) {}
+                        }
+
+                        // Priority 6: Shop-specific gallery in IDB/LocalStorage (first image)
+                        let shopGallery = null;
+                        if (db.id) {
+                            try {
+                                shopGallery = JSON.parse(localStorage.getItem('ownerShopGallery_' + db.id) || 'null') ||
+                                              await getIDBMedia('ownerShopGallery_' + db.id).catch(() => null);
+                            } catch (_) {}
+                        }
+                        if ((!shopGallery || !shopGallery.length) && db.owner_id) {
+                            try {
+                                shopGallery = JSON.parse(localStorage.getItem('ownerShopGallery_' + db.owner_id) || 'null') ||
+                                              await getIDBMedia('ownerShopGallery_' + db.owner_id).catch(() => null);
+                            } catch (_) {}
+                        }
+
+                        if (!coverImg && Array.isArray(shopGallery) && shopGallery.length > 0 && shopGallery[0]) {
+                            coverImg = shopGallery[0];
+                        }
+
+                        // Priority 7: Current owner shop on local device
+                        if (!coverImg && isCurrentOwnerShop) {
+                            coverImg = localCover || idbCover || (localGallery && localGallery.length > 0 ? localGallery[0] : null);
+                            if (!shopGallery || !shopGallery.length) shopGallery = localGallery;
+                        }
+
+                        // Priority 8: Existing valid cover image from discovery cache
+                        if (!coverImg && hasCachedShops) {
+                            try {
+                                const cDisc = JSON.parse(localStorage.getItem('cachedDiscoveryShops') || '[]');
+                                const foundC = cDisc.find(s => s.id === db.id);
+                                if (foundC?.cover_image && !foundC.cover_image.includes('avatar') && !foundC.cover_image.startsWith('data:image/svg')) {
+                                    coverImg = foundC.cover_image;
+                                }
+                            } catch (_) {}
+                        }
+
+                        // Priority 9: High quality car wash cover fallback (NEVER use user profile avatar as cover)
+                        if (!coverImg || typeof coverImg !== 'string' || coverImg.includes('avatar') || coverImg.startsWith('data:image/svg') || coverImg === 'undefined' || coverImg === 'null') {
                             coverImg = DEFAULT_COVER_IMAGES[i % DEFAULT_COVER_IMAGES.length];
                         }
 
@@ -1183,16 +1271,16 @@ tailwind.config = {
                             reviews: realReviewText,
                             tags: (db.facilities && db.facilities.length > 0) ? db.facilities : ['คาร์แคร์', 'ล้างสีดูดฝุ่น'],
                             price: '฿' + minPrice,
-                            image: coverImg,        // แสดงเป็นรูปปกหลัก (Cover image, NOT avatar)
+                            image: coverImg,        // แสดงเป็นรูปปกร้านหลัก (Main Shop Cover Image)
                             cover_image: coverImg,  // Explicit cover image reference
-                            images: (isCurrentOwnerShop && localGallery && localGallery.length > 0) ? localGallery : [coverImg],
+                            images: (Array.isArray(shopGallery) && shopGallery.length > 0) ? shopGallery : [coverImg],
                             logo: logo,             // Logo/avatar retained separately
                             lat: Number(lat.toFixed(6)),
                             lng: Number(lng.toFixed(6)),
                             badge: db.is_open ? 'เปิดอยู่' : 'ปิดชั่วคราว',
                             badgeColor: db.is_open ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
                         };
-                    });
+                    }));
 
                     // Cache fresh shops for next instant 0ms load
                     localStorage.setItem('cachedDiscoveryShops', JSON.stringify(shops));
