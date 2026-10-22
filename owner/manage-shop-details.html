@@ -93,7 +93,7 @@
                     <span id="shopContextSubtitle" class="text-xs font-semibold text-primary">ร้าน ohm Car Wash</span>
                     <span class="text-outline text-xs">•</span>
                     <div id="cloud-sync-badge" class="flex items-center gap-1.5 text-[11px] font-medium text-secondary opacity-0 transition-opacity duration-500">
-                        <span class="material-symbols-outlined text-[14px]">cloud_done</span>
+                        <span id="cloud-sync-icon" class="material-symbols-outlined text-[14px]">cloud_done</span>
                         <span id="cloud-sync-text">ข้อมูลเป็นปัจจุบันแล้ว</span>
                     </div>
                 </div>
@@ -531,6 +531,7 @@
                 return null;
             }
         }
+        window.getIDBMedia = getMediaFromIDB;
 
         function safeLocalStorageSet(key, val) {
             try {
@@ -548,11 +549,11 @@
         // Helper: Extract embedded JSON metadata from shop description
         function extractShopMetadata(description) {
             if (!description || typeof description !== 'string') return { cleanDesc: description || '', meta: null };
-            const match = description.match(/<!--BCW_META:([\s\S]*?)-->/);
+            const match = description.match(new RegExp('\\x3C!--BCW_META:([\\s\\S]*?)--\\x3E'));
             if (match) {
                 try {
                     const meta = JSON.parse(match[1]);
-                    const cleanDesc = description.replace(/<!--BCW_META:[\s\S]*?-->/g, '').trim();
+                    const cleanDesc = description.replace(new RegExp('\\x3C!--BCW_META:[\\s\\S]*?--\\x3E', 'g'), '').trim();
                     return { cleanDesc, meta };
                 } catch (_) {}
             }
@@ -1016,30 +1017,31 @@
         // Cloud Sync Status Controller
         function setCloudSyncStatus(status, customText) {
             const badge = document.getElementById('cloud-sync-badge');
-            if (!badge) return;
+            const icon = document.getElementById('cloud-sync-icon');
+            const text = document.getElementById('cloud-sync-text');
+            if (!badge || !icon || !text) return;
+
             badge.classList.remove('opacity-0', 'text-primary', 'text-secondary', 'text-amber-400');
+            icon.classList.remove('animate-spin', 'text-primary', 'text-secondary', 'text-amber-400');
 
             if (status === 'syncing') {
                 badge.classList.add('text-primary');
-                badge.innerHTML = `
-                    <span class="material-symbols-outlined text-[14px] animate-spin text-primary">sync</span>
-                    <span id="cloud-sync-text">${customText || 'กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...'}</span>
-                `;
+                icon.classList.add('animate-spin', 'text-primary');
+                icon.textContent = 'sync';
+                text.textContent = customText || 'กำลังตรวจสอบข้อมูลล่าสุดกับเซิร์ฟเวอร์...';
             } else if (status === 'synced') {
                 badge.classList.add('text-secondary');
-                badge.innerHTML = `
-                    <span class="material-symbols-outlined text-[14px] text-secondary">cloud_done</span>
-                    <span id="cloud-sync-text">${customText || 'ข้อมูลเป็นปัจจุบันแล้ว'}</span>
-                `;
+                icon.classList.add('text-secondary');
+                icon.textContent = 'cloud_done';
+                text.textContent = customText || 'ข้อมูลเป็นปัจจุบันแล้ว';
                 setTimeout(() => {
                     badge.classList.add('opacity-0');
                 }, 1800);
             } else if (status === 'offline') {
                 badge.classList.add('text-amber-400');
-                badge.innerHTML = `
-                    <span class="material-symbols-outlined text-[14px] text-amber-400">cloud_off</span>
-                    <span id="cloud-sync-text">${customText || 'แสดงผลจากข้อมูลในเครื่อง (ออฟไลน์)'}</span>
-                `;
+                icon.classList.add('text-amber-400');
+                icon.textContent = 'cloud_off';
+                text.textContent = customText || 'แสดงผลจากข้อมูลในเครื่อง (ออฟไลน์)';
                 setTimeout(() => {
                     badge.classList.add('opacity-0');
                 }, 2500);
@@ -1856,8 +1858,8 @@
                     metaPayload.gallery = shopPhotos.slice(0, 8);
                 }
                 if (Object.keys(metaPayload).length > 0) {
-                    const clean = (rawDesc || '').replace(/<!--BCW_META:[\s\S]*?-->/g, '').trim();
-                    descToSave = (clean ? clean + '\n\n' : '') + `<!--BCW_META:${JSON.stringify(metaPayload)}-->`;
+                    const clean = (rawDesc || '').replace(new RegExp('\\x3C!--BCW_META:[\\s\\S]*?--\\x3E', 'g'), '').trim();
+                    descToSave = (clean ? clean + '\n\n' : '') + `\x3C!--BCW_META:${JSON.stringify(metaPayload)}--\x3E`;
                 }
             } catch (_) {}
 

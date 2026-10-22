@@ -1094,11 +1094,11 @@ tailwind.config = {
     // Helper: Extract embedded JSON metadata from shop description
     function extractShopMetadata(description) {
         if (!description || typeof description !== 'string') return { cleanDesc: description || '', meta: null };
-        const match = description.match(/<!--BCW_META:([\s\S]*?)-->/);
+        const match = description.match(new RegExp('\\x3C!--BCW_META:([\\s\\S]*?)--\\x3E'));
         if (match) {
             try {
                 const meta = JSON.parse(match[1]);
-                const cleanDesc = description.replace(/<!--BCW_META:[\s\S]*?-->/g, '').trim();
+                const cleanDesc = description.replace(new RegExp('\\x3C!--BCW_META:[\\s\\S]*?--\\x3E', 'g'), '').trim();
                 return { cleanDesc, meta };
             } catch (_) {}
         }
