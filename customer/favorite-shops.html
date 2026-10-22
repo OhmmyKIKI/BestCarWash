@@ -221,6 +221,260 @@
 <script>
     const DEFAULT_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='cgrad' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%231e3a8a'/><stop offset='100%' stop-color='%233b82f6'/></linearGradient></defs><circle cx='50' cy='50' r='50' fill='url(%23cgrad)'/><circle cx='50' cy='37' r='16' fill='%23ffffff'/><path d='M50 60c-18 0 -30 11 -30 25v5h60v-5c0-14-12-25-30-25z' fill='%23ffffff'/></svg>";
 
+    // Curated high-resolution car wash cover photos (Fallback if shop has not uploaded a cover image)
+    const DEFAULT_COVER_IMAGES = [
+        'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=800&q=80',
+        'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=800&q=80',
+        'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=800&q=80',
+        'https://images.unsplash.com/photo-1580274455191-1c62238fa333?w=800&q=80'
+    ];
+
+    // Helper: Identify whether an image is a generic stock photo or missing
+    function isStockPhoto(url) {
+        if (!url || typeof url !== 'string') return true;
+        const u = url.toLowerCase().trim();
+        return u.includes('unsplash.com/photo') || 
+               u.includes('photo-1601362840469') || 
+               u.includes('photo-1520340356584') || 
+               u.includes('photo-1607860108855') || 
+               u.includes('photo-1580274455191') || 
+               u.includes('googleusercontent.com') ||
+               u.includes('avatar') ||
+               u.startsWith('data:image/svg') ||
+               u === 'null' ||
+               u === 'undefined' ||
+               !u;
+    }
+
+    // Helper: Extract embedded JSON metadata from shop description
+    function extractShopMetadata(description) {
+        if (!description || typeof description !== 'string') return { cleanDesc: description || '', meta: null };
+        const match = description.match(new RegExp('\\x3C!--BCW_META:([\\s\\S]*?)--\\x3E'));
+        if (match) {
+            try {
+                const meta = JSON.parse(match[1]);
+                const cleanDesc = description.replace(new RegExp('\\x3C!--BCW_META:[\\s\\S]*?--\\x3E', 'g'), '').trim();
+                return { cleanDesc, meta };
+            } catch (_) {}
+        }
+        return { cleanDesc: description, meta: null };
+    }
+
+    const IDB_NAME = 'BestCarWashMedia';
+    const IDB_STORE = 'shop_media';
+
+    function openMediaDB() {
+        return new Promise((resolve) => {
+            if (typeof indexedDB === 'undefined') return resolve(null);
+            try {
+                const req = indexedDB.open(IDB_NAME, 2);
+                req.onupgradeneeded = (e) => {
+                    try {
+                        const db = e.target.result;
+                        if (db && !db.objectStoreNames.contains(IDB_STORE)) {
+                            db.createObjectStore(IDB_STORE);
+                        }
+                    } catch (_) {}
+                };
+                req.onsuccess = (e) => {
+                    const db = e.target.result;
+                    if (!db || !db.objectStoreNames || !db.objectStoreNames.contains(IDB_STORE)) return resolve(null);
+                    resolve(db);
+                };
+                req.onerror = () => resolve(null);
+                req.onblocked = () => resolve(null);
+            } catch (_) {
+                resolve(null);
+            }
+        });
+    }
+
+    async function getIDBMedia(key) {
+        if (!key) return null;
+        try {
+            const db = await openMediaDB().catch(() => null);
+            if (!db || !db.objectStoreNames || !db.objectStoreNames.contains(IDB_STORE)) return null;
+            return new Promise((resolve) => {
+                try {
+                    const tx = db.transaction(IDB_STORE, 'readonly');
+                    const req = tx.objectStore(IDB_STORE).get(key);
+                    req.onsuccess = () => resolve(req.result || null);
+                    req.onerror = () => resolve(null);
+                } catch (_) {
+                    resolve(null);
+                }
+            });
+        } catch (_) {
+            return null;
+        }
+    }
+
+    // Synchronous resolution of shop cover for 0ms initial render
+    function resolveShopCoverSync(s, idx = 0) {
+        if (!s) return DEFAULT_COVER_IMAGES[idx % DEFAULT_COVER_IMAGES.length];
+        
+        // 1. Cloud metadata embedded in shop description
+        const { meta: cloudMeta } = extractShopMetadata(s.description);
+        if (cloudMeta?.cover_image && !isStockPhoto(cloudMeta.cover_image)) {
+            return cloudMeta.cover_image;
+        }
+
+        // 2. Shop-specific LocalStorage by shop ID or owner ID
+        if (s.id) {
+            const lsC = localStorage.getItem('ownerCoverImage_' + s.id);
+            if (lsC && !isStockPhoto(lsC)) return lsC;
+        }
+        if (s.owner_id) {
+            const lsC = localStorage.getItem('ownerCoverImage_' + s.owner_id);
+            if (lsC && !isStockPhoto(lsC)) return lsC;
+        }
+
+        // 3. Cached shop details
+        if (s.id) {
+            try {
+                const sDetails = JSON.parse(localStorage.getItem('cachedShopDetails_' + s.id) || 'null');
+                if (sDetails?.cover_image && !isStockPhoto(sDetails.cover_image)) return sDetails.cover_image;
+                if (Array.isArray(sDetails?.images) && sDetails.images.length > 0 && !isStockPhoto(sDetails.images[0])) return sDetails.images[0];
+            } catch (_) {}
+        }
+
+        // 4. Cached discovery shops
+        if (s.id) {
+            try {
+                const discShops = JSON.parse(localStorage.getItem('cachedDiscoveryShops') || '[]');
+                const found = discShops.find(d => d.id === s.id);
+                if (found?.cover_image && !isStockPhoto(found.cover_image)) return found.cover_image;
+                if (found?.image && !isStockPhoto(found.image)) return found.image;
+            } catch (_) {}
+        }
+
+        // 5. Gallery from Cloud Meta or LocalStorage
+        if (Array.isArray(cloudMeta?.gallery) && cloudMeta.gallery.length > 0 && !isStockPhoto(cloudMeta.gallery[0])) {
+            return cloudMeta.gallery[0];
+        }
+        if (s.id) {
+            try {
+                const gal = JSON.parse(localStorage.getItem('ownerShopGallery_' + s.id) || 'null');
+                if (Array.isArray(gal) && gal.length > 0 && !isStockPhoto(gal[0])) return gal[0];
+            } catch (_) {}
+        }
+
+        // 6. Generic ownerCoverImage (for current owner's active shop)
+        const currentShopId = localStorage.getItem('currentShopId');
+        if (s.id && currentShopId && s.id === currentShopId) {
+            const lsC = localStorage.getItem('ownerCoverImage');
+            if (lsC && !isStockPhoto(lsC)) return lsC;
+        }
+
+        // 7. Supabase table cover columns
+        if (s.cover_image_url && !isStockPhoto(s.cover_image_url)) return s.cover_image_url;
+        if (s.cover_image && !isStockPhoto(s.cover_image)) return s.cover_image;
+        if (s.cover_url && !isStockPhoto(s.cover_url)) return s.cover_url;
+
+        // 8. Gallery arrays on object
+        if (Array.isArray(s.photos) && s.photos.length > 0 && !isStockPhoto(s.photos[0])) return s.photos[0];
+        if (Array.isArray(s.gallery) && s.gallery.length > 0 && !isStockPhoto(s.gallery[0])) return s.gallery[0];
+        if (Array.isArray(s.images) && s.images.length > 0 && !isStockPhoto(s.images[0])) return s.images[0];
+
+        // 9. Existing non-stock image on shop object
+        if (s.image && !isStockPhoto(s.image)) return s.image;
+
+        return DEFAULT_COVER_IMAGES[idx % DEFAULT_COVER_IMAGES.length];
+    }
+
+    // Full async resolution of shop cover (including IndexedDB)
+    async function resolveShopCover(s, idx = 0) {
+        if (!s) return DEFAULT_COVER_IMAGES[idx % DEFAULT_COVER_IMAGES.length];
+        
+        // Priority 0: Cloud-persisted metadata from shop description
+        const { meta: cloudMeta } = extractShopMetadata(s.description);
+        if (cloudMeta?.cover_image && !isStockPhoto(cloudMeta.cover_image)) {
+            return cloudMeta.cover_image;
+        }
+
+        // Priority 1: Shop-specific IndexedDB by shop ID or owner ID
+        if (s.id) {
+            const idbC = await getIDBMedia('ownerCoverImage_' + s.id).catch(() => null);
+            if (idbC && !isStockPhoto(idbC)) return idbC;
+        }
+        if (s.owner_id) {
+            const idbC = await getIDBMedia('ownerCoverImage_' + s.owner_id).catch(() => null);
+            if (idbC && !isStockPhoto(idbC)) return idbC;
+        }
+
+        // Priority 2: Shop-specific LocalStorage by shop ID or owner ID
+        if (s.id) {
+            const lsC = localStorage.getItem('ownerCoverImage_' + s.id);
+            if (lsC && !isStockPhoto(lsC)) return lsC;
+        }
+        if (s.owner_id) {
+            const lsC = localStorage.getItem('ownerCoverImage_' + s.owner_id);
+            if (lsC && !isStockPhoto(lsC)) return lsC;
+        }
+
+        // Priority 3: Cached shop details
+        if (s.id) {
+            try {
+                const sDetails = JSON.parse(localStorage.getItem('cachedShopDetails_' + s.id) || 'null');
+                if (sDetails?.cover_image && !isStockPhoto(sDetails.cover_image)) return sDetails.cover_image;
+                if (Array.isArray(sDetails?.images) && sDetails.images.length > 0 && !isStockPhoto(sDetails.images[0])) return sDetails.images[0];
+            } catch (_) {}
+        }
+
+        // Priority 4: Cached discovery shops
+        if (s.id) {
+            try {
+                const discShops = JSON.parse(localStorage.getItem('cachedDiscoveryShops') || '[]');
+                const found = discShops.find(d => d.id === s.id);
+                if (found?.cover_image && !isStockPhoto(found.cover_image)) return found.cover_image;
+                if (found?.image && !isStockPhoto(found.image)) return found.image;
+            } catch (_) {}
+        }
+
+        // Priority 5: Gallery from Cloud Meta, IndexedDB, or LocalStorage
+        if (Array.isArray(cloudMeta?.gallery) && cloudMeta.gallery.length > 0 && !isStockPhoto(cloudMeta.gallery[0])) {
+            return cloudMeta.gallery[0];
+        }
+        if (s.id) {
+            try {
+                const gal = JSON.parse(localStorage.getItem('ownerShopGallery_' + s.id) || 'null') ||
+                            await getIDBMedia('ownerShopGallery_' + s.id).catch(() => null);
+                if (Array.isArray(gal) && gal.length > 0 && !isStockPhoto(gal[0])) return gal[0];
+            } catch (_) {}
+        }
+
+        // Priority 6: Current Owner Cover Image
+        const currentShopId = localStorage.getItem('currentShopId');
+        if (s.id && currentShopId && s.id === currentShopId) {
+            const idbC = await getIDBMedia('ownerCoverImage').catch(() => null);
+            if (idbC && !isStockPhoto(idbC)) return idbC;
+            const lsC = localStorage.getItem('ownerCoverImage');
+            if (lsC && !isStockPhoto(lsC)) return lsC;
+        }
+
+        // Priority 7: Supabase table columns for cover
+        if (s.cover_image_url && !isStockPhoto(s.cover_image_url)) return s.cover_image_url;
+        if (s.cover_image && !isStockPhoto(s.cover_image)) return s.cover_image;
+        if (s.cover_url && !isStockPhoto(s.cover_url)) return s.cover_url;
+
+        // Priority 8: Database photos array
+        if (Array.isArray(s.photos) && s.photos.length > 0 && !isStockPhoto(s.photos[0])) return s.photos[0];
+        if (typeof s.photos === 'string' && s.photos.trim().startsWith('[')) {
+            try {
+                const p = JSON.parse(s.photos);
+                if (Array.isArray(p) && p.length > 0 && !isStockPhoto(p[0])) return p[0];
+            } catch (_) {}
+        }
+        if (Array.isArray(s.gallery) && s.gallery.length > 0 && !isStockPhoto(s.gallery[0])) return s.gallery[0];
+        if (Array.isArray(s.images) && s.images.length > 0 && !isStockPhoto(s.images[0])) return s.images[0];
+
+        // Priority 9: Existing non-stock image on shop object
+        if (s.image && !isStockPhoto(s.image)) return s.image;
+
+        // Fallback: DEFAULT_COVER_IMAGES
+        return DEFAULT_COVER_IMAGES[idx % DEFAULT_COVER_IMAGES.length];
+    }
+
     // Master Favorite Shops Data loaded dynamically from Supabase
     let SHOPS_DATA = {};
 
@@ -415,7 +669,7 @@
                 <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 hover:border-primary/50 rounded-2xl overflow-hidden flex flex-col justify-between group transition-all duration-300 hover:shadow-[0_8px_25px_rgba(37,99,235,0.15)] relative">
                     <!-- Image & Badges -->
                     <div class="relative h-44 w-full overflow-hidden bg-surface-container-highest">
-                        <img src="${shop.image}" alt="${shop.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <img src="${shop.image}" alt="${shop.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=800&q=80';">
                         <div class="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent"></div>
 
                         <!-- Top Badges -->
@@ -514,6 +768,11 @@
             if (cachedFavs) {
                 const parsed = JSON.parse(cachedFavs);
                 if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+                    // Re-resolve cover for each shop in case a custom cover was set by the owner
+                    Object.values(parsed).forEach((s, idx) => {
+                        const cover = resolveShopCoverSync(s, idx);
+                        if (cover) s.image = cover;
+                    });
                     SHOPS_DATA = parsed;
                     hasCachedData = true;
                 }
@@ -522,8 +781,9 @@
                 const favIds = getFavoriteShopIds();
                 const discShops = JSON.parse(localStorage.getItem('cachedDiscoveryShops') || '[]');
                 if (favIds.length > 0 && discShops.length > 0) {
-                    discShops.forEach(s => {
+                    discShops.forEach((s, idx) => {
                         if (favIds.includes(s.id)) {
+                            const cover = resolveShopCoverSync(s, idx);
                             SHOPS_DATA[s.id] = {
                                 id: s.id,
                                 name: s.name || 'ร้านคาร์แคร์',
@@ -532,7 +792,7 @@
                                 reviews: s.reviews ? `${s.reviews}` : '10',
                                 tags: (s.tags && s.tags.length > 0) ? s.tags : ['คาร์แคร์', 'ล้างสีดูดฝุ่น'],
                                 price: s.price || '฿150',
-                                image: s.image || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80',
+                                image: cover,
                                 status: s.status || 'เปิดให้บริการ • เปิดอยู่',
                                 isOpen: s.isOpen !== false,
                                 nextQueue: s.nextQueue || 'วันนี้ 14:00',
@@ -546,6 +806,43 @@
 
         // 0ms instant render of favorites
         renderShops();
+
+        // Check IndexedDB immediately for persisted owner cover images (in case high-res covers were saved in IDB)
+        (async () => {
+            let updated = false;
+            for (const [id, shop] of Object.entries(SHOPS_DATA)) {
+                if (isStockPhoto(shop.image)) {
+                    const idbCover = await getIDBMedia('ownerCoverImage_' + id).catch(() => null) ||
+                                     await getIDBMedia('ownerCoverImage').catch(() => null);
+                    if (idbCover && !isStockPhoto(idbCover)) {
+                        shop.image = idbCover;
+                        updated = true;
+                    }
+                }
+            }
+            if (updated) renderShops();
+        })();
+
+        // Live cross-tab sync when owner changes cover photo
+        window.addEventListener('storage', (e) => {
+            if (e.key && (e.key.includes('CoverImage') || e.key.includes('ShopGallery') || e.key === 'cachedDiscoveryShops' || e.key === 'favoriteShopIds')) {
+                Object.values(SHOPS_DATA).forEach((s, idx) => {
+                    const c = resolveShopCoverSync(s, idx);
+                    if (c) s.image = c;
+                });
+                renderShops();
+            }
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                Object.values(SHOPS_DATA).forEach((s, idx) => {
+                    const c = resolveShopCoverSync(s, idx);
+                    if (c) s.image = c;
+                });
+                renderShops();
+            }
+        });
 
         // ========================================================
         // LAYER 2: SILENT FAST-TRACK BACKGROUND SYNC WITH SUPABASE
@@ -592,11 +889,12 @@
                         const profiles = Array.isArray(profilesRes) ? profilesRes : [];
 
                         const newShopsData = {};
-                        shops.forEach(s => {
+                        await Promise.all(shops.map(async (s, idx) => {
                             const srvs = services.filter(srv => srv.shop_id === s.id);
-                            const minPrice = srvs.length > 0 ? Math.min(...srvs.map(srv => parseFloat(srv.price) || 200)) : 150;
-                            const ownerProf = profiles.find(p => p.id === s.owner_id);
-                            const img = s.logo_url || ownerProf?.avatar_url || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80';
+                            const minPrice = srvs.length > 0 ? Math.min(...srvs.map(srv => parseFloat(srv.price_s || srv.price) || 200)) : 150;
+                            
+                            // RESOLVE ACTUAL SHOP COVER PHOTO SET BY OWNER
+                            const cover = await resolveShopCover(s, idx);
 
                             newShopsData[s.id] = {
                                 id: s.id,
@@ -606,13 +904,13 @@
                                 reviews: s.review_count ? `${s.review_count}` : '10',
                                 tags: (s.facilities && s.facilities.length > 0) ? s.facilities : ['คาร์แคร์', 'ล้างสีดูดฝุ่น'],
                                 price: '฿' + minPrice,
-                                image: img,
+                                image: cover,
                                 status: s.is_open ? 'เปิดให้บริการ • เปิดอยู่' : 'ปิดชั่วคราว',
                                 isOpen: !!s.is_open,
                                 nextQueue: 'วันนี้ 14:00',
                                 phone: s.phone_number || '080-000-0000'
                             };
-                        });
+                        }));
                         SHOPS_DATA = newShopsData;
                         localStorage.setItem('cachedFavoriteShopsData', JSON.stringify(newShopsData));
                     } else {
