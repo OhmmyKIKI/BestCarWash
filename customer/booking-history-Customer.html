@@ -426,11 +426,11 @@
             currentReviewShopId = currentActiveBooking?.rawShopId || currentActiveBooking?.shopId || localStorage.getItem('currentShopId') || localStorage.getItem('lastBookedShopId');
         }
 
-        // Check local reviews map for pre-filled data
+        // Check local reviews map for pre-filled data - STRICTLY BY BOOKING ID ONLY!
         let localRevMap = {};
         try { localRevMap = JSON.parse(localStorage.getItem('customer_reviews_map') || '{}'); } catch(e) {}
         const cleanBk = currentReviewBookingId ? String(currentReviewBookingId).replace('#','').trim() : '';
-        const savedRev = (cleanBk && localRevMap[cleanBk]) || (currentReviewBookingId && localRevMap[currentReviewBookingId]) || (currentReviewShopId && localRevMap[currentReviewShopId]);
+        const savedRev = (currentReviewBookingId && localRevMap[currentReviewBookingId]) || (cleanBk && localRevMap[cleanBk]) || null;
         if (savedRev) {
             if (!existingRating && savedRev.rating) existingRating = savedRev.rating;
             if (!existingComment && savedRev.comment) existingComment = savedRev.comment;
@@ -587,11 +587,11 @@
                         if (patchRes && !patchRes.error) syncSuccess = true;
                         else if (patchRes?.error) lastSyncError = patchRes.error;
                     } else {
-                        // Check if review already exists in DB
-                        let checkQuery = `reviews?customer_id=eq.${customerId}&shop_id=eq.${targetShop}`;
-                        if (payload.booking_id) checkQuery += `&booking_id=eq.${payload.booking_id}`;
-                        checkQuery += '&limit=1';
-                        const existingList = await fetcher(checkQuery).catch(() => null);
+                        // Check if review already exists in DB for THIS SPECIFIC booking
+                        let checkQuery = (payload.booking_id && String(payload.booking_id).length > 20)
+                            ? `reviews?booking_id=eq.${payload.booking_id}&customer_id=eq.${customerId}&limit=1`
+                            : null;
+                        const existingList = checkQuery ? await fetcher(checkQuery).catch(() => null) : null;
                         const existing = Array.isArray(existingList) && existingList.length > 0 ? existingList[0] : (existingList?.data?.[0] || null);
 
                         if (existing?.id) {
@@ -652,7 +652,7 @@
                 console.log('✅ Supabase review saved successfully:', savedReviewId);
             }
 
-            // 3. Persist review in local storage map
+            // 3. Persist review in local storage map (STRICTLY BY BOOKING ID ONLY)
             const revObj = {
                 id: savedReviewId,
                 shopId: targetShop,
@@ -668,20 +668,28 @@
                 const cleanBk = String(currentReviewBookingId).replace('#','').trim();
                 localRevMap[cleanBk] = revObj;
                 localRevMap[currentReviewBookingId] = revObj;
+                if (cleanBk.length >= 8) {
+                    localRevMap[cleanBk.substring(0, 8).toLowerCase()] = revObj;
+                }
             }
-            if (targetShop) {
-                localRevMap[targetShop] = revObj;
+            // DO NOT save under targetShop! Clean up contaminated targetShop keys
+            if (targetShop && localRevMap[targetShop]) {
+                delete localRevMap[targetShop];
             }
             localStorage.setItem('customer_reviews_map', JSON.stringify(localRevMap));
 
-            // 4. Update cached history and re-render card UI immediately
+            // 4. Update cached history and re-render card UI immediately - STRICTLY FOR THIS SPECIFIC BOOKING!
             try {
                 let hist = JSON.parse(localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
                 if (Array.isArray(hist)) {
                     let updated = false;
                     hist.forEach(h => {
-                        const isMatch = (currentReviewBookingId && (h.rawBookingId === currentReviewBookingId || h.bookingId === currentReviewBookingId || h.id === currentReviewBookingId)) ||
-                                        (targetShop && h.shopId === targetShop);
+                        const isMatch = currentReviewBookingId && (
+                            h.rawBookingId === currentReviewBookingId ||
+                            h.id === currentReviewBookingId ||
+                            h.dbId === currentReviewBookingId ||
+                            normBookingId(h.bookingId) === normBookingId(currentReviewBookingId)
+                        );
                         if (isMatch) {
                             h.userReview = revObj;
                             updated = true;
@@ -691,6 +699,26 @@
                         localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(hist));
                         renderCompletedHistory(hist);
                     }
+                }
+            } catch(e) {}
+
+            try {
+                let appList = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
+                if (Array.isArray(appList)) {
+                    let updatedApp = false;
+                    appList.forEach(h => {
+                        const isMatch = currentReviewBookingId && (
+                            h.rawBookingId === currentReviewBookingId ||
+                            h.id === currentReviewBookingId ||
+                            h.dbId === currentReviewBookingId ||
+                            normBookingId(h.bookingId) === normBookingId(currentReviewBookingId)
+                        );
+                        if (isMatch) {
+                            h.userReview = revObj;
+                            updatedApp = true;
+                        }
+                    });
+                    if (updatedApp) localStorage.setItem('appBookingsList', JSON.stringify(appList));
                 }
             } catch(e) {}
 
@@ -1533,14 +1561,31 @@
             let localRevMap = {};
             try { localRevMap = JSON.parse(localStorage.getItem('customer_reviews_map') || '{}'); } catch(e) {}
 
-            // Self-healing: attach userReview if missing and re-match serviceName
+            // Clean contaminated shopId keys from local storage
+            let cleanedMap = false;
+            Object.keys(localRevMap).forEach(k => {
+                if (localRevMap[k]?.shopId === k) {
+                    delete localRevMap[k];
+                    cleanedMap = true;
+                }
+            });
+            if (cleanedMap) {
+                try { localStorage.setItem('customer_reviews_map', JSON.stringify(localRevMap)); } catch(_) {}
+            }
+
+            // Self-healing: attach userReview STRICTLY by booking ID
+            let historyCleaned = false;
             historyItems.forEach(item => {
-                if (!item.userReview) {
-                    const cleanBk = item.rawBookingId || (item.bookingId ? item.bookingId.replace('#','').trim() : '') || item.id;
-                    const foundRev = (cleanBk && localRevMap[cleanBk]) || (item.rawBookingId && localRevMap[item.rawBookingId]) || (item.shopId && localRevMap[item.shopId]);
-                    if (foundRev) {
-                        item.userReview = foundRev;
-                    }
+                const cleanBk = item.bookingId ? String(item.bookingId).replace('#','').trim() : '';
+                const rawBk = item.rawBookingId || item.id || item.dbId || '';
+                const shortBk = cleanBk.length >= 8 ? cleanBk.substring(0, 8).toLowerCase() : cleanBk;
+                const foundRev = (rawBk && localRevMap[rawBk]) || (cleanBk && localRevMap[cleanBk]) || (shortBk && localRevMap[shortBk]) || null;
+                if (foundRev) {
+                    item.userReview = foundRev;
+                } else if (item.userReview) {
+                    // Contaminated review from legacy shopId fallback or mismatched booking - clear it!
+                    item.userReview = null;
+                    historyCleaned = true;
                 }
 
                 if (!item.serviceName || item.serviceName === 'บริการล้างรถ') {
@@ -1554,6 +1599,9 @@
                     } catch (_) {}
                 }
             });
+            if (historyCleaned) {
+                try { localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(historyItems)); } catch(_) {}
+            }
         }
 
         // Update tab header badge
@@ -2368,7 +2416,14 @@
                     let localRevMap = {};
                     try { localRevMap = JSON.parse(localStorage.getItem('customer_reviews_map') || '{}'); } catch(e) {}
 
-                    // Merge DB reviews into local map
+                    // Clean contaminated shopId keys from local storage
+                    Object.keys(localRevMap).forEach(k => {
+                        if (localRevMap[k]?.shopId === k) {
+                            delete localRevMap[k];
+                        }
+                    });
+
+                    // Merge DB reviews into local map - STRICTLY BY BOOKING ID ONLY!
                     customerReviews.forEach(r => {
                         const obj = {
                             id: r.id,
@@ -2379,11 +2434,13 @@
                             createdAt: r.created_at
                         };
                         if (r.booking_id) {
-                            localRevMap[r.booking_id] = obj;
-                            localRevMap[String(r.booking_id).replace('#','').trim()] = obj;
-                        }
-                        if (r.shop_id && !localRevMap[r.shop_id]) {
-                            localRevMap[r.shop_id] = obj;
+                            const rawId = String(r.booking_id).trim();
+                            const cleanId = rawId.replace('#','').trim();
+                            localRevMap[rawId] = obj;
+                            localRevMap[cleanId] = obj;
+                            if (cleanId.length >= 8) {
+                                localRevMap[cleanId.substring(0, 8).toLowerCase()] = obj;
+                            }
                         }
                     });
                     try { localStorage.setItem('customer_reviews_map', JSON.stringify(localRevMap)); } catch(e) {}
@@ -2391,7 +2448,8 @@
                     const mappedList = dbBookings.map(item => {
                         const parsed = parseBookingData(item);
                         const cleanId = String(item.id || '').replace('#','').trim();
-                        const userRev = localRevMap[item.id] || localRevMap[cleanId] || (item.shop_id ? localRevMap[item.shop_id] : null) || null;
+                        const shortId = cleanId.length >= 8 ? cleanId.substring(0, 8).toLowerCase() : cleanId;
+                        const userRev = localRevMap[item.id] || localRevMap[cleanId] || localRevMap[shortId] || null;
                         return {
                             bookingId: '#' + item.id.substring(0, 8).toUpperCase(),
                             rawBookingId: item.id,
@@ -2409,6 +2467,7 @@
                             status: item.status.toLowerCase(),
                             userReview: userRev ? {
                                 id: userRev.id,
+                                bookingId: item.id,
                                 rating: userRev.rating,
                                 comment: userRev.comment,
                                 createdAt: userRev.createdAt || userRev.created_at
