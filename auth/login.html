@@ -18,7 +18,8 @@
         if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
             var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
             var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
-            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            var safeStorage = typeof getSafeAuthStorage === 'function' ? getSafeAuthStorage() : undefined;
+            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, safeStorage ? { auth: { storage: safeStorage } } : undefined);
         }
         var supabaseClient = window.supabaseClient;
     </script>
@@ -213,6 +214,9 @@
             if (lower.includes('rate limit')) {
                 return 'ลองเข้าสู่ระบบบ่อยเกินไป กรุณารอสักครู่';
             }
+            if (lower.includes('quota') || lower.includes('storage') || lower.includes('setitem')) {
+                return 'พื้นที่จัดเก็บแคชของเบราว์เซอร์เต็ม ระบบกำลังล้างข้อมูลชั่วคราวและเข้าสู่ระบบใหม่อีกครั้ง';
+            }
             return msg;
         }
 
@@ -223,7 +227,8 @@
             if (window.supabase && typeof window.supabase.createClient === 'function') {
                 const SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
                 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
-                window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                const safeStorage = typeof getSafeAuthStorage === 'function' ? getSafeAuthStorage() : undefined;
+                window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, safeStorage ? { auth: { storage: safeStorage } } : undefined);
                 return window.supabaseClient;
             }
             return null;
@@ -611,11 +616,25 @@
             btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> กำลังเข้าสู่ระบบ...';
             
             try {
-                const { data, error } = await client.auth.signInWithPassword({
+                // Ensure storage quota has ample space before login attempt
+                if (typeof cleanupBloatedLocalStorage === 'function') {
+                    cleanupBloatedLocalStorage();
+                }
+
+                let { data, error } = await client.auth.signInWithPassword({
                     email: email,
                     password: password,
                 });
                 
+                // If quota error occurred during SDK internal persistence, evict and retry
+                if (error && (String(error.message).includes('quota') || String(error).includes('quota') || String(error.message).includes('setItem'))) {
+                    console.warn('Quota error detected on login, evicting storage and retrying...');
+                    if (typeof cleanupBloatedLocalStorage === 'function') cleanupBloatedLocalStorage();
+                    const retry = await client.auth.signInWithPassword({ email, password });
+                    data = retry.data;
+                    error = retry.error;
+                }
+
                 if (error) {
                     showToast(formatAuthError(error.message), 'error');
                     btn.disabled = false;
@@ -628,6 +647,17 @@
                 }
             } catch (err) {
                 console.error('Login error:', err);
+                if (String(err.message).includes('quota') || String(err.message).includes('setItem')) {
+                    if (typeof cleanupBloatedLocalStorage === 'function') cleanupBloatedLocalStorage();
+                    try {
+                        const retry = await client.auth.signInWithPassword({ email, password });
+                        if (retry.data?.user) {
+                            showToast('เข้าสู่ระบบสำเร็จ กำลังนำทาง...', 'success');
+                            setTimeout(() => handleRedirect(retry.data.user), 500);
+                            return;
+                        }
+                    } catch (_) {}
+                }
                 showToast(formatAuthError(err.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ'), 'error');
                 btn.disabled = false;
                 btn.innerHTML = originalHTML;

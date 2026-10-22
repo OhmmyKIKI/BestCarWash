@@ -17,12 +17,133 @@ function getPreferredSupabaseUrl() {
 
 var SUPABASE_URL = getPreferredSupabaseUrl();
 
+// Quota-Safe LocalStorage Cleaner to prevent DOMException on setItem
+function cleanupBloatedLocalStorage() {
+    try {
+        if (typeof window === 'undefined' || !window.localStorage) return;
+        const keysToRemove = [];
+        const heavyPrefixes = [
+            'ownerCoverImage',
+            'ownerShopGallery',
+            'ownerShopLogo',
+            'cachedDiscoveryShops',
+            'cachedFavoriteShopsData',
+            'cachedShopDetails_'
+        ];
+
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (!k) continue;
+            // Retain essential system and user session keys
+            if (k === 'rememberedEmail' || k === 'selectedRole' || k === 'currentShopId' || k === 'lastLoggedInUserId') {
+                continue;
+            }
+            if (heavyPrefixes.some(prefix => k.startsWith(prefix))) {
+                const val = localStorage.getItem(k);
+                if (val && (val.includes('data:image') || val.length > 20000)) {
+                    keysToRemove.push(k);
+                }
+            } else {
+                const val = localStorage.getItem(k);
+                if (val && (val.startsWith('data:image') || (val.includes('data:image') && val.length > 30000))) {
+                    if (!k.includes('-auth-token')) {
+                        keysToRemove.push(k);
+                    }
+                }
+            }
+        }
+
+        keysToRemove.forEach(k => {
+            try {
+                localStorage.removeItem(k);
+                console.log('[Supabase Storage Guard] Evicted heavy cache key to free quota:', k);
+            } catch (_) {}
+        });
+
+        // Strip bloated base64 from auth token itself if present
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+                const raw = localStorage.getItem(k);
+                if (raw && (raw.includes('data:image') || raw.length > 15000)) {
+                    try {
+                        const parsed = JSON.parse(raw);
+                        if (parsed.user?.user_metadata) {
+                            let modified = false;
+                            for (const [mKey, mVal] of Object.entries(parsed.user.user_metadata)) {
+                                if (typeof mVal === 'string' && (mVal.startsWith('data:') || mVal.length > 500)) {
+                                    delete parsed.user.user_metadata[mKey];
+                                    modified = true;
+                                } else if (Array.isArray(mVal) && mVal.some(x => typeof x === 'string' && (x.startsWith('data:') || x.length > 500))) {
+                                    delete parsed.user.user_metadata[mKey];
+                                    modified = true;
+                                }
+                            }
+                            if (modified) {
+                                localStorage.setItem(k, JSON.stringify(parsed));
+                                console.log('[Supabase Storage Guard] Sanitized bloated user_metadata in token:', k);
+                            }
+                        }
+                    } catch (_) {}
+                }
+            }
+        }
+    } catch (_) {}
+}
+window.cleanupBloatedLocalStorage = cleanupBloatedLocalStorage;
+
+// Safe Custom Storage Adapter for Supabase Client Auth
+function getSafeAuthStorage() {
+    return {
+        getItem: (key) => {
+            try {
+                const val = localStorage.getItem(key);
+                if (val !== null) return val;
+            } catch (_) {}
+            try {
+                return sessionStorage.getItem(key);
+            } catch (_) {
+                return null;
+            }
+        },
+        setItem: (key, value) => {
+            try {
+                localStorage.setItem(key, value);
+            } catch (e) {
+                console.warn('[Supabase Auth Storage] QuotaExceeded on setItem for [' + key + ']. Evicting heavy keys...', e);
+                cleanupBloatedLocalStorage();
+                try {
+                    localStorage.setItem(key, value);
+                    console.log('[Supabase Auth Storage] Successfully setItem after quota eviction.');
+                } catch (retryErr) {
+                    console.warn('[Supabase Auth Storage] LocalStorage still full. Persisting to sessionStorage:', retryErr);
+                    try {
+                        sessionStorage.setItem(key, value);
+                    } catch (_) {}
+                }
+            }
+        },
+        removeItem: (key) => {
+            try { localStorage.removeItem(key); } catch (_) {}
+            try { sessionStorage.removeItem(key); } catch (_) {}
+        }
+    };
+}
+window.getSafeAuthStorage = getSafeAuthStorage;
+
+// Proactively run cleanup on startup
+if (typeof window !== 'undefined') {
+    cleanupBloatedLocalStorage();
+}
+
 // Safe initializer to ensure supabaseClient is always available
 function getSupabaseClient() {
     if (window.supabaseClient) return window.supabaseClient;
     if (window.supabase && typeof window.supabase.createClient === 'function') {
+        const safeStorage = getSafeAuthStorage();
         window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
             auth: {
+                storage: safeStorage,
                 persistSession: true,
                 autoRefreshToken: true,
                 detectSessionInUrl: true
