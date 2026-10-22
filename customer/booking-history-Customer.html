@@ -411,13 +411,26 @@
             localStorage.setItem('activeCustomerBooking', JSON.stringify(currentActiveBooking));
             try {
                 let list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
-                const idx = list.findIndex(item => normBookingId(item.bookingId) === normBookingId(currentActiveBooking.bookingId));
+                const idx = list.findIndex(item => matchBookingId(item.bookingId, currentActiveBooking.bookingId) || matchBookingId(item.id, currentActiveBooking.id));
                 if (idx !== -1) {
                     list[idx].status = 'arrived';
                     list[idx].step = 2;
                     localStorage.setItem('appBookingsList', JSON.stringify(list));
                 }
             } catch (_) {}
+
+            // Sync to Supabase
+            const rawDbId = currentActiveBooking.rawBookingId || (currentActiveBooking.id && currentActiveBooking.id.length > 20 ? currentActiveBooking.id : null);
+            if (rawDbId) {
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                if (fetcher) {
+                    fetcher(`bookings?id=eq.${rawDbId}`, {
+                        method: 'PATCH',
+                        headers: { Prefer: 'return=minimal' },
+                        body: JSON.stringify({ status: 'arrived', updated_at: new Date().toISOString() })
+                    }).catch(()=>{});
+                }
+            }
         }
         setServiceStep(2);
     }
@@ -430,13 +443,26 @@
             localStorage.setItem('activeCustomerBooking', JSON.stringify(currentActiveBooking));
             try {
                 let list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
-                const idx = list.findIndex(item => normBookingId(item.bookingId) === normBookingId(currentActiveBooking.bookingId));
+                const idx = list.findIndex(item => matchBookingId(item.bookingId, currentActiveBooking.bookingId) || matchBookingId(item.id, currentActiveBooking.id));
                 if (idx !== -1) {
                     list[idx].status = 'washing';
                     list[idx].step = 3;
                     localStorage.setItem('appBookingsList', JSON.stringify(list));
                 }
             } catch (_) {}
+
+            // Sync to Supabase
+            const rawDbId = currentActiveBooking.rawBookingId || (currentActiveBooking.id && currentActiveBooking.id.length > 20 ? currentActiveBooking.id : null);
+            if (rawDbId) {
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                if (fetcher) {
+                    fetcher(`bookings?id=eq.${rawDbId}`, {
+                        method: 'PATCH',
+                        headers: { Prefer: 'return=minimal' },
+                        body: JSON.stringify({ status: 'washing', updated_at: new Date().toISOString() })
+                    }).catch(()=>{});
+                }
+            }
         }
         setServiceStep(3);
     }
@@ -449,13 +475,26 @@
             localStorage.setItem('activeCustomerBooking', JSON.stringify(currentActiveBooking));
             try {
                 let list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
-                const idx = list.findIndex(item => normBookingId(item.bookingId) === normBookingId(currentActiveBooking.bookingId));
+                const idx = list.findIndex(item => matchBookingId(item.bookingId, currentActiveBooking.bookingId) || matchBookingId(item.id, currentActiveBooking.id));
                 if (idx !== -1) {
                     list[idx].status = 'ready';
                     list[idx].step = 4;
                     localStorage.setItem('appBookingsList', JSON.stringify(list));
                 }
             } catch (_) {}
+
+            // Sync to Supabase
+            const rawDbId = currentActiveBooking.rawBookingId || (currentActiveBooking.id && currentActiveBooking.id.length > 20 ? currentActiveBooking.id : null);
+            if (rawDbId) {
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                if (fetcher) {
+                    fetcher(`bookings?id=eq.${rawDbId}`, {
+                        method: 'PATCH',
+                        headers: { Prefer: 'return=minimal' },
+                        body: JSON.stringify({ status: 'ready', updated_at: new Date().toISOString() })
+                    }).catch(()=>{});
+                }
+            }
         }
         setServiceStep(4);
     }
@@ -1774,6 +1813,17 @@
         return String(id || '').replace('#', '').trim().toLowerCase();
     }
 
+    function matchBookingId(id1, id2) {
+        if (!id1 || !id2) return false;
+        const a = normBookingId(id1);
+        const b = normBookingId(id2);
+        if (a === b) return true;
+        if (a.length >= 8 && b.length >= 8) {
+            if (a.slice(0, 8) === b.slice(0, 8)) return true;
+        }
+        return false;
+    }
+
     // Toast Notification Helper
     function showCustomerToast(msg, icon = 'check_circle') {
         const toast = document.getElementById('customerToast');
@@ -1803,11 +1853,16 @@
 
         // Cross-check with shared appBookingsList only if this customer owns that booking
         const listStr = localStorage.getItem('appBookingsList');
-        if (listStr && b && b.bookingId) {
+        if (listStr && b && (b.bookingId || b.id || b.dbId || b.rawBookingId)) {
             try {
                 const list = JSON.parse(listStr);
                 if (Array.isArray(list) && list.length > 0) {
-                    const found = list.find(item => normBookingId(item.bookingId) === normBookingId(b.bookingId));
+                    const found = list.find(item =>
+                        matchBookingId(item.bookingId, b.bookingId) ||
+                        matchBookingId(item.id, b.id) ||
+                        matchBookingId(item.dbId, b.dbId) ||
+                        matchBookingId(item.rawBookingId, b.rawBookingId)
+                    );
                     if (found) {
                         b = { ...b, ...found };
                     }
@@ -1970,12 +2025,19 @@
 
         // Map status to step:
         let stepNum = 1;
-        if (b.status === 'incoming' || b.status === 'pending') stepNum = 0;
-        else if (b.status === 'confirmed') stepNum = 1;
-        else if (b.status === 'arrived') stepNum = 2;
-        else if (b.status === 'washing') stepNum = 3;
-        else if (b.status === 'ready') stepNum = 4;
-        else if (typeof b.step === 'number') stepNum = b.step;
+        const normSt = (b.status || '').toLowerCase();
+        if (normSt === 'incoming' || normSt === 'pending') stepNum = 0;
+        else if (normSt === 'confirmed') stepNum = 1;
+        else if (normSt === 'arrived') stepNum = 2;
+        else if (normSt === 'washing') stepNum = 3;
+        else if (normSt === 'ready') stepNum = 4;
+        else if (normSt === 'completed') stepNum = 5;
+
+        if (typeof b.step === 'number') {
+            stepNum = b.step;
+        } else if (typeof b.service_step === 'number') {
+            stepNum = b.service_step;
+        }
 
         setServiceStep(stepNum);
     }
@@ -2065,6 +2127,8 @@
                     let carBrand = existingLocal?.carBrand || null;
                     let depositAmount = existingLocal?.depositAmount || '฿ 50.00';
                     let slipUrl = existingLocal?.slipImage || null;
+                    let serviceStep = existingLocal?.step || null;
+                    let serviceStatus = existingLocal?.status || null;
 
                     if (item.service_name) {
                         serviceName = item.service_name;
@@ -2073,8 +2137,10 @@
                     // Try parsing vehicle_info as JSON
                     if (item.vehicle_info) {
                         try {
-                            const vi = JSON.parse(item.vehicle_info);
+                            const vi = typeof item.vehicle_info === 'string' ? JSON.parse(item.vehicle_info) : item.vehicle_info;
                             if (vi && typeof vi === 'object') {
+                                if (vi.service_step !== undefined && vi.service_step !== null) serviceStep = Number(vi.service_step);
+                                if (vi.service_status) serviceStatus = String(vi.service_status).toLowerCase();
                                 if (vi.service_name) serviceName = vi.service_name;
                                 if (vi.brand && vi.plate) carName = `${vi.brand} (${vi.plate})`;
                                 else if (vi.brand) carName = vi.brand;
@@ -2106,7 +2172,7 @@
                     if (!serviceName || serviceName === 'บริการล้างรถ') {
                         try {
                             const list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
-                            const found = list.find(b => normBookingId(b.bookingId) === normBookingId(item.id) || normBookingId(b.id) === normBookingId(item.id));
+                            const found = list.find(b => matchBookingId(b.bookingId, item.id) || matchBookingId(b.id, item.id));
                             if (found?.serviceName) {
                                 serviceName = found.serviceName;
                                 if (!carName && found.carName) carName = found.carName;
@@ -2130,7 +2196,9 @@
                         carPlate: carPlate || '-',
                         carBrand: carBrand || 'รถยนต์',
                         depositAmount: depositAmount,
-                        slipUrl: slipUrl
+                        slipUrl: slipUrl,
+                        serviceStep: serviceStep,
+                        serviceStatus: serviceStatus
                     };
                 }
 
@@ -2141,10 +2209,29 @@
                         let existingLocal = null;
                         try { existingLocal = JSON.parse(localStorage.getItem('activeCustomerBooking') || '{}'); } catch(e) {}
                         const parsedActive = parseBookingData(activeOngoing, existingLocal);
+
+                        // Resolve effective status and step
+                        let effectiveStatus = (parsedActive.serviceStatus || activeOngoing.status || '').toLowerCase();
+                        if (effectiveStatus === 'pending') effectiveStatus = 'incoming';
+                        
+                        let effectiveStep = 1;
+                        if (effectiveStatus === 'incoming') effectiveStep = 0;
+                        else if (effectiveStatus === 'confirmed') effectiveStep = 1;
+                        else if (effectiveStatus === 'arrived') effectiveStep = 2;
+                        else if (effectiveStatus === 'washing') effectiveStep = 3;
+                        else if (effectiveStatus === 'ready') effectiveStep = 4;
+                        else if (effectiveStatus === 'completed') effectiveStep = 5;
+
+                        if (typeof parsedActive.serviceStep === 'number') {
+                            effectiveStep = parsedActive.serviceStep;
+                        }
+
                         const mappedActive = {
                             ...(existingLocal || {}),
                             bookingId: '#' + activeOngoing.id.substring(0, 8).toUpperCase(),
                             rawBookingId: activeOngoing.id,
+                            id: activeOngoing.id,
+                            dbId: activeOngoing.id,
                             shopId: activeOngoing.shop_id,
                             shopName: activeOngoing.shops?.name || existingLocal?.shopName || 'ร้านคาร์แคร์',
                             shopPhone: activeOngoing.shops?.phone_number || existingLocal?.shopPhone || '081-234-5678',
@@ -2155,7 +2242,8 @@
                             dateTime: `${activeOngoing.booking_date} ${activeOngoing.booking_time}`,
                             totalAmount: `฿ ${activeOngoing.total_price}`,
                             depositAmount: parsedActive.depositAmount || existingLocal?.depositAmount || '฿ 50.00',
-                            status: activeOngoing.status.toLowerCase()
+                            status: effectiveStatus,
+                            step: effectiveStep
                         };
                         localStorage.setItem('activeCustomerBooking', JSON.stringify(mappedActive));
                     } else {
@@ -2231,6 +2319,71 @@
         if (e.key === 'appBookingsList' || e.key === 'activeCustomerBooking') {
             loadActiveBooking();
         }
+    });
+
+    // Realtime Cloud Auto-Sync for Customer Queue Status (Background Worker)
+    async function syncCustomerActiveQueue() {
+        if (document.hidden) return;
+        let b = null;
+        try {
+            b = JSON.parse(localStorage.getItem('activeCustomerBooking') || 'null');
+        } catch (_) {}
+        if (!b) return;
+
+        const targetId = b.rawBookingId || b.id || b.dbId;
+        const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+        if (!fetcher) return;
+
+        try {
+            let query = (targetId && String(targetId).length > 20)
+                ? `bookings?id=eq.${targetId}&select=*,shops(name,phone_number)&limit=1`
+                : null;
+            if (!query && b.customer_id) {
+                query = `bookings?customer_id=eq.${b.customer_id}&order=created_at.desc&select=*,shops(name,phone_number)&limit=1`;
+            }
+            if (!query) {
+                const uid = localStorage.getItem('lastLoggedInUserId');
+                if (uid) query = `bookings?customer_id=eq.${uid}&order=created_at.desc&select=*,shops(name,phone_number)&limit=1`;
+            }
+            if (!query) return;
+
+            const res = await fetcher(query).catch(() => null);
+            if (Array.isArray(res) && res.length > 0) {
+                const dbRow = res[0];
+                let vi = null;
+                try {
+                    if (typeof dbRow.vehicle_info === 'string') vi = JSON.parse(dbRow.vehicle_info);
+                    else if (typeof dbRow.vehicle_info === 'object') vi = dbRow.vehicle_info;
+                } catch(_) {}
+
+                let cloudStatus = (vi?.service_status || dbRow.status || '').toLowerCase();
+                let cloudStep = (typeof vi?.service_step === 'number') ? vi.service_step : null;
+                if (cloudStep === null) {
+                    if (cloudStatus === 'incoming' || cloudStatus === 'pending') cloudStep = 0;
+                    else if (cloudStatus === 'confirmed') cloudStep = 1;
+                    else if (cloudStatus === 'arrived') cloudStep = 2;
+                    else if (cloudStatus === 'washing') cloudStep = 3;
+                    else if (cloudStatus === 'ready') cloudStep = 4;
+                    else if (cloudStatus === 'completed') cloudStep = 5;
+                }
+
+                const currentSt = (b.status || '').toLowerCase();
+                const currentSp = b.step;
+
+                if ((cloudStatus && cloudStatus !== currentSt) || (cloudStep !== null && cloudStep !== currentSp)) {
+                    b.status = cloudStatus;
+                    if (cloudStep !== null) b.step = cloudStep;
+                    localStorage.setItem('activeCustomerBooking', JSON.stringify(b));
+                    loadActiveBooking();
+                }
+            }
+        } catch (_) {}
+    }
+
+    // Auto-poll cloud every 3.5 seconds
+    setInterval(syncCustomerActiveQueue, 3500);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) syncCustomerActiveQueue();
     });
 </script>
 

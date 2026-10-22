@@ -575,6 +575,17 @@
         return String(id || '').replace('#', '').trim().toLowerCase();
     }
 
+    function matchBookingId(id1, id2) {
+        if (!id1 || !id2) return false;
+        const a = normId(id1);
+        const b = normId(id2);
+        if (a === b) return true;
+        if (a.length >= 8 && b.length >= 8) {
+            if (a.slice(0, 8) === b.slice(0, 8)) return true;
+        }
+        return false;
+    }
+
     function getBookingsList() {
         let list = [];
         const stored = localStorage.getItem('appBookingsList');
@@ -590,8 +601,13 @@
         if (activeCust) {
             try {
                 const cust = JSON.parse(activeCust);
-                if (cust && cust.bookingId) {
-                    const idx = list.findIndex(b => normId(b.bookingId) === normId(cust.bookingId));
+                if (cust && (cust.bookingId || cust.id || cust.dbId)) {
+                    const idx = list.findIndex(b =>
+                        matchBookingId(b.bookingId, cust.bookingId) ||
+                        matchBookingId(b.id, cust.id) ||
+                        matchBookingId(b.dbId, cust.dbId) ||
+                        matchBookingId(b.rawBookingId, cust.rawBookingId)
+                    );
                     if (idx === -1) {
                         list.unshift(cust);
                     } else {
@@ -771,22 +787,42 @@
     }
 
     function mapDbBooking(db, profileMap, serviceMap, existingItem = null) {
-        const rawStatus = (db.status || 'PENDING').toUpperCase();
+        let vi = null;
+        try {
+            if (typeof db.vehicle_info === 'string') vi = JSON.parse(db.vehicle_info);
+            else if (typeof db.vehicle_info === 'object') vi = db.vehicle_info;
+        } catch (_) {}
+
+        let rawStatus = (db.status || 'PENDING').toLowerCase();
+        // If Supabase status is confirmed or pending, check if vehicle_info has more specific sub-stage
+        if (vi?.service_status) {
+            rawStatus = String(vi.service_status).toLowerCase();
+        }
+
         // Map DB status → internal workflow status
         const statusMap = {
-            'PENDING':   'incoming',
-            'CONFIRMED': 'confirmed',
-            'COMPLETED': 'completed',
-            'CANCELLED': 'declined',
-            // Extended statuses stored in DB via our PATCH
-            'ARRIVED':   'arrived',
-            'WASHING':   'washing',
-            'READY':     'ready',
-            'REFUND_REQUESTED': 'refund_requested',
-            'REFUNDED':  'refunded',
-            'NO_SHOW':   'no_show'
+            'pending':   'incoming',
+            'confirmed': 'confirmed',
+            'completed': 'completed',
+            'cancelled': 'declined',
+            // Extended statuses stored in DB
+            'arrived':   'arrived',
+            'washing':   'washing',
+            'ready':     'ready',
+            'refund_requested': 'refund_requested',
+            'refunded':  'refunded',
+            'no_show':   'no_show'
         };
-        const mappedStatus = statusMap[rawStatus] || rawStatus.toLowerCase();
+        const mappedStatus = statusMap[rawStatus] || rawStatus;
+        let step = (typeof vi?.service_step === 'number') ? vi.service_step : null;
+        if (step === null) {
+            if (mappedStatus === 'confirmed') step = 1;
+            else if (mappedStatus === 'arrived') step = 2;
+            else if (mappedStatus === 'washing') step = 3;
+            else if (mappedStatus === 'ready') step = 4;
+            else if (mappedStatus === 'completed') step = 5;
+            else step = 0;
+        }
 
         const parsed = parseVehicleAndService(db, profileMap, serviceMap, existingItem);
 
@@ -824,6 +860,8 @@
             refundReason: db.cancel_reason || db.refund_reason || '',
             refundPromptPay: db.refund_promptpay || parsed.customerPhone,
             status: mappedStatus,
+            step: step,
+            raw_vehicle_info: db.vehicle_info,
             isNew: mappedStatus === 'incoming',
             createdAt: db.created_at
         };
@@ -936,9 +974,9 @@
 
             dbBookings.forEach(db => {
                 const idx = list.findIndex(item =>
-                    normId(item.dbId) === normId(db.id) ||
-                    normId(item.id) === normId(db.id) ||
-                    normId(item.bookingId) === normId(db.id.slice(0, 8))
+                    matchBookingId(item.dbId, db.id) ||
+                    matchBookingId(item.id, db.id) ||
+                    matchBookingId(item.bookingId, db.id)
                 );
                 const existingItem = idx !== -1 ? list[idx] : null;
                 const mapped = mapDbBooking(db, profileMap, serviceMap, existingItem);
@@ -947,8 +985,7 @@
                     list.unshift(mapped);
                     if (mapped.status === 'incoming') hasNewBooking = true;
                 } else {
-                    // Preserve local-only status updates (arrived, washing, ready)
-                    // but sync PENDING/CONFIRMED/COMPLETED/CANCELLED from DB
+                    // Sync accurate status and step from DB
                     const localStatus = list[idx].status;
                     const dbStatus = mapped.status;
                     const localOverrides = ['arrived', 'washing', 'ready', 'refund_requested', 'refunded', 'no_show'];
@@ -976,7 +1013,7 @@
                         list[idx].carSize = oldSize;
                     }
 
-                    if (shouldKeepLocal && ['incoming', 'confirmed'].includes(dbStatus)) {
+                    if (shouldKeepLocal && ['incoming', 'confirmed'].includes(dbStatus) && !['arrived', 'washing', 'ready', 'completed'].includes(dbStatus)) {
                         list[idx].status = localStatus;
                     }
                     if (!list[idx].slipImage && mapped.slipImage) list[idx].slipImage = mapped.slipImage;
@@ -1011,12 +1048,14 @@
     async function updateBooking(bookingId, updates) {
         const list = getBookingsList();
         const b = list.find(item =>
-            normId(item.bookingId) === normId(bookingId) ||
-            normId(item.dbId) === normId(bookingId) ||
-            normId(item.id) === normId(bookingId)
+            matchBookingId(item.bookingId, bookingId) ||
+            matchBookingId(item.rawBookingId, bookingId) ||
+            matchBookingId(item.dbId, bookingId) ||
+            matchBookingId(item.id, bookingId)
         );
         if (b) {
             Object.assign(b, updates);
+            if (updates.step) b.step = updates.step;
             saveBookingsList(list);
         }
 
@@ -1025,34 +1064,57 @@
         if (activeCust) {
             try {
                 const cust = JSON.parse(activeCust);
-                if (normId(cust.bookingId) === normId(bookingId) || normId(cust.id) === normId(bookingId)) {
+                const isCustMatch = matchBookingId(cust.bookingId, bookingId) ||
+                                    matchBookingId(cust.rawBookingId, bookingId) ||
+                                    matchBookingId(cust.dbId, bookingId) ||
+                                    matchBookingId(cust.id, bookingId);
+                if (isCustMatch) {
                     Object.assign(cust, updates);
+                    if (updates.step) cust.step = updates.step;
                     localStorage.setItem('activeCustomerBooking', JSON.stringify(cust));
                 }
             } catch(e) {}
         }
+        try { window.dispatchEvent(new Event('storage')); } catch (_) {}
 
         // === Sync status to Supabase immediately ===
-        const targetDbId = b?.dbId || (b?.id && b.id.length > 20 ? b.id : null);
+        const targetDbId = (bookingId && String(bookingId).length > 20 ? String(bookingId) : null) ||
+                           b?.dbId ||
+                           (b?.id && String(b.id).length > 20 ? b.id : null) ||
+                           (b?.rawBookingId && String(b.rawBookingId).length > 20 ? b.rawBookingId : null);
+
         if (targetDbId && updates.status) {
-            // Map internal workflow status back to DB status
+            // Keep rich workflow status in database
             const dbStatusMap = {
                 'incoming': 'PENDING',
-                'confirmed': 'CONFIRMED',
-                'arrived': 'CONFIRMED',   // sub-stage of confirmed
-                'washing': 'CONFIRMED',   // sub-stage of confirmed
-                'ready': 'CONFIRMED',     // sub-stage of confirmed
-                'completed': 'COMPLETED',
-                'declined': 'CANCELLED',
-                'no_show': 'CANCELLED',
-                'refund_requested': 'CANCELLED',
-                'refunded': 'CANCELLED'
+                'pending': 'PENDING',
+                'confirmed': 'confirmed',
+                'arrived': 'arrived',
+                'washing': 'washing',
+                'ready': 'ready',
+                'completed': 'completed',
+                'declined': 'cancelled',
+                'no_show': 'cancelled',
+                'refund_requested': 'cancelled',
+                'refunded': 'cancelled'
             };
-            const dbStatus = dbStatusMap[updates.status] || updates.status.toUpperCase();
+            const dbStatus = dbStatusMap[updates.status] || updates.status;
 
-            // Store extended sub-stage in notes_internal or a dedicated column if needed
+            // Preserve rich sub-stage in vehicle_info JSON
+            let rawVi = b?.raw_vehicle_info || b?.vehicle_info;
+            let vi = {};
+            if (rawVi && typeof rawVi === 'object') {
+                vi = { ...rawVi };
+            } else if (typeof rawVi === 'string') {
+                try { vi = JSON.parse(rawVi); } catch(_) {}
+            }
+            vi.service_step = updates.step || (updates.status === 'confirmed' ? 1 : (updates.status === 'arrived' ? 2 : (updates.status === 'washing' ? 3 : (updates.status === 'ready' ? 4 : (updates.status === 'completed' ? 5 : 0)))));
+            vi.service_status = updates.status;
+            vi.updated_at = new Date().toISOString();
+
             const patchBody = {
                 status: dbStatus,
+                vehicle_info: JSON.stringify(vi),
                 updated_at: new Date().toISOString()
             };
 
