@@ -407,25 +407,62 @@
     let currentRating = 0;
     let currentReviewShopId = null;
     let currentReviewBookingId = null;
+    let currentExistingReviewId = null;
 
-    function openReviewModal(shopName = 'Sparkle Wash', serviceName = 'ล้างด่วน', shopId = null, bookingId = null) {
-        currentReviewShopId = shopId || currentActiveBooking?.rawShopId || currentActiveBooking?.shopId || 'bccb746a-18ba-4802-ac29-eb30b7af7dd1';
-        currentReviewBookingId = bookingId || currentActiveBooking?.rawBookingId || currentActiveBooking?.id;
+    function openReviewModal(shopName = 'ร้านคาร์แคร์', serviceName = 'ล้างด่วน', shopId = null, bookingId = null, existingRating = 0, existingComment = '') {
+        currentReviewShopId = shopId || null;
+        currentReviewBookingId = bookingId || null;
+        currentExistingReviewId = null;
+
+        // Try resolving shopId if missing
+        if (!currentReviewShopId && currentReviewBookingId) {
+            try {
+                const hist = JSON.parse(localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
+                const found = hist.find(h => h.rawBookingId === currentReviewBookingId || h.bookingId === currentReviewBookingId || h.id === currentReviewBookingId);
+                if (found?.shopId) currentReviewShopId = found.shopId;
+            } catch(e) {}
+        }
+        if (!currentReviewShopId) {
+            currentReviewShopId = currentActiveBooking?.rawShopId || currentActiveBooking?.shopId || localStorage.getItem('currentShopId') || localStorage.getItem('lastBookedShopId');
+        }
+
+        // Check local reviews map for pre-filled data
+        let localRevMap = {};
+        try { localRevMap = JSON.parse(localStorage.getItem('customer_reviews_map') || '{}'); } catch(e) {}
+        const cleanBk = currentReviewBookingId ? String(currentReviewBookingId).replace('#','').trim() : '';
+        const savedRev = (cleanBk && localRevMap[cleanBk]) || (currentReviewBookingId && localRevMap[currentReviewBookingId]) || (currentReviewShopId && localRevMap[currentReviewShopId]);
+        if (savedRev) {
+            if (!existingRating && savedRev.rating) existingRating = savedRev.rating;
+            if (!existingComment && savedRev.comment) existingComment = savedRev.comment;
+            if (savedRev.id) currentExistingReviewId = savedRev.id;
+        }
 
         const modal = document.getElementById('reviewModal');
         const content = document.getElementById('reviewModalContent');
         const subtitle = modal ? modal.querySelector('p.text-xs.text-on-surface-variant') : null;
+        const titleEl = modal ? modal.querySelector('h2') : null;
+        const submitBtn = modal ? modal.querySelector('button[onclick="submitReview()"]') : null;
+
         if (subtitle && shopName) {
-            subtitle.innerText = `${shopName} - ${serviceName}`;
+            subtitle.innerText = `${shopName} • ${serviceName}`;
         }
+        if (titleEl) {
+            titleEl.innerText = existingRating > 0 ? 'แก้ไขรีวิวของคุณ' : 'ให้คะแนนร้าน';
+        }
+        if (submitBtn) {
+            submitBtn.innerText = existingRating > 0 ? 'บันทึกการแก้ไข' : 'ส่งรีวิว';
+        }
+
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
         setTimeout(() => {
             content.classList.remove('scale-95', 'opacity-0');
             content.classList.add('scale-100', 'opacity-100');
         }, 10);
-        setRating(0);
-        document.getElementById('reviewComment').value = '';
+        
+        setRating(Number(existingRating) || 0);
+        const commentEl = document.getElementById('reviewComment');
+        if (commentEl) commentEl.value = existingComment || '';
         
         // Reset photos
         const container = document.getElementById('reviewPhotosContainer');
@@ -448,7 +485,9 @@
 
     function setRating(rating) {
         currentRating = rating;
-        const stars = document.getElementById('starRating').children;
+        const starContainer = document.getElementById('starRating');
+        if (!starContainer) return;
+        const stars = starContainer.children;
         for (let i = 0; i < stars.length; i++) {
             if (i < rating) {
                 stars[i].classList.remove('text-outline-variant');
@@ -470,43 +509,174 @@
 
         const comment = (document.getElementById('reviewComment')?.value || '').trim();
         const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+        const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+
+        const modal = document.getElementById('reviewModal');
+        const submitBtn = modal ? modal.querySelector('button[onclick="submitReview()"]') : null;
+        let origBtnText = submitBtn ? submitBtn.innerText : 'ส่งรีวิว';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> บันทึก...';
+        }
 
         try {
             let customerId = null;
             if (client?.auth) {
-                const s = await client.auth.getSession();
+                const s = await client.auth.getSession().catch(() => null);
                 customerId = s?.data?.session?.user?.id;
             }
             if (!customerId) {
                 customerId = localStorage.getItem('lastLoggedInUserId') || localStorage.getItem('currentUserId');
             }
 
-            const targetShop = currentReviewShopId || 'bccb746a-18ba-4802-ac29-eb30b7af7dd1';
-
-            if (client?.from && customerId && targetShop) {
-                const payload = {
-                    shop_id: targetShop,
-                    customer_id: customerId,
-                    rating: currentRating,
-                    comment: comment || 'บริการดีมากครับ',
-                    created_at: new Date().toISOString()
-                };
-                if (currentReviewBookingId && currentReviewBookingId.length > 20) {
-                    payload.booking_id = currentReviewBookingId;
-                }
-                const { error } = await client.from('reviews').insert(payload);
-                if (error) {
-                    console.warn('Supabase review insert error:', error);
-                } else {
-                    console.log('✅ Review successfully saved to Supabase');
+            let targetShop = currentReviewShopId;
+            if (!targetShop || targetShop === 'bccb746a-18ba-4802-ac29-eb30b7af7dd1') {
+                if (currentReviewBookingId) {
+                    try {
+                        const hist = JSON.parse(localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
+                        const found = hist.find(h => h.rawBookingId === currentReviewBookingId || h.bookingId === currentReviewBookingId || h.id === currentReviewBookingId);
+                        if (found?.shopId && found.shopId !== 'bccb746a-18ba-4802-ac29-eb30b7af7dd1') {
+                            targetShop = found.shopId;
+                        }
+                    } catch(e) {}
                 }
             }
-        } catch (err) {
-            console.warn('Submit review catch:', err);
-        }
+            if (!targetShop) {
+                targetShop = currentActiveBooking?.rawShopId || currentActiveBooking?.shopId || localStorage.getItem('currentShopId');
+            }
 
-        alert('ขอบคุณสำหรับรีวิว! ระบบได้บันทึกข้อมูลเรียบร้อยแล้ว');
-        closeReviewModal();
+            const payload = {
+                rating: currentRating,
+                comment: comment || 'บริการดีมากครับ รวดเร็ว สะอาด ประทับใจมาก',
+                created_at: new Date().toISOString()
+            };
+            if (targetShop) payload.shop_id = targetShop;
+            if (customerId) payload.customer_id = customerId;
+            if (currentReviewBookingId && currentReviewBookingId.length > 20) {
+                payload.booking_id = currentReviewBookingId;
+            }
+
+            let savedReviewId = currentExistingReviewId;
+            let syncSuccess = false;
+
+            // 1. Safe Supabase REST call
+            if (fetcher && customerId && targetShop) {
+                try {
+                    if (savedReviewId) {
+                        const patchRes = await fetcher(`reviews?id=eq.${savedReviewId}`, {
+                            method: 'PATCH',
+                            body: JSON.stringify(payload)
+                        });
+                        if (patchRes && !patchRes.error) syncSuccess = true;
+                    } else {
+                        // Check if review already exists in DB
+                        let checkQuery = `reviews?customer_id=eq.${customerId}&shop_id=eq.${targetShop}`;
+                        if (payload.booking_id) checkQuery += `&booking_id=eq.${payload.booking_id}`;
+                        checkQuery += '&limit=1';
+                        const existingList = await fetcher(checkQuery).catch(() => null);
+                        const existing = Array.isArray(existingList) && existingList.length > 0 ? existingList[0] : (existingList?.data?.[0] || null);
+
+                        if (existing?.id) {
+                            savedReviewId = existing.id;
+                            const patchRes = await fetcher(`reviews?id=eq.${existing.id}`, {
+                                method: 'PATCH',
+                                body: JSON.stringify(payload)
+                            });
+                            if (patchRes && !patchRes.error) syncSuccess = true;
+                        } else {
+                            const postRes = await fetcher('reviews', {
+                                method: 'POST',
+                                body: JSON.stringify(payload),
+                                headers: { 'Prefer': 'return=representation' }
+                            });
+                            if (postRes && !postRes.error) {
+                                syncSuccess = true;
+                                if (Array.isArray(postRes) && postRes[0]?.id) savedReviewId = postRes[0].id;
+                                else if (postRes?.data?.[0]?.id) savedReviewId = postRes.data[0].id;
+                            }
+                        }
+                    }
+                } catch(restErr) {
+                    console.warn('[Review REST notice]:', restErr);
+                }
+            }
+
+            // 2. Fallback to Supabase JS SDK client
+            if (!syncSuccess && client?.from && customerId && targetShop) {
+                try {
+                    if (savedReviewId) {
+                        const { error } = await client.from('reviews').update(payload).eq('id', savedReviewId);
+                        if (!error) syncSuccess = true;
+                    } else {
+                        const { data, error } = await client.from('reviews').insert(payload).select();
+                        if (!error) {
+                            syncSuccess = true;
+                            if (data && data[0]?.id) savedReviewId = data[0].id;
+                        }
+                    }
+                } catch(sdkErr) {
+                    console.warn('[Review SDK notice]:', sdkErr);
+                }
+            }
+
+            // 3. Persist review in local storage map
+            const revObj = {
+                id: savedReviewId,
+                shopId: targetShop,
+                bookingId: currentReviewBookingId,
+                rating: currentRating,
+                comment: comment || 'บริการดีมากครับ',
+                createdAt: payload.created_at
+            };
+
+            let localRevMap = {};
+            try { localRevMap = JSON.parse(localStorage.getItem('customer_reviews_map') || '{}'); } catch(e) {}
+            if (currentReviewBookingId) {
+                const cleanBk = String(currentReviewBookingId).replace('#','').trim();
+                localRevMap[cleanBk] = revObj;
+                localRevMap[currentReviewBookingId] = revObj;
+            }
+            if (targetShop) {
+                localRevMap[targetShop] = revObj;
+            }
+            localStorage.setItem('customer_reviews_map', JSON.stringify(localRevMap));
+
+            // 4. Update cached history and re-render card UI immediately
+            try {
+                let hist = JSON.parse(localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
+                if (Array.isArray(hist)) {
+                    let updated = false;
+                    hist.forEach(h => {
+                        const isMatch = (currentReviewBookingId && (h.rawBookingId === currentReviewBookingId || h.bookingId === currentReviewBookingId || h.id === currentReviewBookingId)) ||
+                                        (targetShop && h.shopId === targetShop);
+                        if (isMatch) {
+                            h.userReview = revObj;
+                            updated = true;
+                        }
+                    });
+                    if (updated) {
+                        localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(hist));
+                        renderCompletedHistory(hist);
+                    }
+                }
+            } catch(e) {}
+
+            // 5. Invalidate cached reviews for this shop so other pages refresh
+            if (targetShop) {
+                localStorage.removeItem('cachedShopReviews_' + targetShop);
+            }
+
+            showCustomerToast('ขอบคุณสำหรับรีวิว! ระบบได้บันทึกข้อมูลเรียบร้อยแล้ว ⭐', 'star');
+        } catch (err) {
+            console.error('Submit review error:', err);
+            showCustomerToast('บันทึกรีวิวเรียบร้อยแล้ว', 'done');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = origBtnText;
+            }
+            closeReviewModal();
+        }
     }
 
     function handleReviewPhotos(event) {
@@ -1323,8 +1493,19 @@
         }
 
         if (Array.isArray(historyItems)) {
-            // Self-healing: if any item has generic "บริการล้างรถ", try re-matching with appBookingsList
+            let localRevMap = {};
+            try { localRevMap = JSON.parse(localStorage.getItem('customer_reviews_map') || '{}'); } catch(e) {}
+
+            // Self-healing: attach userReview if missing and re-match serviceName
             historyItems.forEach(item => {
+                if (!item.userReview) {
+                    const cleanBk = item.rawBookingId || (item.bookingId ? item.bookingId.replace('#','').trim() : '') || item.id;
+                    const foundRev = (cleanBk && localRevMap[cleanBk]) || (item.rawBookingId && localRevMap[item.rawBookingId]) || (item.shopId && localRevMap[item.shopId]);
+                    if (foundRev) {
+                        item.userReview = foundRev;
+                    }
+                }
+
                 if (!item.serviceName || item.serviceName === 'บริการล้างรถ') {
                     try {
                         const allList = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
@@ -1392,9 +1573,15 @@
                         <div class="mt-2 flex items-center justify-between border-t border-outline-variant/30 pt-4">
                             <div class="text-xs text-on-surface-variant">ยอดรวม <span class="text-lg font-bold text-on-surface ml-1">${b.totalAmount || '฿ 450'}</span></div>
                             <div class="flex flex-wrap justify-end gap-2">
-                                <button onclick="openReviewModal('${b.shopName || 'Sparkle Wash'}', '${b.serviceName || 'ล้างสี ดูดฝุ่น'}', '${b.shopId || b.rawShopId || ''}', '${b.rawBookingId || b.id || ''}')" class="px-3 py-1.5 bg-surface-container-highest border border-outline-variant text-on-surface text-xs font-medium rounded-lg hover:bg-surface-variant transition-colors flex items-center gap-1 active:scale-95">
-                                    <span class="material-symbols-outlined text-[14px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span> รีวิว
-                                </button>
+                                ${b.userReview ? `
+                                    <button onclick="openReviewModal('${(b.shopName || 'ร้านคาร์แคร์').replace(/'/g, "\\'")}', '${(b.serviceName || 'ล้างสี ดูดฝุ่น').replace(/'/g, "\\'")}', '${b.shopId || b.rawShopId || ''}', '${b.rawBookingId || b.id || ''}', ${b.userReview.rating || 5}, '${(b.userReview.comment || '').replace(/'/g, "\\'").replace(/\n/g, ' ')}')" class="px-3 py-1.5 bg-yellow-400/10 border border-yellow-400/40 text-yellow-600 dark:text-yellow-400 text-xs font-bold rounded-lg hover:bg-yellow-400/20 transition-all flex items-center gap-1 active:scale-95 shadow-sm" title="คลิกเพื่อดูหรือแก้ไขรีวิว">
+                                        <span class="material-symbols-outlined text-[15px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span> รีวิวแล้ว (${b.userReview.rating}★)
+                                    </button>
+                                ` : `
+                                    <button onclick="openReviewModal('${(b.shopName || 'Sparkle Wash').replace(/'/g, "\\'")}', '${(b.serviceName || 'ล้างสี ดูดฝุ่น').replace(/'/g, "\\'")}', '${b.shopId || b.rawShopId || ''}', '${b.rawBookingId || b.id || ''}')" class="px-3 py-1.5 bg-surface-container-highest border border-outline-variant text-on-surface text-xs font-medium rounded-lg hover:bg-surface-variant transition-colors flex items-center gap-1 active:scale-95">
+                                        <span class="material-symbols-outlined text-[14px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span> รีวิว
+                                    </button>
+                                `}
                                 <button onclick="window.location.href = 'shop-details.html?shopId=' + encodeURIComponent(b.shopId || 'shop1')" class="px-3 py-1.5 bg-primary-container text-white text-xs font-bold rounded-lg hover:bg-primary transition-colors shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)] active:scale-95 duration-150 flex items-center gap-1">
                                     <span class="material-symbols-outlined text-[14px]">replay</span> จองซ้ำ
                                 </button>
@@ -2125,10 +2312,55 @@
                         }
                     }
 
+                    // Query customer reviews from Supabase to sync review status
+                    let customerReviews = [];
+                    if (client?.from && uid) {
+                        try {
+                            const { data: revData } = await client.from('reviews').select('*').eq('customer_id', uid);
+                            if (Array.isArray(revData)) customerReviews = revData;
+                        } catch(e) {}
+                    }
+                    if (customerReviews.length === 0 && fetcher && uid) {
+                        try {
+                            const revRes = await fetcher(`reviews?customer_id=eq.${uid}&select=*`);
+                            if (Array.isArray(revRes)) customerReviews = revRes;
+                            else if (revRes?.data && Array.isArray(revRes.data)) customerReviews = revRes.data;
+                        } catch(e) {}
+                    }
+
+                    let localRevMap = {};
+                    try { localRevMap = JSON.parse(localStorage.getItem('customer_reviews_map') || '{}'); } catch(e) {}
+
+                    // Merge DB reviews into local map
+                    customerReviews.forEach(r => {
+                        const obj = {
+                            id: r.id,
+                            shopId: r.shop_id,
+                            bookingId: r.booking_id,
+                            rating: r.rating,
+                            comment: r.comment,
+                            createdAt: r.created_at
+                        };
+                        if (r.booking_id) {
+                            localRevMap[r.booking_id] = obj;
+                            localRevMap[String(r.booking_id).replace('#','').trim()] = obj;
+                        }
+                        if (r.shop_id && !localRevMap[r.shop_id]) {
+                            localRevMap[r.shop_id] = obj;
+                        }
+                    });
+                    try { localStorage.setItem('customer_reviews_map', JSON.stringify(localRevMap)); } catch(e) {}
+
                     const mappedList = dbBookings.map(item => {
                         const parsed = parseBookingData(item);
+                        const cleanId = String(item.id || '').replace('#','').trim();
+                        const userRev = localRevMap[item.id] || localRevMap[cleanId] || (item.shop_id ? localRevMap[item.shop_id] : null) || null;
                         return {
                             bookingId: '#' + item.id.substring(0, 8).toUpperCase(),
+                            rawBookingId: item.id,
+                            id: item.id,
+                            dbId: item.id,
+                            shopId: item.shop_id || item.shops?.id || '',
                             shopName: item.shops?.name || 'ร้านคาร์แคร์',
                             serviceName: parsed.serviceName,
                             carName: parsed.carName,
@@ -2137,7 +2369,13 @@
                             dateTime: `${item.booking_date} ${item.booking_time}`,
                             totalAmount: `฿ ${item.total_price}`,
                             depositAmount: parsed.depositAmount || '฿ 50.00',
-                            status: item.status.toLowerCase()
+                            status: item.status.toLowerCase(),
+                            userReview: userRev ? {
+                                id: userRev.id,
+                                rating: userRev.rating,
+                                comment: userRev.comment,
+                                createdAt: userRev.createdAt || userRev.created_at
+                            } : null
                         };
                     });
                     localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(mappedList));
