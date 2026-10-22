@@ -200,7 +200,7 @@
                         </div>
 
                         <!-- Step 1: ยืนยันคิว -->
-                        <div class="flex flex-col items-center relative z-10 cursor-pointer" onclick="setServiceStep(1)">
+                        <div class="flex flex-col items-center relative z-10 select-none">
                             <div class="w-8 h-8 rounded-full bg-primary text-background font-bold flex items-center justify-center border-2 border-background shadow-md transition-all duration-300" id="stepNode1">
                                 <span class="material-symbols-outlined text-[16px]">done</span>
                             </div>
@@ -208,7 +208,7 @@
                         </div>
 
                         <!-- Step 2: ร้านรับรถแล้ว (เดิมคือเข้าซอง) -->
-                        <div class="flex flex-col items-center relative z-10 cursor-pointer" onclick="setServiceStep(2)">
+                        <div class="flex flex-col items-center relative z-10 select-none">
                             <div class="w-8 h-8 rounded-full bg-surface-container-highest text-on-surface-variant font-medium flex items-center justify-center border-2 border-background transition-all duration-300" id="stepNode2">
                                 <span class="material-symbols-outlined text-[16px]">directions_car</span>
                             </div>
@@ -216,7 +216,7 @@
                         </div>
 
                         <!-- Step 3: กำลังล้าง -->
-                        <div class="flex flex-col items-center relative z-10 cursor-pointer" onclick="setServiceStep(3)">
+                        <div class="flex flex-col items-center relative z-10 select-none">
                             <div class="w-8 h-8 rounded-full bg-surface-container-highest text-on-surface-variant font-medium flex items-center justify-center border-2 border-background transition-all duration-300" id="stepNode3">
                                 <span class="material-symbols-outlined text-[16px]">local_car_wash</span>
                             </div>
@@ -224,7 +224,7 @@
                         </div>
 
                         <!-- Step 4: เสร็จสิ้นพร้อมรับรถ -->
-                        <div class="flex flex-col items-center relative z-10 cursor-pointer" onclick="setServiceStep(4)">
+                        <div class="flex flex-col items-center relative z-10 select-none">
                             <div class="w-8 h-8 rounded-full bg-surface-container-highest text-on-surface-variant font-medium flex items-center justify-center border-2 border-background transition-all duration-300" id="stepNode4">
                                 <span class="material-symbols-outlined text-[16px]">task_alt</span>
                             </div>
@@ -401,146 +401,6 @@
                 emptyUpcoming.classList.add('flex');
             }
         }, 800);
-    }
-
-    function simulateShopAccept() {
-        alert('ร้านค้ารับรถของคุณแล้ว นำรถเข้าไปล้างในช่องบริการเรียบร้อย');
-        if (currentActiveBooking) {
-            currentActiveBooking.status = 'arrived';
-            currentActiveBooking.step = 2;
-            localStorage.setItem('activeCustomerBooking', JSON.stringify(currentActiveBooking));
-            try {
-                let list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
-                const idx = list.findIndex(item => matchBookingId(item.bookingId, currentActiveBooking.bookingId) || matchBookingId(item.id, currentActiveBooking.id));
-                if (idx !== -1) {
-                    list[idx].status = 'arrived';
-                    list[idx].step = 2;
-                    localStorage.setItem('appBookingsList', JSON.stringify(list));
-                }
-            } catch (_) {}
-
-            // Sync to Supabase
-            const rawDbId = currentActiveBooking.rawBookingId || (currentActiveBooking.id && currentActiveBooking.id.length > 20 ? currentActiveBooking.id : null);
-            if (rawDbId) {
-                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
-                if (fetcher) {
-                    fetcher(`bookings?id=eq.${rawDbId}`, {
-                        method: 'PATCH',
-                        headers: { Prefer: 'return=minimal' },
-                        body: JSON.stringify({ status: 'arrived', updated_at: new Date().toISOString() })
-                    }).catch(()=>{});
-                }
-            }
-        }
-        setServiceStep(2);
-    }
-
-    function simulateShopStartWash() {
-        alert('ช่างเริ่มลงมือฉีดน้ำล้างและดูดฝุ่นทำความสะอาด');
-        if (currentActiveBooking) {
-            currentActiveBooking.status = 'washing';
-            currentActiveBooking.step = 3;
-            localStorage.setItem('activeCustomerBooking', JSON.stringify(currentActiveBooking));
-            try {
-                let list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
-                const idx = list.findIndex(item => matchBookingId(item.bookingId, currentActiveBooking.bookingId) || matchBookingId(item.id, currentActiveBooking.id));
-                if (idx !== -1) {
-                    list[idx].status = 'washing';
-                    list[idx].step = 3;
-                    localStorage.setItem('appBookingsList', JSON.stringify(list));
-                }
-            } catch (_) {}
-
-            // Sync to Supabase
-            const rawDbId = currentActiveBooking.rawBookingId || (currentActiveBooking.id && currentActiveBooking.id.length > 20 ? currentActiveBooking.id : null);
-            if (rawDbId) {
-                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
-                if (fetcher) {
-                    fetcher(`bookings?id=eq.${rawDbId}`, {
-                        method: 'PATCH',
-                        headers: { Prefer: 'return=minimal' },
-                        body: JSON.stringify({ status: 'washing', updated_at: new Date().toISOString() })
-                    }).catch(()=>{});
-                }
-            }
-        }
-        setServiceStep(3);
-    }
-
-    function simulateShopReadyForPickup() {
-        alert('🎉 ร้านค้าล้างรถของคุณเสร็จเรียบร้อยแล้ว!\nระบบได้ส่งการแจ้งเตือน "พร้อมรับรถ" มายังคุณ (รายการยังคงอยู่หน้านี้เพื่อรอคุณไปรับรถ)');
-        if (currentActiveBooking) {
-            currentActiveBooking.status = 'ready';
-            currentActiveBooking.step = 4;
-            localStorage.setItem('activeCustomerBooking', JSON.stringify(currentActiveBooking));
-            try {
-                let list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
-                const idx = list.findIndex(item => matchBookingId(item.bookingId, currentActiveBooking.bookingId) || matchBookingId(item.id, currentActiveBooking.id));
-                if (idx !== -1) {
-                    list[idx].status = 'ready';
-                    list[idx].step = 4;
-                    localStorage.setItem('appBookingsList', JSON.stringify(list));
-                }
-            } catch (_) {}
-
-            // Sync to Supabase
-            const rawDbId = currentActiveBooking.rawBookingId || (currentActiveBooking.id && currentActiveBooking.id.length > 20 ? currentActiveBooking.id : null);
-            if (rawDbId) {
-                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
-                if (fetcher) {
-                    fetcher(`bookings?id=eq.${rawDbId}`, {
-                        method: 'PATCH',
-                        headers: { Prefer: 'return=minimal' },
-                        body: JSON.stringify({ status: 'ready', updated_at: new Date().toISOString() })
-                    }).catch(()=>{});
-                }
-            }
-        }
-        setServiceStep(4);
-    }
-
-    // เจ้าของร้านกดยืนยันส่งมอบรถและรับเงิน -> ย้ายรายการไปฝั่งประวัติ
-    function shopConfirmHandover() {
-        if (!currentActiveBooking) return;
-        const nowTime = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
-        currentActiveBooking.status = 'completed';
-        currentActiveBooking.step = 5;
-        currentActiveBooking.completedAt = 'วันนี้, ' + nowTime;
-        localStorage.setItem('activeCustomerBooking', JSON.stringify(currentActiveBooking));
-
-        // Sync to Supabase bookings table
-        const rawDbId = currentActiveBooking.rawBookingId || (currentActiveBooking.id && currentActiveBooking.id.length > 20 ? currentActiveBooking.id : null);
-        if (rawDbId) {
-            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            if (client?.from) {
-                client.from('bookings').update({ status: 'completed', updated_at: new Date().toISOString() }).eq('id', rawDbId).then().catch(()=>{});
-            }
-        }
-
-        try {
-            let list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
-            const b = list.find(item => normBookingId(item.bookingId) === normBookingId(currentActiveBooking.bookingId));
-            if (b) {
-                b.status = 'completed';
-                b.step = 5;
-                b.completedAt = 'วันนี้, ' + nowTime;
-            } else {
-                list.unshift({ ...currentActiveBooking });
-            }
-            localStorage.setItem('appBookingsList', JSON.stringify(list));
-        } catch(e) {}
-
-        const completedShopName = currentActiveBooking.shopName;
-        const completedServiceName = currentActiveBooking.serviceName;
-
-        loadActiveBooking();
-        renderCompletedHistory();
-        switchTab('completed');
-        showCustomerToast('🎉 ส่งมอบรถเสร็จสิ้น! ข้อมูลย้ายไปยังประวัติแล้ว');
-
-        setTimeout(() => {
-            openReviewModal(completedShopName, completedServiceName);
-        }, 600);
     }
 
     // --- Review Modal Logic ---
@@ -1864,7 +1724,15 @@
                         matchBookingId(item.rawBookingId, b.rawBookingId)
                     );
                     if (found) {
+                        const preserveStatus = b.status;
+                        const preserveStep = b.step;
                         b = { ...b, ...found };
+                        if (preserveStatus && !['incoming', 'pending'].includes(preserveStatus)) {
+                            b.status = preserveStatus;
+                        }
+                        if (typeof preserveStep === 'number' && preserveStep > (b.step || 0)) {
+                            b.step = preserveStep;
+                        }
                     }
                 }
             } catch(e) {}
@@ -1943,6 +1811,8 @@
                 showCustomerToast('✨ รถของคุณล้างเสร็จแล้ว! สามารถเดินทางมารับรถได้เลย');
             } else if (b.status === 'washing') {
                 showCustomerToast('🧼 ร้านค้าเริ่มล้างทำความสะอาดรถของคุณแล้ว');
+            } else if (b.status === 'arrived') {
+                showCustomerToast('🚗 ร้านค้ารับรถของคุณแล้ว นำรถเข้าไปเตรียมล้าง');
             } else if (b.status === 'confirmed') {
                 showCustomerToast('✅ ร้านค้ายืนยันรับคิวของคุณเรียบร้อยแล้ว!');
             }
@@ -2321,6 +2191,30 @@
         }
     });
 
+    // BroadcastChannel for instant zero-latency cross-tab status syncing
+    try {
+        if (typeof BroadcastChannel !== 'undefined') {
+            const bc = new BroadcastChannel('carwash_booking_sync');
+            bc.onmessage = (ev) => {
+                if (ev.data && ev.data.type === 'STATUS_UPDATE') {
+                    const activeCustStr = localStorage.getItem('activeCustomerBooking');
+                    if (activeCustStr) {
+                        try {
+                            const ac = JSON.parse(activeCustStr);
+                            if (matchBookingId(ac.bookingId, ev.data.bookingId) || matchBookingId(ac.id, ev.data.bookingId) || matchBookingId(ac.rawBookingId, ev.data.bookingId)) {
+                                ac.status = ev.data.status;
+                                if (ev.data.step) ac.step = ev.data.step;
+                                localStorage.setItem('activeCustomerBooking', JSON.stringify(ac));
+                                loadActiveBooking();
+                            }
+                        } catch(_) {}
+                    }
+                    syncCustomerActiveQueue();
+                }
+            };
+        }
+    } catch (_) {}
+
     // Realtime Cloud Auto-Sync for Customer Queue Status (Background Worker)
     async function syncCustomerActiveQueue() {
         if (document.hidden) return;
@@ -2328,9 +2222,8 @@
         try {
             b = JSON.parse(localStorage.getItem('activeCustomerBooking') || 'null');
         } catch (_) {}
-        if (!b) return;
 
-        const targetId = b.rawBookingId || b.id || b.dbId;
+        const targetId = b ? (b.rawBookingId || b.id || b.dbId) : null;
         const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
         if (!fetcher) return;
 
@@ -2338,7 +2231,7 @@
             let query = (targetId && String(targetId).length > 20)
                 ? `bookings?id=eq.${targetId}&select=*,shops(name,phone_number)&limit=1`
                 : null;
-            if (!query && b.customer_id) {
+            if (!query && b?.customer_id) {
                 query = `bookings?customer_id=eq.${b.customer_id}&order=created_at.desc&select=*,shops(name,phone_number)&limit=1`;
             }
             if (!query) {
@@ -2348,8 +2241,9 @@
             if (!query) return;
 
             const res = await fetcher(query).catch(() => null);
-            if (Array.isArray(res) && res.length > 0) {
-                const dbRow = res[0];
+            const rows = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+            if (rows.length > 0) {
+                const dbRow = rows[0];
                 let vi = null;
                 try {
                     if (typeof dbRow.vehicle_info === 'string') vi = JSON.parse(dbRow.vehicle_info);
@@ -2367,14 +2261,42 @@
                     else if (cloudStatus === 'completed') cloudStep = 5;
                 }
 
-                const currentSt = (b.status || '').toLowerCase();
-                const currentSp = b.step;
+                if (!b) {
+                    if (['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready', 'refund_requested'].includes(cloudStatus)) {
+                        b = {
+                            bookingId: '#' + dbRow.id.substring(0, 8).toUpperCase(),
+                            rawBookingId: dbRow.id,
+                            id: dbRow.id,
+                            dbId: dbRow.id,
+                            shopId: dbRow.shop_id,
+                            shopName: dbRow.shops?.name || 'ร้านคาร์แคร์',
+                            shopPhone: dbRow.shops?.phone_number || '081-234-5678',
+                            serviceName: vi?.service_name || dbRow.service_name || 'ล้างสี ดูดฝุ่น',
+                            carName: vi?.brand ? `${vi.brand} (${vi.plate || ''})` : 'รถยนต์',
+                            carBrand: vi?.brand || 'รถยนต์',
+                            carPlate: vi?.plate || '-',
+                            dateTime: `${dbRow.booking_date || ''} ${dbRow.booking_time || ''}`.trim() || 'วันนี้',
+                            totalAmount: `฿ ${dbRow.total_price || 450}`,
+                            depositAmount: `฿ ${dbRow.deposit_amount || 50}`,
+                            status: cloudStatus,
+                            step: cloudStep
+                        };
+                        localStorage.setItem('activeCustomerBooking', JSON.stringify(b));
+                        loadActiveBooking();
+                        return;
+                    }
+                }
 
-                if ((cloudStatus && cloudStatus !== currentSt) || (cloudStep !== null && cloudStep !== currentSp)) {
-                    b.status = cloudStatus;
-                    if (cloudStep !== null) b.step = cloudStep;
-                    localStorage.setItem('activeCustomerBooking', JSON.stringify(b));
-                    loadActiveBooking();
+                if (b) {
+                    const currentSt = (b.status || '').toLowerCase();
+                    const currentSp = b.step;
+
+                    if ((cloudStatus && cloudStatus !== currentSt) || (cloudStep !== null && cloudStep !== currentSp)) {
+                        b.status = cloudStatus;
+                        if (cloudStep !== null) b.step = cloudStep;
+                        localStorage.setItem('activeCustomerBooking', JSON.stringify(b));
+                        loadActiveBooking();
+                    }
                 }
             }
         } catch (_) {}

@@ -1076,6 +1076,13 @@
             } catch(e) {}
         }
         try { window.dispatchEvent(new Event('storage')); } catch (_) {}
+        try {
+            if (typeof BroadcastChannel !== 'undefined') {
+                const bc = new BroadcastChannel('carwash_booking_sync');
+                bc.postMessage({ type: 'STATUS_UPDATE', bookingId, status: updates.status, step: updates.step });
+                bc.close();
+            }
+        } catch (_) {}
 
         // === Sync status to Supabase immediately ===
         const targetDbId = (bookingId && String(bookingId).length > 20 ? String(bookingId) : null) ||
@@ -1084,21 +1091,22 @@
                            (b?.rawBookingId && String(b.rawBookingId).length > 20 ? b.rawBookingId : null);
 
         if (targetDbId && updates.status) {
-            // Keep rich workflow status in database
+            // Check constraint "bookings_status_check":
+            // PostgreSQL only allows: 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'
             const dbStatusMap = {
                 'incoming': 'PENDING',
                 'pending': 'PENDING',
-                'confirmed': 'confirmed',
-                'arrived': 'arrived',
-                'washing': 'washing',
-                'ready': 'ready',
-                'completed': 'completed',
-                'declined': 'cancelled',
-                'no_show': 'cancelled',
-                'refund_requested': 'cancelled',
-                'refunded': 'cancelled'
+                'confirmed': 'CONFIRMED',
+                'arrived': 'CONFIRMED',
+                'washing': 'CONFIRMED',
+                'ready': 'CONFIRMED',
+                'completed': 'COMPLETED',
+                'declined': 'CANCELLED',
+                'no_show': 'CANCELLED',
+                'refund_requested': 'CANCELLED',
+                'refunded': 'CANCELLED'
             };
-            const dbStatus = dbStatusMap[updates.status] || updates.status;
+            const dbStatus = dbStatusMap[updates.status] || 'CONFIRMED';
 
             // Preserve rich sub-stage in vehicle_info JSON
             let rawVi = b?.raw_vehicle_info || b?.vehicle_info;
@@ -1111,6 +1119,8 @@
             vi.service_step = updates.step || (updates.status === 'confirmed' ? 1 : (updates.status === 'arrived' ? 2 : (updates.status === 'washing' ? 3 : (updates.status === 'ready' ? 4 : (updates.status === 'completed' ? 5 : 0)))));
             vi.service_status = updates.status;
             vi.updated_at = new Date().toISOString();
+
+            if (b) b.raw_vehicle_info = vi;
 
             const patchBody = {
                 status: dbStatus,
@@ -1129,14 +1139,14 @@
                 }
             } catch(err) {
                 console.warn('[owner-bookings] Supabase PATCH notice:', err);
-                // Fallback: SDK
-                try {
-                    const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                    if (client?.from) {
-                        await client.from('bookings').update(patchBody).eq('id', targetDbId);
-                    }
-                } catch(_) {}
             }
+            // SDK Fallback as secondary guarantee
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (client?.from) {
+                    await client.from('bookings').update(patchBody).eq('id', targetDbId);
+                }
+            } catch(_) {}
         }
     }
 
