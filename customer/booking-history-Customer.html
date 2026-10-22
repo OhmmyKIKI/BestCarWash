@@ -2039,10 +2039,22 @@
                                 if (vi.deposit_amount) depositAmount = `฿ ${Number(vi.deposit_amount).toFixed(2)}`;
                                 if (vi.slip_url) slipUrl = vi.slip_url;
                             } else {
-                                carName = String(item.vehicle_info);
+                                const raw = String(item.vehicle_info).trim();
+                                carName = raw;
+                                const pMatch = raw.match(/\(([^)]+)\)/);
+                                if (pMatch && pMatch[1]) {
+                                    carPlate = pMatch[1].trim();
+                                    carBrand = raw.substring(0, raw.indexOf('(')).trim() || 'รถยนต์';
+                                }
                             }
                         } catch (_) {
-                            carName = String(item.vehicle_info);
+                            const raw = String(item.vehicle_info).trim();
+                            carName = raw;
+                            const pMatch = raw.match(/\(([^)]+)\)/);
+                            if (pMatch && pMatch[1]) {
+                                carPlate = pMatch[1].trim();
+                                carBrand = raw.substring(0, raw.indexOf('(')).trim() || 'รถยนต์';
+                            }
                         }
                     }
 

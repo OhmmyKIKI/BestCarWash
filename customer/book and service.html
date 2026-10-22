@@ -1859,13 +1859,30 @@
             }
         } catch(e) {}
 
-        // Extract selected vehicle info
+        // Extract selected vehicle info with robust fallbacks
         const checkedCar = document.querySelector('input[name="selected_car"]:checked');
-        const carBrand = checkedCar ? checkedCar.value : 'Toyota Yaris';
-        const carPlateData = checkedCar ? (checkedCar.getAttribute('data-plate') || '') : '';
-        const plateParts = carPlateData.split('|');
-        const carPlate = plateParts[0]?.trim() || '1กก 9999';
-        const carSize = plateParts[1]?.trim() || 'รถเก๋ง';
+        let carBrand = 'Toyota Yaris';
+        let carPlate = '1กก 9999';
+        let carSize = 'รถเก๋ง';
+
+        if (checkedCar) {
+            carBrand = checkedCar.value || 'Toyota Yaris';
+            const carPlateData = checkedCar.getAttribute('data-plate') || '';
+            const plateParts = carPlateData.split('|');
+            carPlate = plateParts[0]?.trim() || '1กก 9999';
+            carSize = plateParts[1]?.trim() || 'รถเก๋ง';
+        } else {
+            // Fallback: check getCars()
+            const cars = typeof getCars === 'function' ? getCars() : [];
+            const primary = cars.find(c => c.isPrimary) || cars[0];
+            if (primary) {
+                carBrand = primary.brand || 'Toyota Yaris';
+                carPlate = primary.plate || '1กก 9999';
+                carSize = primary.size || 'รถเก๋ง';
+            }
+        }
+
+        const realServiceName = selectedServiceName || document.getElementById('summary-service-name')?.innerText?.trim() || 'ล้างสี ดูดฝุ่น';
 
         // Save active booking to localStorage for live tracking
         const activeBooking = {
@@ -1879,7 +1896,7 @@
             shopMapLink: currentShop?.map_link || currentShop?.map_url || '',
             customerName: customerName,
             customerPhone: customerPhone,
-            serviceName: selectedServiceName || 'ล้างสี ดูดฝุ่น',
+            serviceName: realServiceName,
             carBrand: carBrand,
             carPlate: carPlate,
             carSize: carSize,
@@ -1931,9 +1948,15 @@
                 // Embed rich booking metadata inside vehicle_info JSON so no data is ever lost
                 const vehicleJson = JSON.stringify({
                     brand: carBrand,
+                    model: carBrand,
                     plate: carPlate,
+                    plate_number: carPlate,
+                    license_plate: carPlate,
+                    carPlate: carPlate,
                     size: carSize,
-                    service_name: selectedServiceName || 'ล้างสี ดูดฝุ่น',
+                    car_size: carSize,
+                    service_name: realServiceName,
+                    serviceName: realServiceName,
                     customer_name: customerName,
                     customer_phone: customerPhone,
                     deposit_amount: 50,
@@ -2013,6 +2036,29 @@
                             l[idx].dbId = dbRow.id;
                             l[idx].bookingId = activeBooking.bookingId;
                             localStorage.setItem('appBookingsList', JSON.stringify(l));
+                        }
+                    } catch (_) {}
+
+                    // Also insert into booking_services table for relational integrity
+                    try {
+                        const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                        if (fetcher && validShopId && dbRow?.id) {
+                            const shopServices = await fetcher(`services?shop_id=eq.${validShopId}&select=id,name,price`).catch(() => []);
+                            let matchedSrv = null;
+                            if (Array.isArray(shopServices) && shopServices.length > 0) {
+                                matchedSrv = shopServices.find(s => s.name && (s.name.includes(realServiceName) || realServiceName.includes(s.name))) || shopServices[0];
+                            }
+                            if (matchedSrv?.id) {
+                                await fetcher('booking_services', {
+                                    method: 'POST',
+                                    headers: { 'Prefer': 'return=minimal' },
+                                    body: {
+                                        booking_id: dbRow.id,
+                                        service_id: matchedSrv.id,
+                                        price: parseFloat(selectedServicePrice) || 450
+                                    }
+                                }).catch(() => {});
+                            }
                         }
                     } catch (_) {}
                 } else {

@@ -616,7 +616,161 @@
     // =========================================================
     // MAP Supabase DB row → local booking object
     // =========================================================
-    function mapDbBooking(db, profileMap, serviceMap) {
+    function parseVehicleAndService(db, profileMap, serviceMap, existingItem = null) {
+        let carBrand = '';
+        let carPlate = '';
+        let carSize = '';
+        let serviceName = '';
+        let customerName = '';
+        let customerPhone = '';
+        let depositAmount = '';
+        let slipImage = '';
+
+        // 1. Try parsing vehicle_info as JSON object
+        let vi = null;
+        if (db.vehicle_info) {
+            if (typeof db.vehicle_info === 'object' && db.vehicle_info !== null) {
+                vi = db.vehicle_info;
+            } else if (typeof db.vehicle_info === 'string') {
+                const trimmed = db.vehicle_info.trim();
+                if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                    try {
+                        vi = JSON.parse(trimmed);
+                    } catch (_) {
+                        vi = null;
+                    }
+                }
+            }
+        }
+
+        if (vi && typeof vi === 'object') {
+            carBrand = vi.brand || vi.brand_model || vi.model || vi.vehicle_model || vi.carBrand || '';
+            carPlate = vi.plate || vi.plate_number || vi.license_plate || vi.carPlate || vi.car_plate || vi.plateNumber || '';
+            carSize  = vi.size || vi.car_size || vi.carSize || '';
+            serviceName = vi.service_name || vi.serviceName || vi.service || vi.package_name || '';
+            customerName = vi.customer_name || vi.customerName || vi.name || '';
+            customerPhone = vi.customer_phone || vi.customerPhone || vi.phone || '';
+            depositAmount = vi.deposit_amount || vi.depositAmount || vi.deposit || '';
+            slipImage = vi.slip_url || vi.slipUrl || vi.slip_image || vi.slipImage || '';
+        }
+
+        // 2. If vehicle_info is plain text (e.g. "City (กข 321) - รถกระบะ / รถใหญ่ (XL)" or "Toyota Yaris (1กก-1234) - S")
+        if (!vi && typeof db.vehicle_info === 'string' && db.vehicle_info.trim().length > 0) {
+            const raw = db.vehicle_info.trim();
+            // Try extracting plate inside parentheses: "City (กข 321) - รถใหญ่"
+            const pMatch = raw.match(/\(([^)]+)\)/);
+            if (pMatch && pMatch[1]) {
+                if (!carPlate) carPlate = pMatch[1].trim();
+                const beforeP = raw.substring(0, raw.indexOf('(')).trim();
+                if (beforeP && !carBrand) carBrand = beforeP;
+                const afterP = raw.substring(raw.indexOf(')') + 1).replace(/^[\s-]+/, '').trim();
+                if (afterP && !carSize) carSize = afterP;
+            } else if (raw.includes('-')) {
+                const parts = raw.split('-');
+                if (!carBrand) carBrand = parts[0]?.trim() || '';
+                if (!carSize && parts[1]) carSize = parts[1]?.trim() || '';
+            } else {
+                if (!carBrand) carBrand = raw;
+            }
+        }
+
+        // 3. Check existing local item (from appBookingsList or activeCustomerBooking)
+        if (existingItem) {
+            if (!carPlate && existingItem.carPlate && existingItem.carPlate !== '1กก 9999' && existingItem.carPlate !== 'กข 1234') {
+                carPlate = existingItem.carPlate;
+            }
+            if (!carBrand && existingItem.carBrand) carBrand = existingItem.carBrand;
+            if (!carSize && existingItem.carSize) carSize = existingItem.carSize;
+            if (!serviceName && existingItem.serviceName && existingItem.serviceName !== 'บริการล้างสี ดูดฝุ่น' && existingItem.serviceName !== 'บริการล้างรถ') {
+                serviceName = existingItem.serviceName;
+            }
+            if (!slipImage && existingItem.slipImage) slipImage = existingItem.slipImage;
+            if (!customerName && existingItem.customerName) customerName = existingItem.customerName;
+            if (!customerPhone && existingItem.customerPhone) customerPhone = existingItem.customerPhone;
+        }
+
+        // Cross-check activeCustomerBooking in localStorage
+        try {
+            const activeCust = localStorage.getItem('activeCustomerBooking');
+            if (activeCust) {
+                const ac = JSON.parse(activeCust);
+                const isMatch = normId(ac.bookingId) === normId(db.id) ||
+                                normId(ac.bookingId) === normId(db.id.slice(0, 8)) ||
+                                normId(ac.id) === normId(db.id) ||
+                                normId(ac.dbId) === normId(db.id);
+                if (isMatch) {
+                    if (!carPlate && ac.carPlate) carPlate = ac.carPlate;
+                    if (!carBrand && ac.carBrand) carBrand = ac.carBrand;
+                    if (!carSize && ac.carSize) carSize = ac.carSize;
+                    if (!serviceName && ac.serviceName) serviceName = ac.serviceName;
+                    if (!slipImage && ac.slipImage) slipImage = ac.slipImage;
+                }
+            }
+        } catch (_) {}
+
+        // Cross-check appBookingsList in localStorage
+        try {
+            const storedList = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
+            const found = storedList.find(b =>
+                normId(b.bookingId) === normId(db.id) ||
+                normId(b.bookingId) === normId(db.id.slice(0, 8)) ||
+                normId(b.id) === normId(db.id) ||
+                normId(b.dbId) === normId(db.id)
+            );
+            if (found) {
+                if (!carPlate && found.carPlate && found.carPlate !== '1กก 9999' && found.carPlate !== 'กข 1234') carPlate = found.carPlate;
+                if (!carBrand && found.carBrand) carBrand = found.carBrand;
+                if (!carSize && found.carSize) carSize = found.carSize;
+                if (!serviceName && found.serviceName && found.serviceName !== 'บริการล้างสี ดูดฝุ่น') serviceName = found.serviceName;
+                if (!slipImage && found.slipImage) slipImage = found.slipImage;
+            }
+        } catch (_) {}
+
+        // 4. Resolve serviceName from booking_services table join
+        if (!serviceName || serviceName === 'บริการล้างสี ดูดฝุ่น' || serviceName === 'บริการล้างรถ') {
+            const services = serviceMap ? (serviceMap[db.id] || []) : [];
+            const joinedNames = services.map(s => s.name || s.service_name || '').filter(Boolean).join(' + ');
+            if (joinedNames) {
+                serviceName = joinedNames;
+            }
+        }
+
+        // 5. Intelligent fallback for serviceName based on total_price
+        if (!serviceName || serviceName === 'บริการล้างสี ดูดฝุ่น' || serviceName === 'บริการล้างรถ') {
+            const price = Number(db.total_price || db.totalPrice || 0);
+            if (price >= 1200) serviceName = 'เคลือบแก้วเซรามิกพรีเมียม';
+            else if (price >= 800) serviceName = 'ขัดเคลือบสีรอบคัน & สปาภายใน';
+            else if (price >= 450) serviceName = 'พรีเมียมดีเทลลิ่ง';
+            else if (price >= 350) serviceName = 'ล้างสี & เคลือบแว็กซ์';
+            else if (price >= 250) serviceName = 'ล้างสี ดูดฝุ่น';
+            else if (price >= 150) serviceName = 'ล้างด่วนภายนอก';
+            else if (price > 0) serviceName = 'ล้างสี ดูดฝุ่น';
+            else serviceName = 'บริการล้างสี ดูดฝุ่น';
+        }
+
+        // 6. Final safety fallbacks for car
+        if (!carBrand) carBrand = 'รถยนต์';
+        if (!carPlate) carPlate = '1กก 9999';
+        if (!carSize) carSize = 'รถเก๋ง';
+
+        // 7. Customer profile details
+        const profile = profileMap ? profileMap[db.customer_id] : null;
+        if (!customerName) customerName = profile?.full_name || db.customer_name || 'ลูกค้า';
+        if (!customerPhone) customerPhone = db.customer_phone || profile?.phone_number || '089-123-4567';
+
+        return {
+            carBrand,
+            carPlate,
+            carSize,
+            serviceName,
+            customerName,
+            customerPhone,
+            depositAmount: depositAmount || db.deposit_amount || db.depositAmount || 50,
+            slipImage: slipImage || db.slip_url || db.slip_image || db.payment_slip || ''
+        };
+    }
+
+    function mapDbBooking(db, profileMap, serviceMap, existingItem = null) {
         const rawStatus = (db.status || 'PENDING').toUpperCase();
         // Map DB status → internal workflow status
         const statusMap = {
@@ -634,36 +788,7 @@
         };
         const mappedStatus = statusMap[rawStatus] || rawStatus.toLowerCase();
 
-        // Parse vehicle_info: stored as JSON string or plain text
-        let carBrand = 'Toyota Yaris', carPlate = '1กก 9999', carSize = 'รถเก๋ง';
-        let viCustomerName = null, viCustomerPhone = null, viServiceName = null, viSlip = null, viDeposit = null;
-        try {
-            const vi = db.vehicle_info ? JSON.parse(db.vehicle_info) : null;
-            if (vi && typeof vi === 'object') {
-                carBrand = vi.brand || vi.brand_model || vi.model || 'Toyota Yaris';
-                carPlate = vi.plate || vi.plate_number || '1กก 9999';
-                carSize  = vi.size || vi.car_size || 'รถเก๋ง';
-                viCustomerName = vi.customer_name;
-                viCustomerPhone = vi.customer_phone;
-                viServiceName = vi.service_name;
-                viSlip = vi.slip_url;
-                viDeposit = vi.deposit_amount;
-            } else if (typeof db.vehicle_info === 'string') {
-                carBrand = db.vehicle_info;
-            }
-        } catch(_) {
-            carBrand = db.vehicle_info || 'Toyota Yaris';
-        }
-
-        const profile = profileMap ? profileMap[db.customer_id] : null;
-        const customerName = viCustomerName || profile?.full_name || db.customer_name || 'ลูกค้า';
-        const customerPhone = viCustomerPhone || db.customer_phone || profile?.phone_number || '089-123-4567';
-
-        // Service names from booking_services join or embedded JSON
-        const services = serviceMap ? (serviceMap[db.id] || []) : [];
-        const serviceName = viServiceName || (services.length > 0
-            ? services.map(s => s.name || s.service_name || '').filter(Boolean).join(' + ')
-            : (db.service_name || 'บริการล้างสี ดูดฝุ่น'));
+        const parsed = parseVehicleAndService(db, profileMap, serviceMap, existingItem);
 
         // Format date+time nicely
         let dateTime = 'วันนี้ 10:00 น.';
@@ -681,25 +806,23 @@
         }
 
         const totalPrice = db.total_price || db.totalPrice || 450;
-        const depositAmount = viDeposit || db.deposit_amount || db.depositAmount || 50;
-        const slipImage = viSlip || db.slip_url || db.slip_image || db.payment_slip || '';
 
         return {
             bookingId: '#' + db.id.slice(0, 8).toUpperCase(),
             dbId: db.id,
             id: db.id,
-            customerName,
-            customerPhone,
-            carBrand,
-            carPlate,
-            carSize,
-            serviceName,
+            customerName: parsed.customerName,
+            customerPhone: parsed.customerPhone,
+            carBrand: parsed.carBrand,
+            carPlate: parsed.carPlate,
+            carSize: parsed.carSize,
+            serviceName: parsed.serviceName,
             dateTime,
-            depositAmount: '฿' + Number(depositAmount).toFixed(2),
+            depositAmount: '฿' + Number(parsed.depositAmount).toFixed(2),
             totalAmount: '฿' + Number(totalPrice).toFixed(2),
-            slipImage: slipImage,
+            slipImage: parsed.slipImage,
             refundReason: db.cancel_reason || db.refund_reason || '',
-            refundPromptPay: db.refund_promptpay || customerPhone,
+            refundPromptPay: db.refund_promptpay || parsed.customerPhone,
             status: mappedStatus,
             isNew: mappedStatus === 'incoming',
             createdAt: db.created_at
@@ -812,12 +935,14 @@
             let hasNewBooking = false;
 
             dbBookings.forEach(db => {
-                const mapped = mapDbBooking(db, profileMap, serviceMap);
                 const idx = list.findIndex(item =>
                     normId(item.dbId) === normId(db.id) ||
                     normId(item.id) === normId(db.id) ||
                     normId(item.bookingId) === normId(db.id.slice(0, 8))
                 );
+                const existingItem = idx !== -1 ? list[idx] : null;
+                const mapped = mapDbBooking(db, profileMap, serviceMap, existingItem);
+
                 if (idx === -1) {
                     list.unshift(mapped);
                     if (mapped.status === 'incoming') hasNewBooking = true;
@@ -829,8 +954,28 @@
                     const localOverrides = ['arrived', 'washing', 'ready', 'refund_requested', 'refunded', 'no_show'];
                     const shouldKeepLocal = localOverrides.includes(localStatus);
 
-                    // Update fields but preserve local workflow status if it's a sub-stage
+                    // Preserve accurate local carPlate and serviceName if DB mapping returned defaults!
+                    const oldPlate = list[idx].carPlate;
+                    const oldService = list[idx].serviceName;
+                    const oldBrand = list[idx].carBrand;
+                    const oldSize = list[idx].carSize;
+
+                    // Update fields
                     Object.assign(list[idx], mapped);
+
+                    if (oldPlate && oldPlate !== '1กก 9999' && oldPlate !== 'กข 1234' && (mapped.carPlate === '1กก 9999' || mapped.carPlate === 'กข 1234')) {
+                        list[idx].carPlate = oldPlate;
+                    }
+                    if (oldService && oldService !== 'บริการล้างสี ดูดฝุ่น' && oldService !== 'บริการล้างรถ' && (mapped.serviceName === 'บริการล้างสี ดูดฝุ่น' || mapped.serviceName === 'บริการล้างรถ')) {
+                        list[idx].serviceName = oldService;
+                    }
+                    if (oldBrand && oldBrand !== 'Toyota Yaris' && oldBrand !== 'รถยนต์' && (mapped.carBrand === 'Toyota Yaris' || mapped.carBrand === 'รถยนต์')) {
+                        list[idx].carBrand = oldBrand;
+                    }
+                    if (oldSize && oldSize !== 'รถเก๋ง' && mapped.carSize === 'รถเก๋ง') {
+                        list[idx].carSize = oldSize;
+                    }
+
                     if (shouldKeepLocal && ['incoming', 'confirmed'].includes(dbStatus)) {
                         list[idx].status = localStatus;
                     }

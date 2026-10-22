@@ -618,6 +618,41 @@
                         const slip = db.slip_url || db.slip_image || db.payment_slip || '';
                         const refund = db.refund_slip || db.refund_slip_url || '';
 
+                        // Parse vehicle_info (JSON or String)
+                        let carBrand = 'รถยนต์', carPlate = '-', carSize = 'รถเก๋ง', srvName = '';
+                        if (db.vehicle_info) {
+                            try {
+                                const vi = typeof db.vehicle_info === 'object' ? db.vehicle_info : JSON.parse(db.vehicle_info);
+                                if (vi && typeof vi === 'object') {
+                                    carBrand = vi.brand || vi.brand_model || vi.model || 'รถยนต์';
+                                    carPlate = vi.plate || vi.plate_number || vi.license_plate || vi.carPlate || '-';
+                                    carSize = vi.size || vi.car_size || 'รถเก๋ง';
+                                    srvName = vi.service_name || vi.serviceName || '';
+                                }
+                            } catch (_) {
+                                const raw = String(db.vehicle_info).trim();
+                                const pMatch = raw.match(/\(([^)]+)\)/);
+                                if (pMatch && pMatch[1]) {
+                                    carPlate = pMatch[1].trim();
+                                    carBrand = raw.substring(0, raw.indexOf('(')).trim() || 'รถยนต์';
+                                    carSize = raw.substring(raw.indexOf(')') + 1).replace(/^[\s-]+/, '').trim() || 'รถเก๋ง';
+                                } else {
+                                    carBrand = raw || 'รถยนต์';
+                                }
+                            }
+                        }
+
+                        if (!srvName) {
+                            const p = Number(db.total_price || 0);
+                            if (p >= 1200) srvName = 'เคลือบแก้วเซรามิกพรีเมียม';
+                            else if (p >= 800) srvName = 'ขัดเคลือบสีรอบคัน & สปาภายใน';
+                            else if (p >= 450) srvName = 'พรีเมียมดีเทลลิ่ง';
+                            else if (p >= 350) srvName = 'ล้างสี & เคลือบแว็กซ์';
+                            else if (p >= 250) srvName = 'ล้างสี ดูดฝุ่น';
+                            else if (p >= 150) srvName = 'ล้างด่วนภายนอก';
+                            else srvName = db.service_name || 'บริการล้างสี ดูดฝุ่น';
+                        }
+
                         if (!existing) {
                             list.push({
                                 bookingId: '#' + (db.id.slice(0, 8)),
@@ -625,10 +660,10 @@
                                 id: db.id,
                                 customerName: db.customer_name || 'ลูกค้า',
                                 customerPhone: db.customer_phone || '-',
-                                carBrand: db.vehicle_info || 'รถยนต์',
-                                carPlate: db.plate_number || '-',
-                                carSize: db.car_size || 'M',
-                                serviceName: db.service_name || 'บริการล้างรถ',
+                                carBrand: carBrand,
+                                carPlate: carPlate,
+                                carSize: carSize,
+                                serviceName: srvName,
                                 dateTime: db.booking_date || 'วันนี้',
                                 completedAt: db.completed_at || db.booking_date,
                                 depositAmount: '฿' + (db.deposit_amount || '50.00'),
@@ -639,6 +674,8 @@
                             });
                         } else {
                             existing.status = normalizedStatus;
+                            if (carPlate !== '-' && existing.carPlate === '-') existing.carPlate = carPlate;
+                            if (srvName && (!existing.serviceName || existing.serviceName === 'บริการล้างรถ')) existing.serviceName = srvName;
                             if (slip && !existing.slipImage) existing.slipImage = slip;
                             if (refund && !existing.refundSlip) existing.refundSlip = refund;
                         }
