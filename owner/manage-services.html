@@ -844,15 +844,18 @@
         const editInputPriceXL = document.getElementById('editInputPriceXL');
 
         let currentEditingCard = null;
-        let currentShopId = null;
+        let currentEditingServiceId = null;
+        let currentShopId = localStorage.getItem('currentShopId') || localStorage.getItem('selectedShopId') || null;
+        let currentUserId = localStorage.getItem('lastLoggedInUserId') || null;
         const serviceListEl = document.getElementById('service-list');
 
         // Instant Initial Setup for Navigation Tabs from Local Storage (0ms)
         try {
             const urlParams = new URLSearchParams(window.location.search);
             const paramShopId = urlParams.get('shop_id') || urlParams.get('id');
-            const initialShopId = (paramShopId && paramShopId.length > 20) ? paramShopId : (localStorage.getItem('currentShopId') || localStorage.getItem('selectedShopId') || 'bccb746a-18ba-4802-ac29-eb30b7af7dd1');
-            const initialShopName = localStorage.getItem('ownerShopName') || 'ohm Car Wash';
+            const initialShopId = (paramShopId && paramShopId.length > 20) ? paramShopId : (currentShopId || localStorage.getItem('currentShopId') || localStorage.getItem('selectedShopId'));
+            const initialShopName = localStorage.getItem('ownerShopName') || 'ร้านคาร์แคร์';
+            if (initialShopId) currentShopId = initialShopId;
             
             const initNavShop = document.getElementById('navShopDetailsLink');
             if (initNavShop && initialShopId) initNavShop.href = `manage-shop-details.html?shop_id=${initialShopId}`;
@@ -1055,37 +1058,40 @@
             }
         }
 
-        // Direct Supabase REST Helper: Robust fetch with anon key fallback (bypasses stale session/HTTP2 protocol resets)
+        // Direct Supabase REST Helper: Robust fetch with safeSupabaseRest integration
         async function fetchSupabaseRest(endpoint, options = {}) {
-            if (typeof SUPABASE_URL === 'undefined' || !SUPABASE_URL) return null;
-            const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+            const clientFetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+            if (clientFetcher) {
+                try {
+                    const res = await clientFetcher(endpoint, options);
+                    if (res && res.data !== undefined) return res.data;
+                    if (res !== null && res !== undefined) return res;
+                } catch (err) {
+                    console.warn('safeSupabaseRest error, trying fallback:', err);
+                }
+            }
+
+            const activeUrl = window.SUPABASE_URL || (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co');
+            const activeKey = window.SUPABASE_ANON_KEY || (typeof SUPABASE_ANON_KEY !== 'undefined' ? SUPABASE_ANON_KEY : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI');
+            const cleanEndpoint = endpoint.replace(/^\/+/, '');
+            const url = `${activeUrl}/rest/v1/${cleanEndpoint}`;
             const method = (options.method || 'GET').toUpperCase();
+
+            let token = null;
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (client?.auth) {
+                    const sess = await client.auth.getSession().catch(() => null);
+                    token = sess?.data?.session?.access_token;
+                }
+            } catch (_) {}
+
             let headers = {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'apikey': activeKey,
+                'Authorization': token ? `Bearer ${token}` : `Bearer ${activeKey}`,
                 'Content-Type': 'application/json',
                 ...(options.headers || {})
             };
-
-            // For mutation requests (POST/PATCH/DELETE), attach session token only if valid and not expired
-            if (method !== 'GET') {
-                try {
-                    const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                    if (client?.auth) {
-                        const sess = await client.auth.getSession().catch(() => null);
-                        const token = sess?.data?.session?.access_token;
-                        if (token) {
-                            try {
-                                const payload = JSON.parse(atob(token.split('.')[1]));
-                                const now = Math.floor(Date.now() / 1000);
-                                if (!payload.exp || payload.exp > now) {
-                                    headers['Authorization'] = `Bearer ${token}`;
-                                }
-                            } catch (_) {}
-                        }
-                    }
-                } catch (_) {}
-            }
 
             const fetchOpts = {
                 method: method,
@@ -1097,9 +1103,8 @@
 
             try {
                 let res = await fetch(url, fetchOpts);
-                // If token expired, unauthorized, or stream issue, retry immediately with anon key
-                if (!res.ok && (res.status === 401 || res.status === 403) && headers['Authorization'] !== `Bearer ${SUPABASE_ANON_KEY}`) {
-                    headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
+                if (!res.ok && (res.status === 401 || res.status === 403) && token) {
+                    headers['Authorization'] = `Bearer ${activeKey}`;
                     fetchOpts.headers = headers;
                     res = await fetch(url, fetchOpts);
                 }
@@ -1108,26 +1113,7 @@
                     const text = await res.text();
                     return text ? JSON.parse(text) : true;
                 }
-            } catch (err) {
-                // If network connection failed or protocol reset, retry cleanly with anon key
-                try {
-                    const fallbackOpts = {
-                        method: method,
-                        headers: {
-                            'apikey': SUPABASE_ANON_KEY,
-                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                            'Content-Type': 'application/json'
-                        }
-                    };
-                    if (options.body) fallbackOpts.body = fetchOpts.body;
-                    const res2 = await fetch(url, fallbackOpts);
-                    if (res2.ok) {
-                        if (method === 'DELETE') return true;
-                        const text2 = await res2.text();
-                        return text2 ? JSON.parse(text2) : true;
-                    }
-                } catch (_) {}
-            }
+            } catch (_) {}
             return null;
         }
 
@@ -1223,70 +1209,71 @@
                 duration_minutes: duration
             };
 
+            const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest || fetchSupabaseRest;
+
             try {
                 if (isValidUuid(srvId)) {
                     let updateSuccess = false;
-                    // Try saving with size columns first
-                    let patchRes = await fetchSupabaseRest(`services?id=eq.${encodeURIComponent(srvId)}`, {
+                    let patchRes = await fetcher(`services?id=eq.${encodeURIComponent(srvId)}`, {
                         method: 'PATCH',
                         headers: { 'Prefer': 'return=representation' },
                         body: fullPayload
                     });
-                    if (patchRes) {
-                        updateSuccess = true;
-                    } else {
-                        // Fallback to core payload if columns not yet added to DB
-                        patchRes = await fetchSupabaseRest(`services?id=eq.${encodeURIComponent(srvId)}`, {
-                            method: 'PATCH',
-                            headers: { 'Prefer': 'return=representation' },
-                            body: corePayload
-                        });
-                        if (patchRes) updateSuccess = true;
-                    }
-
-                    if (updateSuccess) {
+                    const patchList = Array.isArray(patchRes) ? patchRes : (patchRes?.data && Array.isArray(patchRes.data) ? patchRes.data : null);
+                    if (patchList && patchList.length > 0) {
+                        return patchList[0];
+                    } else if (patchRes === true || (patchRes && !Array.isArray(patchRes) && patchRes.id)) {
                         return { id: srvId, ...fullPayload };
                     }
-                } else if (shopId && isValidUuid(shopId)) {
+
+                    // Fallback to core payload if columns error
+                    patchRes = await fetcher(`services?id=eq.${encodeURIComponent(srvId)}`, {
+                        method: 'PATCH',
+                        headers: { 'Prefer': 'return=representation' },
+                        body: corePayload
+                    });
+                    const coreList = Array.isArray(patchRes) ? patchRes : (patchRes?.data && Array.isArray(patchRes.data) ? patchRes.data : null);
+                    if (coreList && coreList.length > 0) {
+                        return { ...coreList[0], ...fullPayload };
+                    } else if (patchRes === true || (patchRes && !Array.isArray(patchRes) && patchRes.id)) {
+                        return { id: srvId, ...fullPayload };
+                    }
+                }
+
+                // If not updated by UUID, check shopId
+                const targetShopId = shopId || currentShopId || localStorage.getItem('currentShopId') || localStorage.getItem('selectedShopId');
+                if (targetShopId && isValidUuid(targetShopId)) {
                     let existing = null;
-                    const check = await fetchSupabaseRest(`services?shop_id=eq.${shopId}&name=eq.${encodeURIComponent(name)}&select=id`);
-                    if (Array.isArray(check) && check.length > 0) {
-                        existing = check[0];
+                    const check = await fetcher(`services?shop_id=eq.${targetShopId}&name=eq.${encodeURIComponent(name)}&select=id`);
+                    const checkList = Array.isArray(check) ? check : (check?.data || []);
+                    if (checkList.length > 0) {
+                        existing = checkList[0];
                     }
 
                     if (existing?.id) {
-                        let patchRes = await fetchSupabaseRest(`services?id=eq.${encodeURIComponent(existing.id)}`, {
+                        let patchRes = await fetcher(`services?id=eq.${encodeURIComponent(existing.id)}`, {
                             method: 'PATCH',
+                            headers: { 'Prefer': 'return=representation' },
                             body: fullPayload
                         });
-                        if (!patchRes) {
-                            patchRes = await fetchSupabaseRest(`services?id=eq.${encodeURIComponent(existing.id)}`, {
-                                method: 'PATCH',
-                                body: corePayload
-                            });
-                        }
+                        const pList = Array.isArray(patchRes) ? patchRes : (patchRes?.data || []);
+                        if (pList.length > 0) return pList[0];
                         return { id: existing.id, ...fullPayload };
                     } else {
-                        let inserted = await fetchSupabaseRest('services', {
+                        let inserted = await fetcher('services', {
                             method: 'POST',
                             headers: { 'Prefer': 'return=representation' },
-                            body: { shop_id: shopId, ...fullPayload }
+                            body: { shop_id: targetShopId, ...fullPayload }
                         });
-                        if (!inserted) {
-                            inserted = await fetchSupabaseRest('services', {
-                                method: 'POST',
-                                headers: { 'Prefer': 'return=representation' },
-                                body: { shop_id: shopId, ...corePayload }
-                            });
-                        }
-                        if (Array.isArray(inserted) && inserted.length > 0) return inserted[0];
+                        const insList = Array.isArray(inserted) ? inserted : (inserted?.data || []);
+                        if (insList && insList.length > 0) return insList[0];
                         if (inserted && inserted.id) return inserted;
                     }
                 }
             } catch (e) {
                 console.warn('saveServiceToSupabase notice:', e?.message || e);
             }
-            return null;
+            return { id: srvId, ...fullPayload };
         }
 
         // Dual-Layer Loading: Cache-First (0ms Instant Display) + Robust Live Supabase Fetch
@@ -1405,6 +1392,7 @@
                 }
 
                 // 3. Render Fresh Data from Supabase
+                const isModalOpen = (editModal && !editModal.classList.contains('hidden')) || (addModal && !addModal.classList.contains('hidden'));
                 if (Array.isArray(dbServices) && dbServices.length > 0) {
                     if (!currentShopId && dbServices[0].shop_id) {
                         currentShopId = dbServices[0].shop_id;
@@ -1413,24 +1401,28 @@
 
                     const merged = mergeDbServicesWithLocal(dbServices);
                     localStorage.setItem('ownerServices', JSON.stringify(merged));
-                    serviceListEl.innerHTML = merged.map(s => createServiceCardHtml(s)).join('');
-                    updateCounts();
+                    if (!isModalOpen) {
+                        serviceListEl.innerHTML = merged.map(s => createServiceCardHtml(s)).join('');
+                        updateCounts();
+                    }
                     setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
                 } else if (Array.isArray(dbServices) && dbServices.length === 0) {
                     // Shop exists but has 0 services in database
                     localStorage.setItem('ownerServices', JSON.stringify([]));
-                    serviceListEl.innerHTML = `
-                        <div id="services-empty-state" class="glass-card rounded-2xl p-10 text-center flex flex-col items-center justify-center">
-                            <span class="material-symbols-outlined text-[48px] text-outline/50 mb-3">inventory_2</span>
-                            <p class="font-bold text-on-surface">ยังไม่มีรายการบริการ</p>
-                            <p class="text-xs text-outline mt-1 mb-4">คุณสามารถเพิ่มบริการใหม่เพื่อเปิดให้ลูกค้าเลือกจองได้</p>
-                            <button type="button" onclick="document.getElementById('openAddModalBtn').click()" class="px-4 py-2 bg-secondary text-on-secondary-container rounded-xl font-bold text-sm flex items-center gap-1.5 shadow-md shadow-secondary/20">
-                                <span class="material-symbols-outlined text-[18px]">add_circle</span>
-                                <span>เพิ่มบริการแรกของคุณ</span>
-                            </button>
-                        </div>
-                    `;
-                    updateCounts();
+                    if (!isModalOpen) {
+                        serviceListEl.innerHTML = `
+                            <div id="services-empty-state" class="glass-card rounded-2xl p-10 text-center flex flex-col items-center justify-center">
+                                <span class="material-symbols-outlined text-[48px] text-outline/50 mb-3">inventory_2</span>
+                                <p class="font-bold text-on-surface">ยังไม่มีรายการบริการ</p>
+                                <p class="text-xs text-outline mt-1 mb-4">คุณสามารถเพิ่มบริการใหม่เพื่อเปิดให้ลูกค้าเลือกจองได้</p>
+                                <button type="button" onclick="document.getElementById('openAddModalBtn').click()" class="px-4 py-2 bg-secondary text-on-secondary-container rounded-xl font-bold text-sm flex items-center gap-1.5 shadow-md shadow-secondary/20">
+                                    <span class="material-symbols-outlined text-[18px]">add_circle</span>
+                                    <span>เพิ่มบริการแรกของคุณ</span>
+                                </button>
+                            </div>
+                        `;
+                        updateCounts();
+                    }
                     setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
                 } else {
                     // Network failure (returned null) -> keep local cache and notify
@@ -1557,6 +1549,7 @@
         // Edit Modal Open / Close
         const showEditModal = (card) => {
             currentEditingCard = card;
+            currentEditingServiceId = card.getAttribute('data-id') || null;
 
             const iconEl = card.querySelector('.card-icon');
             const currentIcon = iconEl ? iconEl.textContent.trim() : 'local_car_wash';
@@ -1597,6 +1590,18 @@
             }, 10);
         };
 
+        // Live calculation of S, L, XL in Edit Modal when Price M is changed
+        if (editInputPriceM) {
+            editInputPriceM.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value) || 0;
+                if (val > 0) {
+                    editInputPriceS.value = Math.round(val * 0.8);
+                    editInputPriceL.value = Math.round(val * 1.2);
+                    editInputPriceXL.value = Math.round(val * 1.5);
+                }
+            });
+        }
+
         const hideEditModal = () => {
             editModal.classList.add('opacity-0');
             editModalContent.classList.add('scale-95');
@@ -1604,6 +1609,7 @@
                 editModal.classList.add('hidden');
                 editModal.classList.remove('flex');
                 currentEditingCard = null;
+                currentEditingServiceId = null;
             }, 300);
         };
 
@@ -1622,9 +1628,62 @@
             }
         });
 
+        // Inline Price Input editing delegation with debounced background sync
+        let inlinePriceDebounce = null;
+        if (serviceListEl) {
+            serviceListEl.addEventListener('input', (e) => {
+                if (e.target.classList.contains('price-input')) {
+                    const card = e.target.closest('.service-card');
+                    if (!card) return;
+
+                    syncCurrentCardsToLocalStorage();
+
+                    clearTimeout(inlinePriceDebounce);
+                    inlinePriceDebounce = setTimeout(() => {
+                        const sId = card.getAttribute('data-id');
+                        const sTitle = card.querySelector('.card-title')?.textContent.trim() || '';
+                        const sDesc = card.querySelector('.card-desc')?.textContent.trim() || '';
+                        const sIcon = card.querySelector('.card-icon')?.textContent.trim() || 'local_car_wash';
+                        const sDurText = card.querySelector('.card-duration')?.textContent.trim() || '30 นาที';
+                        const sDurMinutes = parseInt(sDurText) || 30;
+
+                        const sS = parseFloat(card.querySelector('.price-s')?.value) || 0;
+                        const sM = parseFloat(card.querySelector('.price-m')?.value) || 0;
+                        const sL = parseFloat(card.querySelector('.price-l')?.value) || 0;
+                        const sXL = parseFloat(card.querySelector('.price-xl')?.value) || 0;
+
+                        const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                        const shopIdToUse = currentShopId || localStorage.getItem('currentShopId') || localStorage.getItem('selectedShopId');
+                        saveServiceToSupabase(client, sId, {
+                            name: sTitle,
+                            description: sDesc,
+                            price: sM || sS || 250,
+                            price_s: sS,
+                            price_m: sM,
+                            price_l: sL,
+                            price_xl: sXL,
+                            duration_minutes: sDurMinutes,
+                            icon: sIcon
+                        }, shopIdToUse).then(saved => {
+                            if (saved?.id && card) {
+                                card.setAttribute('data-id', saved.id);
+                                syncCurrentCardsToLocalStorage();
+                            }
+                        });
+                    }, 800);
+                }
+            });
+        }
+
         // Save Edit Changes with Optimistic UI (0ms Instant Feedback) & Supabase Sync
         confirmEditBtn.addEventListener('click', () => {
-            if (!currentEditingCard) return;
+            let targetCard = currentEditingCard;
+            const serviceId = currentEditingServiceId || targetCard?.getAttribute('data-id');
+
+            // If targetCard was detached or replaced by async background re-render, resolve it fresh
+            if ((!targetCard || !document.body.contains(targetCard)) && serviceId) {
+                targetCard = serviceListEl.querySelector(`.service-card[data-id="${serviceId}"]`);
+            }
 
             const newName = editInputName.value.trim();
             if (!newName) {
@@ -1641,32 +1700,32 @@
             const newPriceXL = parseFloat(editInputPriceXL.value) || Math.round(newPriceM * 1.5);
             const durMinutes = parseInt(newDuration) || 30;
 
-            const serviceId = currentEditingCard.getAttribute('data-id');
-
             // 1. Immediately update UI (0ms instant response)
-            const iconEl = currentEditingCard.querySelector('.card-icon');
-            if (iconEl) iconEl.textContent = newIcon;
+            if (targetCard) {
+                const iconEl = targetCard.querySelector('.card-icon');
+                if (iconEl) iconEl.textContent = newIcon;
 
-            const titleEl = currentEditingCard.querySelector('.card-title');
-            if (titleEl) titleEl.textContent = newName;
+                const titleEl = targetCard.querySelector('.card-title');
+                if (titleEl) titleEl.textContent = newName;
 
-            const descEl = currentEditingCard.querySelector('.card-desc');
-            if (descEl) descEl.textContent = newDesc;
+                const descEl = targetCard.querySelector('.card-desc');
+                if (descEl) descEl.textContent = newDesc;
 
-            const durationEl = currentEditingCard.querySelector('.card-duration');
-            if (durationEl) durationEl.textContent = newDuration;
+                const durationEl = targetCard.querySelector('.card-duration');
+                if (durationEl) durationEl.textContent = newDuration;
 
-            const pSInput = currentEditingCard.querySelector('.price-s') || currentEditingCard.querySelectorAll('.price-input')[0];
-            const pMInput = currentEditingCard.querySelector('.price-m') || currentEditingCard.querySelectorAll('.price-input')[1];
-            const pLInput = currentEditingCard.querySelector('.price-l') || currentEditingCard.querySelectorAll('.price-input')[2];
-            const pXLInput = currentEditingCard.querySelector('.price-xl') || currentEditingCard.querySelectorAll('.price-input')[3];
+                const pSInput = targetCard.querySelector('.price-s') || targetCard.querySelectorAll('.price-input')[0];
+                const pMInput = targetCard.querySelector('.price-m') || targetCard.querySelectorAll('.price-input')[1];
+                const pLInput = targetCard.querySelector('.price-l') || targetCard.querySelectorAll('.price-input')[2];
+                const pXLInput = targetCard.querySelector('.price-xl') || targetCard.querySelectorAll('.price-input')[3];
 
-            if (pSInput) pSInput.value = newPriceS;
-            if (pMInput) pMInput.value = newPriceM;
-            if (pLInput) pLInput.value = newPriceL;
-            if (pXLInput) pXLInput.value = newPriceXL;
+                if (pSInput) pSInput.value = newPriceS;
+                if (pMInput) pMInput.value = newPriceM;
+                if (pLInput) pLInput.value = newPriceL;
+                if (pXLInput) pXLInput.value = newPriceXL;
+            }
 
-            const cardRef = currentEditingCard;
+            const cardRef = targetCard;
             hideEditModal();
             syncCurrentCardsToLocalStorage();
 
