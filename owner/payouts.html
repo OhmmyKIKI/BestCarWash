@@ -8,8 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <!-- Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-client.js"></script>
-<script src="../supabase-client.js"></script>
+<script src="supabase-client.js?v=2.1"></script>
 <script>
     if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
         var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
@@ -119,7 +118,7 @@
 
         <!-- Right: Action Buttons -->
         <div class="flex items-center gap-2.5 sm:gap-3">
-            <button type="button" onclick="document.getElementById('openBankModalBtn')?.click()" class="h-11 sm:h-12 px-4 sm:px-5 rounded-xl bg-surface-container hover:bg-surface-variant border border-outline-variant/40 text-on-surface text-sm sm:text-base font-semibold flex items-center gap-2 transition-all hover:border-secondary/40 active:scale-95" title="แก้ไขบัญชี">
+            <button type="button" onclick="var b = document.getElementById('openBankModalBtn'); if (b) b.click();" class="h-11 sm:h-12 px-4 sm:px-5 rounded-xl bg-surface-container hover:bg-surface-variant border border-outline-variant/40 text-on-surface text-sm sm:text-base font-semibold flex items-center gap-2 transition-all hover:border-secondary/40 active:scale-95" title="แก้ไขบัญชี">
                 <span class="material-symbols-outlined text-[20px] text-secondary">edit</span>
                 <span>แก้ไขบัญชี</span>
             </button>
@@ -348,6 +347,20 @@
     }
 
     // ==========================================
+    // UTILITY & RESILIENT REST HELPERS
+    // ==========================================
+    function isValidUuid(id) {
+        return typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    }
+
+    const callRest = (endpoint, options = {}) => {
+        if (typeof window.safeSupabaseRest === 'function') return window.safeSupabaseRest(endpoint, options);
+        if (typeof window.fetchSupabaseRest === 'function') return window.fetchSupabaseRest(endpoint, options);
+        if (typeof safeSupabaseRest === 'function') return safeSupabaseRest(endpoint, options);
+        return Promise.resolve({ data: null, error: new Error('REST helper not loaded') });
+    };
+
+    // ==========================================
     // INDEXEDDB HELPER FOR HIGH-RES QR PERSISTENCE
     // ==========================================
     const IDB_NAME = 'BestCarWashMedia';
@@ -357,6 +370,14 @@
         return new Promise((resolve) => {
             if (typeof indexedDB === 'undefined') return resolve(null);
             try {
+                let resolved = false;
+                const done = (val) => {
+                    if (!resolved) {
+                        resolved = true;
+                        resolve(val);
+                    }
+                };
+                const timer = setTimeout(() => done(null), 1000);
                 const req = indexedDB.open(IDB_NAME, 2);
                 req.onupgradeneeded = (e) => {
                     const db = e.target.result;
@@ -364,8 +385,18 @@
                         db.createObjectStore(IDB_STORE);
                     }
                 };
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = () => resolve(null);
+                req.onsuccess = () => {
+                    clearTimeout(timer);
+                    done(req.result);
+                };
+                req.onerror = () => {
+                    clearTimeout(timer);
+                    done(null);
+                };
+                req.onblocked = () => {
+                    clearTimeout(timer);
+                    done(null);
+                };
             } catch (_) {
                 resolve(null);
             }
@@ -420,33 +451,43 @@
             reader.onload = function(e) {
                 const img = new Image();
                 img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const maxDim = 350; // Optimized size to prevent Supabase payload limit errors
-                    let width = img.width;
-                    let height = img.height;
-                    if (width > height && width > maxDim) {
-                        height = Math.round((height * maxDim) / width);
-                        width = maxDim;
-                    } else if (height > maxDim) {
-                        width = Math.round((width * maxDim) / height);
-                        height = maxDim;
-                    }
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    const compressed = canvas.toDataURL('image/jpeg', 0.75);
+                    try {
+                        const canvas = document.createElement('canvas');
+                        const maxDim = 350; // Optimized size to prevent Supabase payload limit errors
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > height && width > maxDim) {
+                            height = Math.round((height * maxDim) / width);
+                            width = maxDim;
+                        } else if (height > maxDim) {
+                            width = Math.round((width * maxDim) / height);
+                            height = maxDim;
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        const compressed = canvas.toDataURL('image/jpeg', 0.75);
 
-                    currentQrBase64 = compressed;
-                    const preview = document.getElementById('qrPreview');
-                    const placeholder = document.getElementById('qrPlaceholder');
-                    if (preview && placeholder) {
-                        preview.src = compressed;
-                        preview.classList.remove('hidden');
-                        placeholder.classList.add('hidden');
+                        currentQrBase64 = compressed;
+                        const preview = document.getElementById('qrPreview');
+                        const placeholder = document.getElementById('qrPlaceholder');
+                        if (preview && placeholder) {
+                            preview.src = compressed;
+                            preview.classList.remove('hidden');
+                            placeholder.classList.add('hidden');
+                        }
+                    } catch(err) {
+                        console.warn('Canvas render notice:', err);
                     }
                 };
+                img.onerror = function() {
+                    console.warn('Image load notice');
+                };
                 img.src = e.target.result;
+            };
+            reader.onerror = function() {
+                console.warn('FileReader notice');
             };
             reader.readAsDataURL(file);
         }
@@ -507,6 +548,21 @@
                 placeholder.classList.add('hidden');
             }
             updateQrDisplay(savedQr);
+        } else {
+            // Asynchronous fallback check from IndexedDB
+            getIDBMedia('ownerQrCode').then(idbQr => {
+                if (idbQr && !currentQrBase64) {
+                    currentQrBase64 = idbQr;
+                    const preview = document.getElementById('qrPreview');
+                    const placeholder = document.getElementById('qrPlaceholder');
+                    if (preview && placeholder) {
+                        preview.src = idbQr;
+                        preview.classList.remove('hidden');
+                        placeholder.classList.add('hidden');
+                    }
+                    updateQrDisplay(idbQr);
+                }
+            }).catch(() => {});
         }
     }
 
@@ -624,13 +680,15 @@
                 e.preventDefault();
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
                 const bankName = document.getElementById('bankName')?.value || 'ธนาคารกสิกรไทย (KBank)';
-                const accNum = document.getElementById('accountNumber')?.value.trim();
-                const accName = document.getElementById('accountName')?.value.trim();
+                const accNum = document.getElementById('accountNumber')?.value?.trim() || '';
+                const accName = document.getElementById('accountName')?.value?.trim() || '';
                 const qrImg = currentQrBase64 || (currentUserId ? localStorage.getItem('ownerQrCode_' + currentUserId) : null) || localStorage.getItem('ownerQrCode');
 
                 const saveBtn = document.getElementById('saveBankBtn');
-                saveBtn.disabled = true;
-                saveBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> กำลังบันทึก...';
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> กำลังบันทึก...';
+                }
 
                 try {
                     // 1. Save user-scoped keys
@@ -670,7 +728,7 @@
                         setIDBMedia('shopPromptPayQr', qrImg);
                     }
 
-                    // 3. Update UI immediately
+                    // 5. Update UI immediately
                     const dispTitle = document.getElementById('displayBankTitle');
                     if (dispTitle) dispTitle.textContent = bankName;
                     const dispAcc = document.getElementById('displayAccountNumber');
@@ -680,7 +738,7 @@
                     if (qrImg) updateQrDisplay(qrImg);
                     updateBankBrandStyle(bankName);
 
-                    // 4. Save to Supabase auth user_metadata if authenticated
+                    // 6. Save to Supabase auth user_metadata if authenticated
                     if (client?.auth && currentUserId) {
                         try {
                             const cleanBankInfo = {
@@ -699,23 +757,27 @@
                         }
                     }
 
-                    // 5. Save QR Code & Bank Info to Supabase Database (shops.description metadata bridge)
-                    let targetShopId = (currentShopId && currentShopId !== 'local-shop') ? currentShopId : null;
-                    if (!targetShopId && currentUserId) {
+                    // 7. Save QR Code & Bank Info to Supabase Database (shops.description metadata bridge)
+                    let targetShopId = (currentShopId && isValidUuid(currentShopId)) ? currentShopId : null;
+                    if (!targetShopId && currentUserId && isValidUuid(currentUserId)) {
                         try {
-                            const { data: userShops } = await safeSupabaseRest(`shops?select=id,description&owner_id=eq.${currentUserId}&limit=1`);
+                            const { data: userShops } = await callRest(`shops?select=id,description&owner_id=eq.${currentUserId}&limit=1`);
                             if (userShops && userShops.length > 0) {
                                 targetShopId = userShops[0].id;
                                 currentShopId = targetShopId;
                             }
                         } catch (_) {}
                     }
+                    if (!targetShopId) {
+                        const sId = localStorage.getItem('ownerShopId') || localStorage.getItem('selectedShopId') || localStorage.getItem('currentShopId');
+                        if (isValidUuid(sId)) targetShopId = sId;
+                    }
 
-                    if (targetShopId) {
+                    if (targetShopId && isValidUuid(targetShopId)) {
                         try {
                             let existingDesc = '';
                             let existingMeta = {};
-                            const { data: sData } = await safeSupabaseRest(`shops?select=id,description&id=eq.${targetShopId}&limit=1`);
+                            const { data: sData } = await callRest(`shops?select=id,description&id=eq.${targetShopId}&limit=1`);
                             if (sData && sData.length > 0) {
                                 existingDesc = sData[0].description || '';
                                 const match = existingDesc.match(/<!--BCW_META:([\s\S]*?)-->/);
@@ -743,12 +805,12 @@
                                 description: newDescWithMeta,
                                 updated_at: new Date().toISOString()
                             };
-                            const digits = accNum.replace(/[^0-9]/g, '');
+                            const digits = accNum ? accNum.replace(/[^0-9]/g, '') : '';
                             if (digits.length >= 9 && digits.length <= 13) {
                                 patchPayload.phone_number = digits;
                             }
 
-                            await safeSupabaseRest(`shops?id=eq.${targetShopId}`, {
+                            await callRest(`shops?id=eq.${targetShopId}`, {
                                 method: 'PATCH',
                                 headers: { 'Prefer': 'return=representation' },
                                 body: JSON.stringify(patchPayload)
@@ -780,8 +842,10 @@
                     closeModal();
                     showToast('บันทึกข้อมูลเรียบร้อยแล้ว');
                 } finally {
-                    saveBtn.disabled = false;
-                    saveBtn.innerHTML = 'บันทึกข้อมูลธนาคาร';
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = 'บันทึกข้อมูลธนาคาร';
+                    }
                 }
             });
         }
@@ -795,26 +859,26 @@
         try {
             let shop = null;
 
-            // Step 1: Lookup shop by owner_id in Supabase via safeSupabaseRest
-            if (userId) {
-                const { data } = await safeSupabaseRest(`shops?select=id,name,description,phone_number&owner_id=eq.${userId}&limit=1`);
+            // Step 1: Lookup shop by owner_id in Supabase via callRest
+            if (userId && isValidUuid(userId)) {
+                const { data } = await callRest(`shops?select=id,name,description,phone_number&owner_id=eq.${userId}&limit=1`);
                 if (data && data.length > 0) shop = data[0];
             }
 
-            // Step 2: Fallback lookup by stored shop ID via safeSupabaseRest
+            // Step 2: Fallback lookup by stored shop ID via callRest
             if (!shop) {
                 const storedShopId = localStorage.getItem('currentShopId') || localStorage.getItem('selectedShopId') || localStorage.getItem('ownerShopId');
-                if (storedShopId) {
-                    const { data } = await safeSupabaseRest(`shops?select=id,name,description,phone_number&id=eq.${storedShopId}&limit=1`);
+                if (storedShopId && isValidUuid(storedShopId)) {
+                    const { data } = await callRest(`shops?select=id,name,description,phone_number&id=eq.${storedShopId}&limit=1`);
                     if (data && data.length > 0) shop = data[0];
                 }
             }
 
-            // Step 3: Fallback lookup by shop name in Supabase via safeSupabaseRest
+            // Step 3: Fallback lookup by shop name in Supabase via callRest
             if (!shop) {
                 const storedShopName = localStorage.getItem('ownerShopName') || localStorage.getItem('userShopName');
                 if (storedShopName) {
-                    const { data } = await safeSupabaseRest(`shops?select=id,name,description,phone_number&name=ilike.*${encodeURIComponent(storedShopName)}*&limit=1`);
+                    const { data } = await callRest(`shops?select=id,name,description,phone_number&name=ilike.*${encodeURIComponent(storedShopName)}*&limit=1`);
                     if (data && data.length > 0) shop = data[0];
                 }
             }
@@ -899,11 +963,11 @@
 
             currentShopId = shop.id;
 
-            // Fetch live bookings for this specific shop from Supabase via safeSupabaseRest
+            // Fetch live bookings for this specific shop from Supabase via callRest
             let bookings = [];
-            if (shop.id && shop.id !== 'local-shop') {
+            if (shop.id && isValidUuid(shop.id)) {
                 try {
-                    const { data, error } = await safeSupabaseRest(`bookings?shop_id=eq.${shop.id}&order=created_at.desc`);
+                    const { data, error } = await callRest(`bookings?shop_id=eq.${shop.id}&order=created_at.desc`);
                     if (!error && Array.isArray(data)) {
                         bookings = data;
                     }
@@ -1085,6 +1149,5 @@
 </script>
 </body>
 </html>
-
 
 

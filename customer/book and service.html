@@ -2593,14 +2593,15 @@
 
             // Sync live shop
             try {
+                const isValidUuid = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
                 let dbShop = null;
-                if (paramShopId) {
+                if (paramShopId && isValidUuid(paramShopId)) {
                     const shops = await fetcher(`shops?id=eq.${paramShopId}&limit=1`);
                     if (Array.isArray(shops) && shops.length > 0) dbShop = shops[0];
                 }
                 if (!dbShop) {
                     const cachedShopId = localStorage.getItem('currentShopId');
-                    if (cachedShopId) {
+                    if (cachedShopId && isValidUuid(cachedShopId)) {
                         const shops = await fetcher(`shops?id=eq.${cachedShopId}&limit=1`);
                         if (Array.isArray(shops) && shops.length > 0) dbShop = shops[0];
                     }
