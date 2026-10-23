@@ -157,7 +157,8 @@ function getSupabaseClient() {
 
                     // Proactive Guard: If header is bloated (> 1200 chars), route directly through Serverless Proxy
                     // This guarantees ZERO HTTP 494 on Vercel and ZERO ERR_CONNECTION_RESET on Thai ISPs
-                    if (isAuthLarge && typeof window !== 'undefined' && window.location) {
+                    const canUseHttpProxy = typeof window !== 'undefined' && window.location && window.location.protocol && window.location.protocol.startsWith('http') && window.location.origin && window.location.origin !== 'null';
+                    if (isAuthLarge && canUseHttpProxy) {
                         try {
                             let cleanEndpoint = strUrl;
                             if (cleanEndpoint.includes('/rest/v1/')) {
@@ -193,7 +194,7 @@ function getSupabaseClient() {
 
                     let res = await fetch(url, { ...options, credentials: 'omit' }).catch(() => null);
                     // If Vercel returns 494/431 (Header Too Large) or direct connection reset, failover to Serverless Proxy
-                    if (!res || !res.ok && (res.status === 494 || res.status === 431)) {
+                    if ((!res || !res.ok && (res.status === 494 || res.status === 431)) && canUseHttpProxy) {
                         try {
                             let cleanEndpoint = strUrl;
                             if (cleanEndpoint.includes('/rest/v1/')) {
@@ -344,20 +345,23 @@ async function triggerUserMetadataCleanup() {
 
         if (foundBloat) {
             console.log('[Supabase] Purging bloated metadata keys:', Object.keys(purgedMeta));
-            // First attempt via Serverless Proxy (immune to HTTP 494 and ISP reset)
-            try {
-                const proxyPurge = await fetch('/api/proxy', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'omit',
-                    body: JSON.stringify({ action: 'purge_metadata', token: data?.session?.access_token })
-                });
-                if (proxyPurge.ok) {
-                    await client.auth.refreshSession().catch(() => null);
-                    console.log('[Supabase] Auth metadata purged via Serverless Proxy successfully');
-                    return;
-                }
-            } catch (_) {}
+            // First attempt via Serverless Proxy (only in HTTP/HTTPS environment)
+            const canProxy = typeof window !== 'undefined' && window.location && window.location.protocol && window.location.protocol.startsWith('http') && window.location.origin && window.location.origin !== 'null';
+            if (canProxy) {
+                try {
+                    const proxyPurge = await fetch('/api/proxy', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'omit',
+                        body: JSON.stringify({ action: 'purge_metadata', token: data?.session?.access_token })
+                    });
+                    if (proxyPurge.ok) {
+                        await client.auth.refreshSession().catch(() => null);
+                        console.log('[Supabase] Auth metadata purged via Serverless Proxy successfully');
+                        return;
+                    }
+                } catch (_) {}
+            }
 
             await client.auth.updateUser({ data: purgedMeta }).catch(e => console.warn('[Supabase] updateUser cleanup notice:', e));
             await client.auth.refreshSession().catch(() => null);
@@ -427,10 +431,11 @@ async function safeSupabaseRest(endpoint, options = {}) {
     const isTokenLarge = token && token.length > 2500;
 
     const candidateBases = [];
-    if (typeof window !== 'undefined' && window.location.origin) {
+    const isHttp = typeof window !== 'undefined' && window.location && window.location.protocol && window.location.protocol.startsWith('http') && window.location.origin && window.location.origin !== 'null';
+    if (isHttp) {
         // Primary Tunnel: Serverless Proxy (Zero-494 guarantee, payload in body)
         candidateBases.push('/api/proxy');
-        if (window.location.hostname.includes('vercel.app')) {
+        if (window.location.hostname && window.location.hostname.includes('vercel.app')) {
             candidateBases.push(window.location.origin + '/api/supabase');
         }
     }

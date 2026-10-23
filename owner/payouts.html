@@ -377,10 +377,29 @@
         const db = await openMediaDB();
         if (!db) return;
         try {
+            if (!db.objectStoreNames.contains(IDB_STORE)) return;
             const tx = db.transaction(IDB_STORE, 'readwrite');
             const store = tx.objectStore(IDB_STORE);
             store.put(val, key);
         } catch (_) {}
+    }
+
+    async function getIDBMedia(key) {
+        if (!key) return null;
+        const db = await openMediaDB();
+        if (!db) return null;
+        return new Promise((resolve) => {
+            try {
+                if (!db.objectStoreNames.contains(IDB_STORE)) return resolve(null);
+                const tx = db.transaction(IDB_STORE, 'readonly');
+                const store = tx.objectStore(IDB_STORE);
+                const req = store.get(key);
+                req.onsuccess = () => resolve(req.result || null);
+                req.onerror = () => resolve(null);
+            } catch (_) {
+                resolve(null);
+            }
+        });
     }
 
     function updateQrDisplay(dataUrl) {
@@ -603,6 +622,7 @@
         if (editBankForm) {
             editBankForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
                 const bankName = document.getElementById('bankName')?.value || 'ธนาคารกสิกรไทย (KBank)';
                 const accNum = document.getElementById('accountNumber')?.value.trim();
                 const accName = document.getElementById('accountName')?.value.trim();
@@ -870,7 +890,7 @@
                             </div>
                             <p class="text-on-surface font-semibold text-sm">ยังไม่ได้ลงทะเบียนร้านค้า</p>
                             <p class="text-xs text-on-surface-variant mt-1 mb-4">กรุณาตั้งค่าข้อมูลร้านค้าที่หน้าจัดการร้านเพื่อเริ่มรับเงินมัดจำ</p>
-                            <a href="manage-shop.html" class="px-4 py-2 bg-secondary text-on-secondary-container font-semibold rounded-xl text-xs hover:bg-secondary/90 transition-all">ไปที่หน้าจัดการร้านค้า</a>
+                            <a href="manage-shop-details.html" class="px-4 py-2 bg-secondary text-on-secondary-container font-semibold rounded-xl text-xs hover:bg-secondary/90 transition-all">ไปที่หน้าจัดการร้านค้า</a>
                         </div>
                     `;
                 }

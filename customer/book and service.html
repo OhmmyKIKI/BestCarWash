@@ -1472,7 +1472,9 @@
         currentBookingId = `#BK-${randomNum}`;
 
         // Open Payment Modal directly for customer to scan QR & upload slip
-        openPaymentModal();
+        openPaymentModal().catch(err => {
+            console.error('Failed to open payment modal:', err);
+        });
     };
 
     // ==========================================
@@ -1484,6 +1486,14 @@
     function openMediaDB() {
         return new Promise((resolve) => {
             if (typeof indexedDB === 'undefined') return resolve(null);
+            let settled = false;
+            const timer = setTimeout(() => {
+                if (!settled) {
+                    settled = true;
+                    resolve(null);
+                }
+            }, 700);
+
             try {
                 const req = indexedDB.open(IDB_NAME, 2);
                 req.onupgradeneeded = (e) => {
@@ -1492,29 +1502,56 @@
                         db.createObjectStore(IDB_STORE);
                     }
                 };
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = () => resolve(null);
+                req.onsuccess = () => {
+                    if (!settled) {
+                        settled = true;
+                        clearTimeout(timer);
+                        resolve(req.result);
+                    }
+                };
+                req.onerror = () => {
+                    if (!settled) {
+                        settled = true;
+                        clearTimeout(timer);
+                        resolve(null);
+                    }
+                };
+                req.onblocked = () => {
+                    if (!settled) {
+                        settled = true;
+                        clearTimeout(timer);
+                        resolve(null);
+                    }
+                };
             } catch (_) {
-                resolve(null);
+                if (!settled) {
+                    settled = true;
+                    clearTimeout(timer);
+                    resolve(null);
+                }
             }
         });
     }
 
     async function getIDBMedia(key) {
         if (!key) return null;
-        const db = await openMediaDB();
-        if (!db) return null;
-        return new Promise((resolve) => {
-            try {
-                const tx = db.transaction(IDB_STORE, 'readonly');
-                const store = tx.objectStore(IDB_STORE);
-                const req = store.get(key);
-                req.onsuccess = () => resolve(req.result || null);
-                req.onerror = () => resolve(null);
-            } catch (_) {
-                resolve(null);
-            }
-        });
+        try {
+            const db = await openMediaDB();
+            if (!db || !db.objectStoreNames.contains(IDB_STORE)) return null;
+            return new Promise((resolve) => {
+                try {
+                    const tx = db.transaction(IDB_STORE, 'readonly');
+                    const store = tx.objectStore(IDB_STORE);
+                    const req = store.get(key);
+                    req.onsuccess = () => resolve(req.result || null);
+                    req.onerror = () => resolve(null);
+                } catch (_) {
+                    resolve(null);
+                }
+            });
+        } catch (_) {
+            return null;
+        }
     }
 
     // Resolve owner's recorded QR Code image across memory, storage, and IDB
@@ -1530,47 +1567,7 @@
             return shop.qr_code;
         }
 
-        // 2. Shop-specific localStorage
-        if (shopId) {
-            const byShop = localStorage.getItem('ownerQrCode_' + shopId);
-            if (byShop) return byShop;
-        }
-
-        // 3. Owner-specific localStorage
-        if (ownerId) {
-            const byOwner = localStorage.getItem('ownerQrCode_' + ownerId);
-            if (byOwner) return byOwner;
-        }
-
-        // 4. Global localStorage keys saved by owner in payouts.html
-        const globalQr = localStorage.getItem('ownerQrCode') || localStorage.getItem('shopPromptPayQr') || localStorage.getItem('shopQrCode');
-        if (globalQr) return globalQr;
-
-        // 5. Cached shop details
-        if (shopId) {
-            try {
-                const cachedRaw = localStorage.getItem('cachedShopDetails_' + shopId);
-                if (cachedRaw) {
-                    const parsed = JSON.parse(cachedRaw);
-                    if (parsed?.promptpay_qr) return parsed.promptpay_qr;
-                    if (parsed?.qr_code) return parsed.qr_code;
-                }
-            } catch (_) {}
-        }
-
-        // 6. IndexedDB check (BestCarWashMedia / shop_media)
-        if (shopId) {
-            const idbShop = await getIDBMedia('qr_' + shopId) || await getIDBMedia('ownerQrCode_' + shopId);
-            if (idbShop) return idbShop;
-        }
-        if (ownerId) {
-            const idbOwner = await getIDBMedia('qr_' + ownerId) || await getIDBMedia('ownerQrCode_' + ownerId);
-            if (idbOwner) return idbOwner;
-        }
-        const idbGlobal = await getIDBMedia('ownerQrCode') || await getIDBMedia('shopPromptPayQr');
-        if (idbGlobal) return idbGlobal;
-
-        // 7. Check if shop.description contains metadata bridge
+        // 2. Check if shop.description contains database metadata bridge (Fast & 100% cloud-synced)
         if (shop?.description) {
             const bcwMatch = shop.description.match(/<!--BCW_META:([\s\S]*?)-->/);
             if (bcwMatch && bcwMatch[1]) {
@@ -1593,6 +1590,48 @@
                 } catch (_) {}
             }
         }
+
+        // 3. Shop-specific localStorage
+        if (shopId) {
+            const byShop = localStorage.getItem('ownerQrCode_' + shopId);
+            if (byShop) return byShop;
+        }
+
+        // 4. Owner-specific localStorage
+        if (ownerId) {
+            const byOwner = localStorage.getItem('ownerQrCode_' + ownerId);
+            if (byOwner) return byOwner;
+        }
+
+        // 5. Global localStorage keys saved by owner in payouts.html
+        const globalQr = localStorage.getItem('ownerQrCode') || localStorage.getItem('shopPromptPayQr') || localStorage.getItem('shopQrCode');
+        if (globalQr) return globalQr;
+
+        // 6. Cached shop details
+        if (shopId) {
+            try {
+                const cachedRaw = localStorage.getItem('cachedShopDetails_' + shopId);
+                if (cachedRaw) {
+                    const parsed = JSON.parse(cachedRaw);
+                    if (parsed?.promptpay_qr) return parsed.promptpay_qr;
+                    if (parsed?.qr_code) return parsed.qr_code;
+                }
+            } catch (_) {}
+        }
+
+        // 7. IndexedDB check (BestCarWashMedia / shop_media)
+        try {
+            if (shopId) {
+                const idbShop = await getIDBMedia('qr_' + shopId) || await getIDBMedia('ownerQrCode_' + shopId);
+                if (idbShop) return idbShop;
+            }
+            if (ownerId) {
+                const idbOwner = await getIDBMedia('qr_' + ownerId) || await getIDBMedia('ownerQrCode_' + ownerId);
+                if (idbOwner) return idbOwner;
+            }
+            const idbGlobal = await getIDBMedia('ownerQrCode') || await getIDBMedia('shopPromptPayQr');
+            if (idbGlobal) return idbGlobal;
+        } catch (_) {}
 
         return null;
     }
@@ -1685,6 +1724,11 @@
         if (accountNameEl) {
             accountNameEl.innerText = shopName;
         }
+
+        const depAmountEl = document.getElementById('payment-deposit-amount');
+        if (depAmountEl) depAmountEl.innerText = '฿50';
+        const fullAmountEl = document.getElementById('payment-full-amount');
+        if (fullAmountEl) fullAmountEl.innerText = `(ยอดเต็ม ฿${selectedServicePrice || '450'})`;
 
         const modal = document.getElementById('payment-modal');
         const content = document.getElementById('payment-modal-content');
