@@ -2230,6 +2230,42 @@
                             }
                         }
                     } catch (_) {}
+
+                    // Create and sync Customer Notification
+                    try {
+                        const targetShopName = activeBooking.shopName || 'ร้านคาร์แคร์';
+                        const notifPayload = {
+                            user_id: userId,
+                            title: 'การจองคิวสำเร็จ',
+                            message: `คุณได้ทำการจองคิวที่ ${targetShopName} (วันที่ ${selectedDateText || 'วันนี้'} เวลา ${cleanTime.slice(0,5)} น.) เรียบร้อยแล้ว กรุณารอทางร้านยืนยัน`,
+                            type: 'BOOKING_UPDATE',
+                            related_booking_id: dbRow.id,
+                            is_read: false
+                        };
+                        
+                        // 1. Save to local cache immediately
+                        let cNotifs = JSON.parse(localStorage.getItem('cachedCustomerNotifications') || '[]');
+                        cNotifs = cNotifs.filter(n => n.related_booking_id !== dbRow.id);
+                        cNotifs.unshift({
+                            ...notifPayload,
+                            id: 'local_' + Date.now(),
+                            created_at: new Date().toISOString()
+                        });
+                        localStorage.setItem('cachedCustomerNotifications', JSON.stringify(cNotifs.slice(0, 50)));
+
+                        // 2. Insert to Supabase notifications table
+                        if (client?.from) {
+                            await client.from('notifications').insert([notifPayload]).catch(() => null);
+                        } else if (fetcher) {
+                            await fetcher('notifications', {
+                                method: 'POST',
+                                headers: { 'Prefer': 'return=minimal' },
+                                body: notifPayload
+                            }).catch(() => null);
+                        }
+                    } catch (notifErr) {
+                        console.warn('[book-and-service] Notification notice:', notifErr);
+                    }
                 } else {
                     console.warn('⚠️ ไม่สามารถบันทึกรายการจองลง Supabase ได้ทันที (ระบบบันทึกลงเครื่องและ localStorage แล้ว):', insertErr);
                 }

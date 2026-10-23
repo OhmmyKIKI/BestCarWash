@@ -552,8 +552,32 @@ async function safeSupabaseRest(endpoint, options = {}) {
         if (endpoint.startsWith('http')) break;
     }
 
-    return formatRestResponse(null, lastErr || new Error('Connection failed'));
-}
-
 window.safeSupabaseRest = safeSupabaseRest;
 window.fetchSupabaseRest = safeSupabaseRest;
+
+// Automatically update bell badge across all pages
+function syncNotificationBellBadges() {
+    try {
+        if (typeof window === 'undefined' || !window.localStorage) return;
+        const cached = localStorage.getItem('cachedCustomerNotifications');
+        const notifs = cached ? JSON.parse(cached) : [];
+        const hasUnread = Array.isArray(notifs) && notifs.some(n => !n.is_read);
+
+        const bellLinks = document.querySelectorAll('a[href*="notifications-list.html"]');
+        bellLinks.forEach(a => {
+            const dot = a.querySelector('.bg-error.rounded-full');
+            if (dot) {
+                dot.style.display = hasUnread ? 'block' : 'none';
+            }
+        });
+    } catch (_) {}
+}
+
+if (typeof window !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', syncNotificationBellBadges);
+    } else {
+        setTimeout(syncNotificationBellBadges, 100);
+    }
+}
+window.syncNotificationBellBadges = syncNotificationBellBadges;

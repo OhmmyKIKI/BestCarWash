@@ -1135,6 +1135,58 @@
                     await client.from('bookings').update(patchBody).eq('id', targetDbId);
                 }
             } catch(_) {}
+
+            // Dispatch notification to customer for status update
+            try {
+                const targetCustId = b?.customerId || b?.customer_id || b?.userId || b?.user_id || 'da839dcc-9bca-47d0-b178-29351930fff6';
+                let notifTitle = '';
+                let notifMessage = '';
+                if (updates.status === 'confirmed') {
+                    notifTitle = 'ร้านค้ายืนยันคิวแล้ว';
+                    notifMessage = `คิวบริการล้างรถของคุณได้รับการยืนยันเรียบร้อยแล้ว กรุณานำรถเข้าตามวันและเวลาที่นัดหมาย`;
+                } else if (updates.status === 'arrived') {
+                    notifTitle = 'รถถึงร้านเรียบร้อยแล้ว';
+                    notifMessage = `ร้านค้าได้บันทึกการนำรถเข้าของท่านแล้ว กำลังเข้าสู่คิวการล้าง`;
+                } else if (updates.status === 'washing') {
+                    notifTitle = 'กำลังดำเนินการล้างรถ';
+                    notifMessage = `รถของคุณกำลังอยู่ในขั้นตอนการล้างและดูแลความสะอาดอย่างพิถีพิถัน`;
+                } else if (updates.status === 'ready') {
+                    notifTitle = 'รถของคุณพร้อมแล้ว';
+                    notifMessage = `บริการล้างรถเสร็จสิ้นแล้ว สามารถเข้ามารับรถได้ทันที`;
+                } else if (updates.status === 'completed') {
+                    notifTitle = 'บริการล้างรถเสร็จสิ้นแล้ว';
+                    notifMessage = `ขอบคุณที่ใช้บริการล้างรถ เชิญตรวจรับรถและเขียนรีวิวให้คะแนนร้านค้า`;
+                } else if (['declined', 'cancelled'].includes(updates.status)) {
+                    notifTitle = 'การจองคิวถูกยกเลิก';
+                    notifMessage = `การจองคิวของคุณถูกยกเลิก (${updates.declineReason || 'ร้านค้าติดภารกิจ'})`;
+                } else if (updates.status === 'refunded') {
+                    notifTitle = 'คืนเงินมัดจำสำเร็จ';
+                    notifMessage = `ทางร้านค้าได้ทำการโอนคืนเงินมัดจำ 50 บาทให้คุณเรียบร้อยแล้ว`;
+                }
+
+                if (targetCustId && notifTitle) {
+                    const custNotif = {
+                        user_id: targetCustId,
+                        title: notifTitle,
+                        message: notifMessage,
+                        type: 'BOOKING_UPDATE',
+                        related_booking_id: targetDbId,
+                        is_read: false
+                    };
+                    const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                    if (fetcher) {
+                        fetcher('notifications', { method: 'POST', body: custNotif }).catch(() => null);
+                    }
+                    // Also sync to customer local notifications if on same browser
+                    try {
+                        let cNotifs = JSON.parse(localStorage.getItem('cachedCustomerNotifications') || '[]');
+                        cNotifs.unshift({ ...custNotif, id: 'local_' + Date.now(), created_at: new Date().toISOString() });
+                        localStorage.setItem('cachedCustomerNotifications', JSON.stringify(cNotifs.slice(0, 50)));
+                    } catch (_) {}
+                }
+            } catch (errN) {
+                console.warn('[owner-bookings] Notification dispatch notice:', errN);
+            }
         }
     }
 
