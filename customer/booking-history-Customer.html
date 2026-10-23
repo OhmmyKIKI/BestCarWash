@@ -1175,7 +1175,44 @@
 
     function navigateCurrentShop() {
         if (!currentActiveBooking) return;
-        window.open('https://maps.google.com/?q=' + encodeURIComponent(currentActiveBooking.shopName || ''), '_blank');
+        const b = currentActiveBooking;
+
+        // 1. Direct custom map link provided by the shop owner (highest priority)
+        let mapUrl = b.shopMapLink || b.mapLink || b.map_link || b.mapUrl || b.map_url || '';
+        
+        // Check shop-specific localStorage fallback if shopId is available
+        if (!mapUrl && b.shopId) {
+            mapUrl = localStorage.getItem('ownerShopMapLink_' + b.shopId) || '';
+        }
+        if (!mapUrl) {
+            mapUrl = localStorage.getItem('ownerShopMapLink') || '';
+        }
+
+        // If a valid web URL was set by shop owner, open it directly
+        if (mapUrl && typeof mapUrl === 'string' && (mapUrl.startsWith('http://') || mapUrl.startsWith('https://'))) {
+            window.open(mapUrl, '_blank');
+            return;
+        }
+
+        // 2. Exact GPS Coordinates (latitude, longitude)
+        const lat = b.shopLat ?? b.latitude ?? b.lat;
+        const lng = b.shopLng ?? b.longitude ?? b.lng;
+        if (lat !== null && lat !== undefined && lng !== null && lng !== undefined && !isNaN(Number(lat)) && !isNaN(Number(lng))) {
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+            return;
+        }
+
+        // 3. Shop name combined with shop address for accurate search
+        const shopName = b.shopName || '';
+        const shopAddr = b.shopAddress || b.address || '';
+        const query = [shopName, shopAddr].filter(Boolean).join(' ').trim();
+        if (query) {
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank');
+            return;
+        }
+
+        // 4. Fallback search
+        window.open('https://www.google.com/maps', '_blank');
     }
 
     function openShopCallModal(shopName, phone) {
@@ -2390,7 +2427,7 @@
                     try {
                         const [pRes, bRes] = await Promise.all([
                             client.from('profiles').select('avatar_url, full_name').eq('id', uid).limit(1),
-                            client.from('bookings').select('*, shops(name, phone_number)').eq('customer_id', uid).order('created_at', { ascending: false })
+                            client.from('bookings').select('*, shops(name, phone_number, address, map_link, latitude, longitude)').eq('customer_id', uid).order('created_at', { ascending: false })
                         ]);
                         if (pRes.data && pRes.data.length > 0) profile = pRes.data[0];
                         if (bRes.data && Array.isArray(bRes.data) && bRes.data.length > 0) dbBookings = bRes.data;
@@ -2404,7 +2441,7 @@
                     try {
                         const [profRes, bookingsRes] = await Promise.all([
                             !profile ? fetcher(`profiles?id=eq.${uid}&select=avatar_url,full_name&limit=1`) : null,
-                            fetcher(`bookings?customer_id=eq.${uid}&select=*,shops(name,phone_number)&order=created_at.desc`)
+                            fetcher(`bookings?customer_id=eq.${uid}&select=*,shops(name,phone_number,address,map_link,latitude,longitude)&order=created_at.desc`)
                         ]);
                         if (!profile && Array.isArray(profRes) && profRes.length > 0) profile = profRes[0];
                         if (Array.isArray(bookingsRes) && bookingsRes.length > 0) dbBookings = bookingsRes;
@@ -2567,6 +2604,10 @@
                             shopId: activeOngoing.shop_id,
                             shopName: activeOngoing.shops?.name || existingLocal?.shopName || 'ร้านคาร์แคร์',
                             shopPhone: activeOngoing.shops?.phone_number || existingLocal?.shopPhone || '081-234-5678',
+                            shopAddress: activeOngoing.shops?.address || existingLocal?.shopAddress || '',
+                            shopMapLink: activeOngoing.shops?.map_link || existingLocal?.shopMapLink || existingLocal?.mapLink || '',
+                            shopLat: (activeOngoing.shops?.latitude !== undefined && activeOngoing.shops?.latitude !== null) ? activeOngoing.shops.latitude : (existingLocal?.shopLat ?? existingLocal?.lat ?? null),
+                            shopLng: (activeOngoing.shops?.longitude !== undefined && activeOngoing.shops?.longitude !== null) ? activeOngoing.shops.longitude : (existingLocal?.shopLng ?? existingLocal?.lng ?? null),
                             serviceName: parsedActive.serviceName,
                             carName: parsedActive.carName,
                             carBrand: parsedActive.carBrand,
@@ -2807,14 +2848,14 @@
 
         try {
             let query = (targetId && String(targetId).length > 20)
-                ? `bookings?id=eq.${targetId}&select=*,shops(name,phone_number)&limit=1`
+                ? `bookings?id=eq.${targetId}&select=*,shops(name,phone_number,address,map_link,latitude,longitude)&limit=1`
                 : null;
             if (!query && b?.customer_id) {
-                query = `bookings?customer_id=eq.${b.customer_id}&order=created_at.desc&select=*,shops(name,phone_number)&limit=1`;
+                query = `bookings?customer_id=eq.${b.customer_id}&order=created_at.desc&select=*,shops(name,phone_number,address,map_link,latitude,longitude)&limit=1`;
             }
             if (!query) {
                 const uid = localStorage.getItem('lastLoggedInUserId');
-                if (uid) query = `bookings?customer_id=eq.${uid}&order=created_at.desc&select=*,shops(name,phone_number)&limit=1`;
+                if (uid) query = `bookings?customer_id=eq.${uid}&order=created_at.desc&select=*,shops(name,phone_number,address,map_link,latitude,longitude)&limit=1`;
             }
             if (!query) return;
 
@@ -2849,6 +2890,10 @@
                             shopId: dbRow.shop_id,
                             shopName: dbRow.shops?.name || 'ร้านคาร์แคร์',
                             shopPhone: dbRow.shops?.phone_number || '081-234-5678',
+                            shopAddress: dbRow.shops?.address || '',
+                            shopMapLink: dbRow.shops?.map_link || '',
+                            shopLat: dbRow.shops?.latitude ?? null,
+                            shopLng: dbRow.shops?.longitude ?? null,
                             serviceName: vi?.service_name || dbRow.service_name || 'ล้างสี ดูดฝุ่น',
                             carName: vi?.brand ? `${vi.brand} (${vi.plate || ''})` : 'รถยนต์',
                             carBrand: vi?.brand || 'รถยนต์',
@@ -2866,6 +2911,11 @@
                 }
 
                 if (b) {
+                    if (dbRow.shops?.map_link && !b.shopMapLink) b.shopMapLink = dbRow.shops.map_link;
+                    if (dbRow.shops?.address && !b.shopAddress) b.shopAddress = dbRow.shops.address;
+                    if (dbRow.shops?.latitude !== undefined && dbRow.shops?.latitude !== null && (b.shopLat === null || b.shopLat === undefined)) b.shopLat = dbRow.shops.latitude;
+                    if (dbRow.shops?.longitude !== undefined && dbRow.shops?.longitude !== null && (b.shopLng === null || b.shopLng === undefined)) b.shopLng = dbRow.shops.longitude;
+
                     const currentSt = (b.status || '').toLowerCase();
                     const currentSp = b.step;
 
