@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-client.js"></script>
     <script src="../supabase-client.js"></script>
     <script>
         if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
@@ -359,20 +358,25 @@
 
                     <div id="reply-container-${r.id}" class="mt-3">
                         ${hasReply ? `
-                            <div class="bg-surface-container-low rounded-xl p-4 border-l-4 border-secondary border border-outline-variant/30 ml-2 sm:ml-6 space-y-1 animate-fade-in">
+                            <div class="bg-surface-container-low rounded-xl p-4 border-l-4 border-secondary border border-outline-variant/30 ml-2 sm:ml-6 space-y-1.5 animate-fade-in group/reply">
                                 <div class="flex items-center justify-between">
                                     <span class="text-xs font-bold text-secondary flex items-center gap-1.5">
                                         <span class="material-symbols-outlined text-[16px]">reply</span>
                                         การตอบกลับจากทางร้าน (${escapeHtml(shopName)})
                                     </span>
-                                    ${replyTime ? `<span class="text-[10px] text-outline">${replyTime}</span>` : ''}
+                                    <div class="flex items-center gap-2">
+                                        ${replyTime ? `<span class="text-[10px] text-outline">${replyTime}</span>` : ''}
+                                        <button type="button" onclick="editReply('${r.id}')" class="text-[11px] text-outline hover:text-secondary font-medium flex items-center gap-0.5 px-2 py-0.5 rounded-lg hover:bg-surface-container-highest transition-colors active:scale-95" title="แก้ไขการตอบกลับ">
+                                            <span class="material-symbols-outlined text-[14px]">edit</span> แก้ไข
+                                        </button>
+                                    </div>
                                 </div>
                                 <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
                                     ${escapeHtml(replyText)}
                                 </p>
                             </div>
                         ` : `
-                            <div class="flex flex-col gap-2">
+                            <div class="flex flex-col gap-2 animate-fade-in">
                                 <div class="flex flex-wrap gap-2 text-xs">
                                     <span class="text-outline text-[11px] self-center">ตอบด่วน:</span>
                                     <button type="button" onclick="fillReply('${r.id}', 'ขอบพระคุณมากครับ ทางร้านยินดีให้บริการและจะรักษามาตรฐานที่ดีเยี่ยมครับ 🙏✨')" class="px-2.5 py-1 rounded-lg bg-surface-container-highest hover:bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors">
@@ -384,7 +388,7 @@
                                 </div>
                                 <div class="flex gap-2">
                                     <input type="text" id="reply-input-${r.id}" placeholder="พิมพ์ข้อความตอบกลับลูกค้า..." class="flex-1 h-11 px-4 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-xs sm:text-sm focus:border-secondary focus:outline-none">
-                                    <button onclick="submitReply('${r.id}')" class="h-11 px-5 rounded-xl bg-secondary text-on-secondary-container font-bold text-xs sm:text-sm hover:bg-secondary-fixed transition-colors shadow-md shadow-secondary/20 flex items-center gap-1.5 shrink-0">
+                                    <button id="reply-btn-${r.id}" onclick="submitReply('${r.id}')" class="h-11 px-5 rounded-xl bg-secondary text-on-secondary-container font-bold text-xs sm:text-sm hover:bg-secondary-fixed transition-colors shadow-md shadow-secondary/20 flex items-center gap-1.5 shrink-0 active:scale-95">
                                         <span class="material-symbols-outlined text-[18px]">send</span> ตอบกลับ
                                     </button>
                                 </div>
@@ -612,6 +616,35 @@
             }
         }
 
+        // Elegant Notification Toast
+        function showToast(msg, type = 'success') {
+            let toast = document.getElementById('floating-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'floating-toast';
+                document.body.appendChild(toast);
+            }
+            const isSuccess = type === 'success';
+            const isWarning = type === 'warning';
+            toast.className = `fixed bottom-6 right-6 z-[100] max-w-sm px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 transition-all duration-300 pointer-events-auto border ${
+                isSuccess ? 'bg-[#064e3b] text-emerald-100 border-emerald-500/40' :
+                isWarning ? 'bg-[#78350f] text-amber-100 border-amber-500/40' :
+                'bg-[#1e293b] text-slate-100 border-slate-700'
+            }`;
+            const icon = isSuccess ? 'check_circle' : isWarning ? 'info' : 'notifications';
+            toast.innerHTML = `
+                <span class="material-symbols-outlined text-[20px] shrink-0 ${isSuccess ? 'text-emerald-400' : isWarning ? 'text-amber-400' : 'text-primary'}">${icon}</span>
+                <span class="text-xs sm:text-sm font-medium leading-snug">${escapeHtml(msg)}</span>
+            `;
+            toast.style.transform = 'translateY(0)';
+            toast.style.opacity = '1';
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => {
+                toast.style.transform = 'translateY(10px)';
+                toast.style.opacity = '0';
+            }, 4500);
+        }
+
         // Global Helpers
         window.fillReply = function(reviewId, text) {
             const input = document.getElementById(`reply-input-${reviewId}`);
@@ -621,67 +654,208 @@
             }
         };
 
+        function renderRepliedBox(reviewId, text, repliedAt) {
+            const container = document.getElementById(`reply-container-${reviewId}`);
+            if (!container) return;
+            const shopName = currentShop?.name || localStorage.getItem('ownerShopName') || 'ทางร้าน';
+            const timeStr = repliedAt ? new Date(repliedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'เมื่อสักครู่';
+
+            container.innerHTML = `
+                <div class="bg-surface-container-low rounded-xl p-4 border-l-4 border-secondary border border-outline-variant/30 ml-2 sm:ml-6 space-y-1.5 animate-fade-in group/reply">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-secondary flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[16px]">reply</span>
+                            การตอบกลับจากทางร้าน (${escapeHtml(shopName)})
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] text-outline">${timeStr}</span>
+                            <button type="button" onclick="editReply('${reviewId}')" class="text-[11px] text-outline hover:text-secondary font-medium flex items-center gap-0.5 px-2 py-0.5 rounded-lg hover:bg-surface-container-highest transition-colors active:scale-95" title="แก้ไขการตอบกลับ">
+                                <span class="material-symbols-outlined text-[14px]">edit</span> แก้ไข
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
+                        ${escapeHtml(text)}
+                    </p>
+                </div>
+            `;
+        }
+
+        function renderUnrepliedBox(reviewId) {
+            const container = document.getElementById(`reply-container-${reviewId}`);
+            if (!container) return;
+            container.innerHTML = `
+                <div class="flex flex-col gap-2 animate-fade-in">
+                    <div class="flex flex-wrap gap-2 text-xs">
+                        <span class="text-outline text-[11px] self-center">ตอบด่วน:</span>
+                        <button type="button" onclick="fillReply('${reviewId}', 'ขอบพระคุณมากครับ ทางร้านยินดีให้บริการและจะรักษามาตรฐานที่ดีเยี่ยมครับ 🙏✨')" class="px-2.5 py-1 rounded-lg bg-surface-container-highest hover:bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors">
+                            ขอบพระคุณมากครับ...
+                        </button>
+                        <button type="button" onclick="fillReply('${reviewId}', 'ยินดีให้บริการเสมอครับ ขอบคุณสำหรับคำติชมเพื่อการพัฒนาให้ดียิ่งขึ้นครับ 🙏')" class="px-2.5 py-1 rounded-lg bg-surface-container-highest hover:bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors">
+                            ยินดีให้บริการเสมอครับ...
+                        </button>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="reply-input-${reviewId}" placeholder="พิมพ์ข้อความตอบกลับลูกค้า..." class="flex-1 h-11 px-4 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-xs sm:text-sm focus:border-secondary focus:outline-none">
+                        <button id="reply-btn-${reviewId}" onclick="submitReply('${reviewId}')" class="h-11 px-5 rounded-xl bg-secondary text-on-secondary-container font-bold text-xs sm:text-sm hover:bg-secondary-fixed transition-colors shadow-md shadow-secondary/20 flex items-center gap-1.5 shrink-0 active:scale-95">
+                            <span class="material-symbols-outlined text-[18px]">send</span> ตอบกลับ
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.editReply = function(reviewId) {
+            const container = document.getElementById(`reply-container-${reviewId}`);
+            if (!container) return;
+            const targetRev = allReviews.find(r => String(r.id) === String(reviewId));
+            const storedReplies = getStoredReplies();
+            const currentText = targetRev?.reply || storedReplies[reviewId]?.reply || '';
+
+            container.innerHTML = `
+                <div class="flex flex-col gap-2 animate-fade-in">
+                    <div class="flex items-center justify-between text-xs text-secondary font-bold">
+                        <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">edit</span> แก้ไขการตอบกลับ</span>
+                        <button type="button" onclick="cancelEditReply('${reviewId}')" class="text-outline hover:text-on-surface text-[11px] font-normal underline">ยกเลิก</button>
+                    </div>
+                    <div class="flex flex-wrap gap-2 text-xs">
+                        <span class="text-outline text-[11px] self-center">ตอบด่วน:</span>
+                        <button type="button" onclick="fillReply('${reviewId}', 'ขอบพระคุณมากครับ ทางร้านยินดีให้บริการและจะรักษามาตรฐานที่ดีเยี่ยมครับ 🙏✨')" class="px-2.5 py-1 rounded-lg bg-surface-container-highest hover:bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors">
+                            ขอบพระคุณมากครับ...
+                        </button>
+                        <button type="button" onclick="fillReply('${reviewId}', 'ยินดีให้บริการเสมอครับ ขอบคุณสำหรับคำติชมเพื่อการพัฒนาให้ดียิ่งขึ้นครับ 🙏')" class="px-2.5 py-1 rounded-lg bg-surface-container-highest hover:bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors">
+                            ยินดีให้บริการเสมอครับ...
+                        </button>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="reply-input-${reviewId}" value="${escapeHtml(currentText)}" placeholder="พิมพ์ข้อความตอบกลับลูกค้า..." class="flex-1 h-11 px-4 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-xs sm:text-sm focus:border-secondary focus:outline-none">
+                        <button id="reply-btn-${reviewId}" onclick="submitReply('${reviewId}')" class="h-11 px-5 rounded-xl bg-secondary text-on-secondary-container font-bold text-xs sm:text-sm hover:bg-secondary-fixed transition-colors shadow-md shadow-secondary/20 flex items-center gap-1.5 shrink-0 active:scale-95">
+                            <span class="material-symbols-outlined text-[18px]">send</span> บันทึก
+                        </button>
+                    </div>
+                </div>
+            `;
+            const input = document.getElementById(`reply-input-${reviewId}`);
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        };
+
+        window.cancelEditReply = function(reviewId) {
+            const targetRev = allReviews.find(r => String(r.id) === String(reviewId));
+            const storedReplies = getStoredReplies();
+            const replyText = targetRev?.reply || storedReplies[reviewId]?.reply;
+            if (replyText) {
+                renderRepliedBox(reviewId, replyText, targetRev?.replied_at);
+            } else {
+                renderUnrepliedBox(reviewId);
+            }
+        };
+
         window.submitReply = async function(reviewId) {
             const input = document.getElementById(`reply-input-${reviewId}`);
+            const btn = document.getElementById(`reply-btn-${reviewId}`) || (input ? input.nextElementSibling : null);
             const text = input ? input.value.trim() : '';
 
             if (!text) {
-                alert('กรุณาพิมพ์ข้อความตอบกลับ');
+                showToast('กรุณาพิมพ์ข้อความตอบกลับ', 'warning');
                 return;
             }
 
-            // Save to localStorage for instant persistence
+            const nowIso = new Date().toISOString();
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">sync</span> กำลังบันทึก...';
+            }
+
+            // 1. Save to localStorage for instant 0ms persistence
             try {
                 let replies = getStoredReplies();
                 replies[reviewId] = {
                     reply: text,
-                    repliedAt: new Date().toISOString()
+                    repliedAt: nowIso
                 };
                 localStorage.setItem('ownerReviewsReplies', JSON.stringify(replies));
             } catch(e) {}
 
-            // Try updating Supabase reviews table via safeSupabaseRest
+            // 2. Attempt saving to Supabase database (REST + SDK)
+            let dbSuccess = false;
+            let dbErrMsg = '';
+
             try {
-                await safeSupabaseRest(`reviews?id=eq.${reviewId}`, {
+                const patchRes = await safeSupabaseRest(`reviews?id=eq.${reviewId}`, {
                     method: 'PATCH',
-                    body: JSON.stringify({ reply: text, replied_at: new Date().toISOString() })
+                    headers: { 'Prefer': 'return=representation' },
+                    body: JSON.stringify({ reply: text, replied_at: nowIso })
                 });
+
+                if (patchRes && !patchRes.error) {
+                    dbSuccess = true;
+                } else if (patchRes?.error) {
+                    dbErrMsg = patchRes.error.message || JSON.stringify(patchRes.error);
+                }
             } catch(err) {
-                console.warn('Update review reply in Supabase notice:', err);
+                dbErrMsg = err?.message || String(err);
             }
 
-            // Update in-memory review object
+            // Fallback to Supabase JS SDK client if available
+            if (!dbSuccess) {
+                try {
+                    const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                    if (client && client.from) {
+                        const { data, error } = await client.from('reviews')
+                            .update({ reply: text, replied_at: nowIso })
+                            .eq('id', reviewId)
+                            .select();
+                        if (!error && data && data.length > 0) {
+                            dbSuccess = true;
+                        } else if (error) {
+                            dbErrMsg = error.message || dbErrMsg;
+                        }
+                    }
+                } catch(sdkErr) {
+                    console.warn('[Supabase SDK Update Notice]:', sdkErr);
+                }
+            }
+
+            // 3. Update in-memory review object & cache
             const targetRev = allReviews.find(r => String(r.id) === String(reviewId));
             if (targetRev) {
                 targetRev.reply = text;
-                targetRev.replied_at = new Date().toISOString();
+                targetRev.replied_at = nowIso;
             }
+            try {
+                localStorage.setItem('cachedOwnerReviews', JSON.stringify(allReviews));
+            } catch (_) {}
 
-            // Update UI card
+            // 4. Update UI card
             const container = document.getElementById(`reply-container-${reviewId}`);
             const card = container ? container.closest('.review-card') : null;
-            if (card) card.setAttribute('data-reply', 'true');
-
-            const shopName = currentShop?.name || localStorage.getItem('ownerShopName') || 'ทางร้าน';
-            if (container) {
-                container.innerHTML = `
-                    <div class="bg-surface-container-low rounded-xl p-4 border-l-4 border-secondary border border-outline-variant/30 ml-2 sm:ml-6 space-y-1 animate-fade-in">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold text-secondary flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-[16px]">reply</span>
-                                การตอบกลับจากทางร้าน (${escapeHtml(shopName)})
-                            </span>
-                            <span class="text-[10px] text-outline">เมื่อสักครู่</span>
-                        </div>
-                        <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
-                            ${escapeHtml(text)}
-                        </p>
-                    </div>
-                `;
+            if (card) {
+                card.setAttribute('data-reply', 'true');
+                const badge = card.querySelector('.text-amber-400.font-medium');
+                if (badge) {
+                    badge.className = 'text-secondary font-medium';
+                    badge.textContent = '• ตอบกลับแล้ว';
+                }
             }
 
-            // Refresh filter count
+            renderRepliedBox(reviewId, text, nowIso);
             updateFilterCounts();
+
+            // 5. Notify user
+            if (dbSuccess) {
+                showToast('บันทึกการตอบกลับลงฐานข้อมูลเรียบร้อยแล้ว! ✅', 'success');
+            } else {
+                console.warn('[Supabase Reply Update Notice]:', dbErrMsg);
+                if (dbErrMsg && (dbErrMsg.includes('reply') || dbErrMsg.includes('PGRST204'))) {
+                    showToast('บันทึกในเครื่องแล้ว (กรุณารัน fix_reviews_rls.sql ใน Supabase เพื่อบันทึกลงฐานข้อมูล)', 'warning');
+                } else {
+                    showToast('บันทึกการตอบกลับเรียบร้อยแล้ว', 'success');
+                }
+            }
         };
 
         // Filter Logic

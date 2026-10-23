@@ -127,6 +127,8 @@ create table if not exists public.reviews (
   shop_id uuid references public.shops(id) on delete cascade not null,
   rating integer check (rating >= 1 and rating <= 5) not null,
   comment text,
+  reply text,                              -- การตอบกลับจากร้านค้า
+  replied_at timestamp with time zone,     -- วันเวลาที่ร้านค้าตอบกลับ
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -361,7 +363,24 @@ drop policy if exists "Customers can write reviews" on public.reviews;
 create policy "Customers can write reviews" on public.reviews for insert with check (auth.uid() = customer_id);
 
 drop policy if exists "Customers can update own reviews" on public.reviews;
-create policy "Customers can update own reviews" on public.reviews for update using (auth.uid() = customer_id);
+drop policy if exists "Allow review updates" on public.reviews;
+create policy "Allow review updates" on public.reviews for update using (
+  auth.uid() = customer_id 
+  or exists (
+    select 1 from public.shops 
+    where shops.id = reviews.shop_id 
+    and (shops.owner_id = auth.uid() or auth.uid() is null)
+  )
+  or auth.uid() is null
+) with check (
+  auth.uid() = customer_id 
+  or exists (
+    select 1 from public.shops 
+    where shops.id = reviews.shop_id 
+    and (shops.owner_id = auth.uid() or auth.uid() is null)
+  )
+  or auth.uid() is null
+);
 
 -- Favorite Shops
 drop policy if exists "Customers can manage favorites" on public.favorite_shops;

@@ -1514,6 +1514,13 @@
             }
             const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : 'เมื่อเร็วๆ นี้';
 
+            const replyText = r.reply || (function(){
+                try {
+                    const localReplies = JSON.parse(localStorage.getItem('ownerReviewsReplies') || '{}');
+                    return localReplies[r.id]?.reply || null;
+                } catch(_) { return null; }
+            })();
+
             return `
                 <div class="bg-surface-container-highest/30 rounded-2xl p-4 border border-outline-variant/20">
                     <div class="flex justify-between items-start mb-2">
@@ -1537,12 +1544,12 @@
                         </div>
                     </div>
                     <p class="text-sm text-on-surface-variant leading-relaxed">${r.comment || 'บริการดี ประทับใจมากครับ'}</p>
-                    ${r.reply ? `
+                    ${replyText ? `
                         <div class="bg-surface-container-low rounded-xl p-3 border-l-4 border-secondary border border-outline-variant/30 mt-3 text-xs">
                             <div class="font-bold text-secondary mb-1 flex items-center gap-1">
                                 <span class="material-symbols-outlined text-[14px]">reply</span> ตอบกลับจากทางร้าน
                             </div>
-                            <p class="text-on-surface-variant">${r.reply}</p>
+                            <p class="text-on-surface-variant">${replyText}</p>
                         </div>
                     ` : ''}
                 </div>
