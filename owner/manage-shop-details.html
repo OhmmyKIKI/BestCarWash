@@ -1006,7 +1006,7 @@
         const localCity = syncMeta.city || (syncUserId ? localStorage.getItem('ownerShopCity_' + syncUserId) : null) || localStorage.getItem('ownerShopCity') || '';
         const localZip = syncMeta.zip || (syncUserId ? localStorage.getItem('ownerShopZip_' + syncUserId) : null) || localStorage.getItem('ownerShopZip') || '';
         
-        let localMap = syncMeta.map_link || (syncUserId ? localStorage.getItem('ownerShopMapLink_' + syncUserId) : null) || localStorage.getItem('ownerShopMapLink') || '';
+        let localMap = (syncUserId ? localStorage.getItem('ownerShopMapLink_' + syncUserId) : null) || localStorage.getItem('ownerShopMapLink') || syncMeta.map_link || '';
         const localLat = syncMeta.latitude || localStorage.getItem('ownerShopLat');
         const localLng = syncMeta.longitude || localStorage.getItem('ownerShopLng');
 
@@ -1334,12 +1334,12 @@
                     if (effectiveUserId) safeLocalStorageSet('ownerShopZip_' + effectiveUserId, finalZip);
                 }
 
-                // Google Maps link population (Strictly prioritizing latest saved link for THIS ID)
-                let savedMapLink = (effectiveUserId ? localStorage.getItem('ownerShopMapLink_' + effectiveUserId) : null) || 
-                                   meta.map_link || 
+                // Google Maps link population: Strictly prioritize live database shop.map_link (Universal across mobile & all devices)
+                let savedMapLink = shop?.map_link || 
+                                   (effectiveUserId ? localStorage.getItem('ownerShopMapLink_' + effectiveUserId) : null) || 
                                    (shop?.id ? localStorage.getItem('ownerShopMapLink_' + shop.id) : null) || 
                                    localStorage.getItem('ownerShopMapLink') || 
-                                   shop?.map_link || '';
+                                   meta.map_link || '';
                 if (!savedMapLink && shop?.latitude && shop?.longitude) {
                     savedMapLink = `https://maps.google.com/?q=${shop.latitude},${shop.longitude}`;
                 }
@@ -1350,15 +1350,6 @@
                     safeLocalStorageSet('ownerShopMapLink', savedMapLink);
                     if (effectiveUserId) safeLocalStorageSet('ownerShopMapLink_' + effectiveUserId, savedMapLink);
                     if (shop?.id) safeLocalStorageSet('ownerShopMapLink_' + shop.id, savedMapLink);
-
-                    // Silently sync latest verified map_link to Supabase shops table if database is outdated
-                    if (shop?.id && fetcher && shop.map_link !== savedMapLink) {
-                        fetcher(`shops?id=eq.${shop.id}`, {
-                            method: 'PATCH',
-                            headers: { 'Prefer': 'return=representation' },
-                            body: { map_link: savedMapLink }
-                        }).catch(() => {});
-                    }
                 } else {
                     updateMapPreview('');
                 }
@@ -2110,6 +2101,23 @@
                     method: 'PATCH',
                     body: { avatar_url: newLogoCompressed }
                 }).catch(() => {});
+            }
+
+            // Sync latest map_link & shop info to Supabase Auth User Metadata (so mobile session is never outdated)
+            if (client?.auth && typeof client.auth.updateUser === 'function') {
+                client.auth.updateUser({
+                    data: {
+                        shop_name: name,
+                        phone_number: phone,
+                        map_link: mapLink,
+                        full_address: fullAddr,
+                        street: street,
+                        city: cty,
+                        zip: zip,
+                        latitude: lat,
+                        longitude: lng
+                    }
+                }).catch(authErr => console.warn('Auth user_metadata update notice:', authErr));
             }
 
             // 4. CHECK RESULTS AND GIVE USER IMMEDIATE FEEDBACK

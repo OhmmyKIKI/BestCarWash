@@ -620,8 +620,8 @@
                     if (finalAddr) localStorage.setItem('ownerShopAddress', finalAddr);
                     if (shop?.latitude || meta.latitude) localStorage.setItem('ownerShopLat', shop?.latitude || meta.latitude);
                     if (shop?.longitude || meta.longitude) localStorage.setItem('ownerShopLng', shop?.longitude || meta.longitude);
-                    if (meta.map_link) localStorage.setItem('ownerShopMapLink', meta.map_link);
-                    else if (shop?.latitude && shop?.longitude) localStorage.setItem('ownerShopMapLink', `https://maps.google.com/?q=${shop.latitude},${shop.longitude}`);
+                    const finalMapLink = shop?.map_link || meta.map_link || (shop?.latitude && shop?.longitude ? `https://maps.google.com/?q=${shop.latitude},${shop.longitude}` : '');
+                    if (finalMapLink) localStorage.setItem('ownerShopMapLink', finalMapLink);
 
                     const logoUrl = shop?.logo_url || meta.avatar_url || meta.logo_url;
                     if (logoUrl) {
