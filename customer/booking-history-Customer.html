@@ -280,8 +280,10 @@
                 <!-- Footer with Contact & Actions -->
                 <div class="mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-outline-variant/30 pt-4">
                     <div class="text-xs text-on-surface-variant flex items-center gap-2">
-                        <div>ยอดรวม <span class="text-base font-bold text-primary ml-0.5" id="upcomingTotalText">฿ 450</span></div>
-                        <span class="text-[10px] font-bold text-secondary bg-secondary/10 px-2 py-0.5 rounded-md border border-secondary/20" id="upcomingDepositText">มัดจำแล้ว ฿ 50</span>
+                        <span>ค่ามัดจำ</span>
+                        <span class="text-base font-bold text-secondary font-mono" id="upcomingDepositText">฿ 50.00</span>
+                        <span class="text-[10px] font-bold text-secondary bg-secondary/10 px-2 py-0.5 rounded-md border border-secondary/20">ชำระแล้ว</span>
+                        <span id="upcomingTotalText" class="hidden"></span>
                     </div>
 
                     <div id="upcomingButtons" class="flex flex-wrap items-center gap-2">
@@ -1713,7 +1715,11 @@
                         </div>
 
                         <div class="mt-2 flex items-center justify-between border-t border-outline-variant/30 pt-4">
-                            <div class="text-xs text-on-surface-variant">ยอดรวม <span class="text-lg font-bold text-on-surface ml-1">${b.totalAmount || '฿ 450'}</span></div>
+                            <div class="text-xs text-on-surface-variant flex items-center gap-1.5">
+                                <span>ค่ามัดจำ</span>
+                                <span class="text-base font-bold text-secondary font-mono ml-1">฿ ${(parseFloat(String(b.depositAmount || 50).replace(/[^\d.]/g,'')) || 50).toFixed(2)}</span>
+                                <span class="text-[10px] font-bold text-secondary bg-secondary/10 px-1.5 py-0.5 rounded border border-secondary/20">ชำระแล้ว</span>
+                            </div>
                             <div class="flex flex-wrap justify-end gap-2">
                                 ${b.userReview ? `
                                     <button onclick="openReviewModal('${(b.shopName || 'ร้านคาร์แคร์').replace(/'/g, "\\'")}', '${(b.serviceName || 'ล้างสี ดูดฝุ่น').replace(/'/g, "\\'")}', '${b.shopId || b.rawShopId || ''}', '${b.rawBookingId || b.id || ''}', ${b.userReview.rating || 5}, '${(b.userReview.comment || '').replace(/'/g, "\\'").replace(/\n/g, ' ')}')" class="px-3 py-1.5 bg-yellow-400/10 border border-yellow-400/40 text-yellow-600 dark:text-yellow-400 text-xs font-bold rounded-lg hover:bg-yellow-400/20 transition-all flex items-center gap-1 active:scale-95 shadow-sm" title="คลิกเพื่อดูหรือแก้ไขรีวิว">
@@ -1754,7 +1760,7 @@
 
                         <div class="mt-1 text-sm text-on-surface-variant flex flex-col gap-1">
                             <p><span class="opacity-70">บริการ:</span> ${b.serviceName || 'ล้างรถ'}</p>
-                            <p><span class="opacity-70">สถานะมัดจำ:</span> <strong class="text-emerald-400 font-bold">คืนเงินแล้ว</strong> (คืนมัดจำ ${b.depositAmount || '฿ 50.00'})</p>
+                            <p><span class="opacity-70">ค่ามัดจำ:</span> <strong class="text-emerald-400 font-bold font-mono">฿ ${(parseFloat(String(b.depositAmount || 50).replace(/[^\d.]/g,'')) || 50).toFixed(2)}</strong> <span class="text-xs text-emerald-400 font-bold ml-1">(คืนเงินแล้ว)</span></p>
                         </div>
 
                         <div class="mt-1 p-2.5 rounded-xl bg-[#06C755]/10 border border-[#06C755]/30 flex items-center justify-between">
@@ -1793,7 +1799,7 @@
 
                         <div class="mt-1 text-sm text-on-surface-variant flex flex-col gap-1">
                             <p><span class="opacity-70">บริการ:</span> ${b.serviceName || 'ล้างรถ'}</p>
-                            <p><span class="opacity-70">สถานะมัดจำ:</span> <strong class="text-amber-400 font-bold">รอร้านโอนคืนมัดจำ</strong> (${b.depositAmount || '฿ 50.00'})</p>
+                            <p><span class="opacity-70">ค่ามัดจำ:</span> <strong class="text-amber-400 font-bold font-mono">฿ ${(parseFloat(String(b.depositAmount || 50).replace(/[^\d.]/g,'')) || 50).toFixed(2)}</strong> <span class="text-xs text-amber-300 font-bold ml-1">(รอร้านโอนคืน)</span></p>
                             <p><span class="opacity-70">เหตุผลที่ยกเลิก:</span> ${b.refundReason || 'ติดธุระด่วน'}</p>
                         </div>
 
@@ -1830,7 +1836,7 @@
                         <div class="mt-1 text-sm text-on-surface-variant flex flex-col gap-1">
                             <p><span class="opacity-70">บริการ:</span> ${b.serviceName || 'ล้างสี ดูดฝุ่น'}</p>
                             <p><span class="opacity-70">เหตุผล:</span> <strong class="text-rose-500 dark:text-rose-400 font-medium">${b.declineReason || 'ร้านค้าติดคิวแน่นหรือไม่สะดวกรับบริการในเวลาดังกล่าว'}</strong></p>
-                            <p><span class="opacity-70">สถานะมัดจำ:</span> ${b.refundSlip ? '<span class="text-emerald-500 font-bold">โอนคืนมัดจำแล้ว</span>' : '<span class="text-amber-500 font-bold">รอร้านโอนคืนมัดจำ ฿50.00</span>'}</p>
+                            <p><span class="opacity-70">ค่ามัดจำ:</span> <strong class="text-on-surface font-bold font-mono">฿ 50.00</strong> ${b.refundSlip ? '<span class="text-emerald-500 font-bold text-xs ml-1">(โอนคืนแล้ว)</span>' : '<span class="text-amber-500 font-bold text-xs ml-1">(รอร้านโอนคืน)</span>'}</p>
                         </div>
 
                         <div class="mt-2 flex items-center justify-between border-t border-outline-variant/30 pt-3">
@@ -1840,7 +1846,7 @@
                                         <span class="material-symbols-outlined text-[14px]">receipt_long</span> ดูสลิปคืนเงิน
                                     </button>
                                 ` : `
-                                    <span class="text-xs text-outline">มัดจำ ฿50.00</span>
+                                    <span class="text-xs text-outline">ค่ามัดจำ ฿50.00</span>
                                 `}
                             </div>
                             <button onclick="window.location.href = 'discovery.html'" class="px-3 py-1.5 bg-primary-container text-white text-xs font-bold rounded-lg hover:bg-primary transition-colors flex items-center gap-1 active:scale-95 shadow-sm">
@@ -1873,7 +1879,7 @@
                         <div class="mt-1 text-sm text-on-surface-variant flex flex-col gap-1">
                             <p><span class="opacity-70">บริการ:</span> ${b.serviceName || 'ล้างสี ดูดฝุ่น'}</p>
                             <p><span class="opacity-70">เหตุผล:</span> ${b.refundReason || b.cancelReason || 'ลูกค้ายกเลิกคิว'}</p>
-                            ${b.refundSlip ? `<p><span class="opacity-70">สถานะมัดจำ:</span> <strong class="text-emerald-400 font-bold">คืนเงินแล้ว</strong></p>` : ''}
+                            <p><span class="opacity-70">ค่ามัดจำ:</span> <strong class="text-on-surface font-bold font-mono">฿ 50.00</strong> ${b.refundSlip ? '<span class="text-emerald-400 font-bold text-xs ml-1">(คืนเงินแล้ว)</span>' : ''}</p>
                         </div>
 
                         <div class="mt-2 flex items-center justify-between border-t border-outline-variant/30 pt-3">
@@ -1882,7 +1888,9 @@
                                     <button onclick="openRefundSlipModal('', '${cleanId}')" class="text-xs text-emerald-500 hover:underline flex items-center gap-1 font-bold">
                                         <span class="material-symbols-outlined text-[14px]">receipt_long</span> ดูสลิปคืนเงิน
                                     </button>
-                                ` : ''}
+                                ` : `
+                                    <span class="text-xs text-outline">ค่ามัดจำ ฿50.00</span>
+                                `}
                             </div>
                             <button onclick="window.location.href = 'shop-details.html?shopId=' + encodeURIComponent(b.shopId || '')" class="px-3 py-1.5 bg-surface-container-highest border border-outline-variant text-on-surface text-xs font-medium rounded-lg hover:bg-surface-variant transition-colors flex items-center gap-1 active:scale-95">
                                 <span class="material-symbols-outlined text-[14px]">replay</span> จองใหม่
@@ -2272,8 +2280,11 @@
         if (servEl && b.serviceName) servEl.innerText = b.serviceName;
         if (carEl) carEl.innerText = b.carName || `${b.carBrand || 'รถของคุณ'} (${b.carPlate || ''})`;
         if (shopEl && b.shopName) shopEl.innerText = b.shopName;
-        if (totalEl && b.totalAmount) totalEl.innerText = `฿ ${String(b.totalAmount).replace(/[^\d]/g,'') || '450'}`;
-        if (depositEl && b.depositAmount) depositEl.innerText = `มัดจำแล้ว ฿ ${String(b.depositAmount).replace(/[^\d]/g,'') || '50'}`;
+        if (totalEl) totalEl.innerText = '';
+        if (depositEl) {
+            const num = b.depositAmount ? parseFloat(String(b.depositAmount).replace(/[^\d.]/g,'')) : 50;
+            depositEl.innerText = `฿ ${(isNaN(num) ? 50 : num).toFixed(2)}`;
+        }
 
         // Map status to step:
         let stepNum = 1;
