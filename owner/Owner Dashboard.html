@@ -256,20 +256,26 @@
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-surface-container-highest/60 text-outline text-xs font-semibold uppercase tracking-wider border-b border-outline-variant/20">
-                                <th class="py-3.5 px-4 whitespace-nowrap w-28">
+                                <th class="py-3.5 px-4 whitespace-nowrap w-24">
                                     <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-primary">schedule</span> เวลา</span>
                                 </th>
+                                <th class="py-3.5 px-4 whitespace-nowrap">
+                                    <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-primary">directions_car</span> ทะเบียน & รถ</span>
+                                </th>
                                 <th class="py-3.5 px-4">
-                                    <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-secondary">dry_cleaning</span> รายการบริการที่เลือก</span>
+                                    <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-secondary">dry_cleaning</span> บริการที่เลือก</span>
+                                </th>
+                                <th class="py-3.5 px-4 whitespace-nowrap">
+                                    <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-amber-500">person</span> ข้อมูลลูกค้า</span>
                                 </th>
                                 <th class="py-3.5 px-4 whitespace-nowrap text-right">
-                                    <span>สถานะ</span>
+                                    <span>ยอดเงิน & สถานะ</span>
                                 </th>
                             </tr>
                         </thead>
                         <tbody id="today-bookings-tbody" class="divide-y divide-outline-variant/20 text-sm">
                             <tr>
-                                <td colspan="3" class="p-8 text-center text-outline">
+                                <td colspan="5" class="p-8 text-center text-outline">
                                     <div class="flex flex-col items-center justify-center gap-2 py-4">
                                         <span class="material-symbols-outlined text-[32px] opacity-40 animate-spin">progress_activity</span>
                                         <p class="text-sm font-medium text-on-surface">กำลังโหลดข้อมูลการจองวันนี้...</p>
@@ -479,6 +485,71 @@
         }
 
         return 'บริการทั่วไป';
+    }
+
+    // สกัดข้อมูลการจองแบบครบวงจร (ทะเบียน, รถ, เวลา, ลูกค้า, เบอร์โทร, มัดจำ)
+    function extractBookingDetails(b) {
+        if (!b) return {};
+        let vi = null;
+        if (b.vehicle_info) {
+            if (typeof b.vehicle_info === 'object' && b.vehicle_info !== null) {
+                vi = b.vehicle_info;
+            } else if (typeof b.vehicle_info === 'string') {
+                try { vi = JSON.parse(b.vehicle_info); } catch (_) {}
+            }
+        }
+
+        // 1. ป้ายทะเบียนรถ
+        let plate = vi?.plate || vi?.plate_number || vi?.license_plate || vi?.carPlate || b.plate_number || b.carPlate || '';
+        if (!plate && typeof b.vehicle_info === 'string') {
+            const m = b.vehicle_info.match(/\(([^)]+)\)/);
+            if (m && m[1]) plate = m[1].trim();
+        }
+        if (!plate) plate = 'ไม่ระบุทะเบียน';
+
+        // 2. ข้อมูลยี่ห้อและขนาดรถ
+        let brand = vi?.brand || vi?.model || vi?.brand_model || b.carBrand || 'รถยนต์';
+        let size = vi?.size || vi?.car_size || b.carSize || 'รถเก๋ง';
+
+        // 3. ชื่อบริการที่ลูกค้าเลือก
+        let service = extractBookingServiceName(b);
+
+        // 4. เวลาที่จอง
+        let time = '-';
+        if (b.booking_time) {
+            time = b.booking_time.slice(0, 5) + ' น.';
+        } else if (b.bookingTime) {
+            time = b.bookingTime.slice(0, 5) + (b.bookingTime.includes('น.') ? '' : ' น.');
+        } else if (b.dateTime) {
+            const tMatch = b.dateTime.match(/(\d{1,2}:\d{2})/);
+            time = tMatch ? (tMatch[1] + ' น.') : b.dateTime.replace(/.*?,\s*/, '');
+        } else if (b.created_at) {
+            time = new Date(b.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
+        }
+
+        // 5. ข้อมูลลูกค้า & เบอร์โทร
+        let customerName = vi?.customer_name || vi?.customerName || b.customer_name || b.customerName || 'ลูกค้า';
+        let customerPhone = vi?.customer_phone || vi?.customerPhone || b.customer_phone || b.customerPhone || '';
+
+        // 6. ยอดเงินมัดจำ & ยอดรวม
+        let deposit = vi?.deposit_amount || b.deposit_amount || b.depositAmount || 50;
+        let depositStr = typeof deposit === 'string' && deposit.includes('฿') ? deposit : `฿${Number(deposit || 50).toFixed(0)}`;
+        let total = b.total_price || vi?.total_amount || b.totalAmount || '';
+        let totalStr = total ? (typeof total === 'string' && total.includes('฿') ? total : `฿${Number(total).toLocaleString('th-TH')}`) : '';
+
+        return {
+            id: b.bookingId || ('#' + String(b.id || '').slice(0, 8).toUpperCase()),
+            plate,
+            brand,
+            size,
+            service,
+            time,
+            customerName,
+            customerPhone,
+            depositStr,
+            totalStr,
+            status: b.status
+        };
     }
 
     let popularityChartInstance = null;
@@ -702,7 +773,7 @@
         `;
     }
 
-    // 3. รายการจองวันนี้: ตารางเวลาแสดงชื่อรายการที่ลูกค้าเลือก และตัดช่องทะเบียนออก
+    // 3. รายการจองวันนี้: ตารางเวลาแสดงเวลา, ทะเบียน & รถ, บริการที่เลือก, ข้อมูลลูกค้า และยอดเงิน/สถานะ
     function renderTodayBookings(todayList) {
         const tbody = document.getElementById('today-bookings-tbody');
         const badgeCount = document.getElementById('today-bookings-badge');
@@ -714,7 +785,7 @@
         if (!todayList || todayList.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="3" class="p-8 text-center text-outline">
+                    <td colspan="5" class="p-8 text-center text-outline">
                         <div class="flex flex-col items-center justify-center gap-2 py-6">
                             <div class="w-12 h-12 rounded-full bg-surface-variant flex items-center justify-center text-outline/60">
                                 <span class="material-symbols-outlined text-[28px]">calendar_today</span>
@@ -736,34 +807,68 @@
         });
 
         tbody.innerHTML = sorted.map(b => {
-            let timeDisplay = '-';
-            if (b.booking_time) {
-                timeDisplay = b.booking_time.slice(0, 5) + ' น.';
-            } else if (b.dateTime) {
-                timeDisplay = b.dateTime.replace(/.*?,\s*/, '');
-            } else if (b.created_at) {
-                timeDisplay = new Date(b.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
-            }
-
-            const serviceName = escapeHtml(extractBookingServiceName(b));
-            const badge = getStatusBadge(b.status);
+            const d = extractBookingDetails(b);
+            const badge = getStatusBadge(d.status);
 
             return `
-                <tr class="hover:bg-surface-variant/40 transition-colors">
-                    <td class="py-3.5 px-4 whitespace-nowrap w-28">
-                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-container-highest font-semibold text-on-surface text-xs">
+                <tr class="hover:bg-surface-variant/40 transition-colors group">
+                    <!-- 1. เวลาที่จอง -->
+                    <td class="py-3.5 px-4 whitespace-nowrap w-24 align-middle">
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-container-highest font-bold text-on-surface text-xs border border-outline-variant/40 shadow-sm">
                             <span class="material-symbols-outlined text-[14px] text-primary">schedule</span>
-                            ${timeDisplay}
+                            <span>${escapeHtml(d.time)}</span>
                         </div>
                     </td>
-                    <td class="py-3.5 px-4">
-                        <div class="font-bold text-on-surface text-sm sm:text-base flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full bg-secondary shrink-0"></span>
-                            <span>${serviceName}</span>
+
+                    <!-- 2. ทะเบียน & ข้อมูลรถ -->
+                    <td class="py-3.5 px-4 whitespace-nowrap align-middle">
+                        <div class="flex flex-col">
+                            <span class="px-2 py-0.5 bg-surface-container-highest text-on-surface font-mono font-extrabold text-xs sm:text-sm rounded border border-outline-variant/60 tracking-wider shadow-sm w-fit">
+                                ${escapeHtml(d.plate)}
+                            </span>
+                            <span class="text-[11px] text-outline font-medium mt-0.5 truncate max-w-[150px]">
+                                ${escapeHtml(d.brand)} • ${escapeHtml(d.size)}
+                            </span>
                         </div>
                     </td>
-                    <td class="py-3.5 px-4 whitespace-nowrap text-right">
-                        ${badge}
+
+                    <!-- 3. ชื่อบริการที่ลูกค้าเลือก -->
+                    <td class="py-3.5 px-4 align-middle">
+                        <div class="flex items-start gap-2">
+                            <span class="w-2 h-2 rounded-full bg-secondary shrink-0 mt-1.5"></span>
+                            <div class="min-w-0">
+                                <span class="font-bold text-on-surface text-sm sm:text-base leading-snug line-clamp-1" title="${escapeHtml(d.service)}">
+                                    ${escapeHtml(d.service)}
+                                </span>
+                                <span class="text-[11px] font-mono text-outline/80 block mt-0.5">${escapeHtml(d.id)}</span>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- 4. ข้อมูลลูกค้า & เบอร์โทร -->
+                    <td class="py-3.5 px-4 whitespace-nowrap align-middle">
+                        <div class="flex flex-col">
+                            <span class="font-semibold text-on-surface text-xs sm:text-sm">
+                                ${escapeHtml(d.customerName)}
+                            </span>
+                            ${d.customerPhone && d.customerPhone !== '-' ? `
+                                <a href="tel:${escapeHtml(d.customerPhone)}" class="inline-flex items-center gap-1 text-[11px] text-primary hover:underline font-mono font-bold mt-0.5" title="กดเพื่อโทรออก">
+                                    <span class="material-symbols-outlined text-[13px]">call</span>
+                                    <span>${escapeHtml(d.customerPhone)}</span>
+                                </a>
+                            ` : '<span class="text-[11px] text-outline">-</span>'}
+                        </div>
+                    </td>
+
+                    <!-- 5. ยอดเงิน & สถานะ -->
+                    <td class="py-3.5 px-4 whitespace-nowrap text-right align-middle">
+                        <div class="flex flex-col items-end gap-1">
+                            ${badge}
+                            <div class="text-[11px] text-outline flex items-center gap-1 font-mono">
+                                <span>มัดจำ: <strong class="text-secondary font-bold">${escapeHtml(d.depositStr)}</strong></span>
+                                ${d.totalStr ? `<span class="opacity-60">(${escapeHtml(d.totalStr)})</span>` : ''}
+                            </div>
+                        </div>
                     </td>
                 </tr>
             `;
