@@ -253,17 +253,14 @@
             </div>
             <div class="glass-card rounded-2xl shadow-xl overflow-hidden flex flex-col border border-outline-variant/60">
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse min-w-[500px]">
+                    <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-surface-container-highest/60 text-outline text-xs font-semibold uppercase tracking-wider border-b border-outline-variant/20">
                                 <th class="py-3.5 px-4 whitespace-nowrap w-28">
                                     <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-primary">schedule</span> เวลา</span>
                                 </th>
-                                <th class="py-3.5 px-4 whitespace-nowrap">
-                                    <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-secondary">dry_cleaning</span> รายการบริการ</span>
-                                </th>
-                                <th class="py-3.5 px-4 whitespace-nowrap">
-                                    <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-amber-500">pin</span> ทะเบียนรถ</span>
+                                <th class="py-3.5 px-4">
+                                    <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-secondary">dry_cleaning</span> รายการบริการที่เลือก</span>
                                 </th>
                                 <th class="py-3.5 px-4 whitespace-nowrap text-right">
                                     <span>สถานะ</span>
@@ -272,7 +269,7 @@
                         </thead>
                         <tbody id="today-bookings-tbody" class="divide-y divide-outline-variant/20 text-sm">
                             <tr>
-                                <td colspan="4" class="p-8 text-center text-outline">
+                                <td colspan="3" class="p-8 text-center text-outline">
                                     <div class="flex flex-col items-center justify-center gap-2 py-4">
                                         <span class="material-symbols-outlined text-[32px] opacity-40 animate-spin">progress_activity</span>
                                         <p class="text-sm font-medium text-on-surface">กำลังโหลดข้อมูลการจองวันนี้...</p>
@@ -438,51 +435,138 @@
         return false;
     }
 
+    // ดึงชื่อบริการที่ลูกค้าเลือกอย่างแม่นยำจากข้อมูลการจอง (ทั้งจาก vehicle_info JSON, คอลัมน์ตรง หรือ notes)
+    function extractBookingServiceName(b) {
+        if (!b) return 'บริการทั่วไป';
+        
+        // 1. ตรวจสอบใน vehicle_info JSON (book and service.html บันทึก realServiceName ลงใน vehicle_info JSON)
+        if (b.vehicle_info) {
+            if (typeof b.vehicle_info === 'object' && b.vehicle_info !== null) {
+                const v = b.vehicle_info;
+                if (v.service_name && typeof v.service_name === 'string' && v.service_name.trim()) return v.service_name.trim();
+                if (v.serviceName && typeof v.serviceName === 'string' && v.serviceName.trim()) return v.serviceName.trim();
+                if (v.service && typeof v.service === 'string' && v.service.trim()) return v.service.trim();
+            } else if (typeof b.vehicle_info === 'string') {
+                try {
+                    const parsed = JSON.parse(b.vehicle_info);
+                    if (parsed.service_name && typeof parsed.service_name === 'string' && parsed.service_name.trim()) return parsed.service_name.trim();
+                    if (parsed.serviceName && typeof parsed.serviceName === 'string' && parsed.serviceName.trim()) return parsed.serviceName.trim();
+                    if (parsed.service && typeof parsed.service === 'string' && parsed.service.trim()) return parsed.service.trim();
+                } catch (_) {}
+            }
+        }
+
+        // 2. ตรวจสอบจากคุณสมบัติหรือคอลัมน์โดยตรง
+        if (b.service_name && typeof b.service_name === 'string' && b.service_name.trim()) {
+            return b.service_name.trim();
+        }
+        if (b.serviceName && typeof b.serviceName === 'string' && b.serviceName.trim()) {
+            return b.serviceName.trim();
+        }
+        if (b.service && typeof b.service === 'string' && b.service.trim()) {
+            return b.service.trim();
+        }
+
+        // 3. ตรวจสอบจาก notes (มักจัดรูปแบบเป็น "ชื่อแพ็กเกจ - ข้อมูลอื่นๆ")
+        if (b.notes && typeof b.notes === 'string' && b.notes.trim()) {
+            const part = b.notes.split('-')[0].trim();
+            if (part) return part;
+        }
+
+        // 4. ตาราง services ที่ join มา
+        if (b.services && b.services.name) {
+            return b.services.name.trim();
+        }
+
+        return 'บริการทั่วไป';
+    }
+
     let popularityChartInstance = null;
 
-    // 4. สัดส่วนแพ็กเกจ (Package Proportion Chart) เชื่อมกับชื่อบริการจริงของร้าน
+    // 4. สัดส่วนแพ็กเกจ: เอาชื่อบริการที่เจ้าของร้านตั้งไว้มาแสดงสัดส่วนว่าลูกค้าเลือกบริการอะไรบ่อยสุด
     function updatePopularityChart(list, shopServices) {
         const canvas = document.getElementById('popularityChart');
         const legendEl = document.getElementById('popularityLegend');
         if (!canvas || !legendEl) return;
 
-        // Build service lookup map from shop's actual services
-        const validServicesMap = {};
+        // 1. รวบรวมชื่อบริการทั้งหมดที่เจ้าของร้านตั้งไว้
+        const ownerServiceNames = [];
+        const canonicalMap = {};
+        const idToNameMap = {};
+
         if (Array.isArray(shopServices) && shopServices.length > 0) {
             shopServices.forEach(s => {
-                if (s && s.name) {
+                if (s && s.name && typeof s.name === 'string' && s.name.trim()) {
                     const cleanName = s.name.trim();
-                    validServicesMap[s.id] = cleanName;
-                    validServicesMap[cleanName.toLowerCase()] = cleanName;
+                    if (!ownerServiceNames.includes(cleanName)) {
+                        ownerServiceNames.push(cleanName);
+                        canonicalMap[cleanName.toLowerCase()] = cleanName;
+                    }
+                    if (s.id) {
+                        idToNameMap[s.id] = cleanName;
+                    }
                 }
             });
         }
 
-        const pkgCounts = {};
-        let totalCount = 0;
-
-        (list || []).forEach(b => {
-            let name = '';
-            if (b.service_name && validServicesMap[b.service_name.trim().toLowerCase()]) {
-                name = validServicesMap[b.service_name.trim().toLowerCase()];
-            } else if (b.service_id && validServicesMap[b.service_id]) {
-                name = validServicesMap[b.service_id];
-            } else if (b.service_name) {
-                name = b.service_name.trim();
-            } else if (b.serviceName) {
-                name = b.serviceName.trim();
-            } else if (b.notes) {
-                name = b.notes.split('-')[0].trim();
-            }
-
-            if (!name) name = 'บริการทั่วไป';
-            pkgCounts[name] = (pkgCounts[name] || 0) + 1;
-            totalCount++;
+        // กำหนดจำนวนเริ่มต้นของบริการที่ร้านตั้งไว้เป็น 0
+        const counts = {};
+        ownerServiceNames.forEach(name => {
+            counts[name] = 0;
         });
 
-        const entries = Object.entries(pkgCounts).sort((a, b) => b[1] - a[1]);
+        let totalBookingsCounted = 0;
 
-        if (entries.length === 0 || totalCount === 0) {
+        (list || []).forEach(b => {
+            let matchedName = null;
+
+            // ตรวจสอบตาม service_id
+            if (b.service_id && idToNameMap[b.service_id]) {
+                matchedName = idToNameMap[b.service_id];
+            }
+
+            // ถ้าไม่พบตาม id ให้ตรวจสอบตามชื่อรายการบริการที่ลูกค้าเลือก
+            if (!matchedName) {
+                const selectedName = extractBookingServiceName(b);
+                const sLower = selectedName.toLowerCase();
+
+                if (canonicalMap[sLower]) {
+                    matchedName = canonicalMap[sLower];
+                } else {
+                    const found = ownerServiceNames.find(os => {
+                        const osLower = os.toLowerCase();
+                        return sLower.includes(osLower) || osLower.includes(sLower);
+                    });
+                    if (found) {
+                        matchedName = found;
+                    } else if (selectedName && selectedName !== 'บริการทั่วไป') {
+                        matchedName = selectedName;
+                    }
+                }
+            }
+
+            if (matchedName) {
+                counts[matchedName] = (counts[matchedName] || 0) + 1;
+                totalBookingsCounted++;
+            }
+        });
+
+        // 2. จัดอันดับบริการว่าลูกค้าเลือกบริการอะไรบ่อยสุด (เรียงลำดับจากมากไปน้อย)
+        const allTrackedNames = Array.from(new Set([...ownerServiceNames, ...Object.keys(counts)]));
+        const rankedServices = allTrackedNames.map(name => {
+            return {
+                name: name,
+                count: counts[name] || 0
+            };
+        });
+
+        // เรียงลำดับจากบริการที่ถูกเลือกบ่อยสุดลงมา
+        rankedServices.sort((a, b) => b.count - a.count);
+
+        // กรองเฉพาะบริการที่มีการเลือก (count > 0) เพื่อพล็อตบน Doughnut Chart
+        const activeChartEntries = rankedServices.filter(s => s.count > 0);
+
+        if (activeChartEntries.length === 0 || totalBookingsCounted === 0) {
             if (popularityChartInstance) {
                 popularityChartInstance.destroy();
                 popularityChartInstance = null;
@@ -508,21 +592,42 @@
                     }
                 }
             });
-            legendEl.innerHTML = `
-                <div class="text-center text-xs text-outline py-3 space-y-1">
-                    <p class="font-semibold text-on-surface">ยังไม่มีสถิติแพ็กเกจ</p>
-                    <p class="text-outline">เมื่อมีลูกค้าจองบริการ ระบบจะคำนวณสัดส่วนความนิยมให้อัตโนมัติ</p>
-                </div>
-            `;
+
+            if (ownerServiceNames.length > 0) {
+                legendEl.innerHTML = `
+                    <div class="space-y-1.5 pt-1">
+                        <div class="text-[11px] font-semibold text-outline uppercase tracking-wider mb-2 flex items-center justify-between">
+                            <span>บริการที่ร้านตั้งไว้ (${ownerServiceNames.length} รายการ)</span>
+                            <span>จำนวนครั้งที่เลือก</span>
+                        </div>
+                        ${ownerServiceNames.map((name, idx) => `
+                            <div class="flex justify-between items-center text-xs py-1.5 px-2.5 rounded-lg bg-surface-variant/30 border border-outline-variant/30">
+                                <div class="flex items-center gap-2 truncate pr-2">
+                                    <span class="w-4 h-4 rounded-full bg-surface-container flex items-center justify-center text-[10px] font-bold text-outline">${idx + 1}</span>
+                                    <span class="truncate text-on-surface font-medium" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+                                </div>
+                                <span class="font-semibold text-outline shrink-0">0 คัน <span class="text-[10px]">(0%)</span></span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                legendEl.innerHTML = `
+                    <div class="text-center text-xs text-outline py-3 space-y-1">
+                        <p class="font-semibold text-on-surface">ยังไม่มีสถิติแพ็กเกจ</p>
+                        <p class="text-outline">เมื่อมีลูกค้าจองบริการ ระบบจะคำนวณสัดส่วนความนิยมให้อัตโนมัติ</p>
+                    </div>
+                `;
+            }
             return;
         }
 
         const palette = ['#0284c7', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#f97316', '#14b8a6'];
 
-        const labels = entries.map(e => e[0]);
-        const counts = entries.map(e => e[1]);
-        const percentages = entries.map(e => Math.round((e[1] / totalCount) * 100));
-        const bgColors = entries.map((_, i) => palette[i % palette.length]);
+        const labels = activeChartEntries.map(e => e.name);
+        const dataCounts = activeChartEntries.map(e => e.count);
+        const percentages = activeChartEntries.map(e => Math.round((e.count / totalBookingsCounted) * 100));
+        const bgColors = activeChartEntries.map((_, i) => palette[i % palette.length]);
 
         if (popularityChartInstance) {
             popularityChartInstance.destroy();
@@ -535,7 +640,7 @@
             data: {
                 labels: labels,
                 datasets: [{
-                    data: counts,
+                    data: dataCounts,
                     backgroundColor: bgColors,
                     borderWidth: 2,
                     borderColor: '#ffffff',
@@ -556,7 +661,7 @@
                         cornerRadius: 8,
                         callbacks: {
                             label: function(context) {
-                                const count = counts[context.dataIndex] || 0;
+                                const count = dataCounts[context.dataIndex] || 0;
                                 const pct = percentages[context.dataIndex] || 0;
                                 return ` ${context.label}: ${pct}% (${count} คัน)`;
                             }
@@ -566,22 +671,38 @@
             }
         });
 
-        legendEl.innerHTML = entries.map((e, idx) => {
-            const color = palette[idx % palette.length];
-            const pct = Math.round((e[1] / totalCount) * 100);
-            return `
-                <div class="flex justify-between items-center text-sm py-1 border-b border-outline-variant/20 last:border-0">
-                    <div class="flex items-center gap-2 truncate pr-2">
-                        <div class="w-3 h-3 rounded-full shrink-0 shadow-sm" style="background-color: ${color};"></div>
-                        <span class="truncate text-on-surface font-medium" title="${escapeHtml(e[0])}">${escapeHtml(e[0])}</span>
-                    </div>
-                    <span class="font-bold text-on-surface shrink-0">${pct}% <span class="text-xs text-outline font-normal">(${e[1]} คัน)</span></span>
+        // แสดงอันดับบริการที่ลูกค้าเลือกบ่อยสุด (Ranked List)
+        legendEl.innerHTML = `
+            <div class="space-y-1.5 pt-1">
+                <div class="text-[11px] font-semibold text-outline uppercase tracking-wider mb-2 flex items-center justify-between">
+                    <span>อันดับบริการที่ถูกเลือกบ่อยสุด</span>
+                    <span>สัดส่วน</span>
                 </div>
-            `;
-        }).join('');
+                ${rankedServices.map((e, idx) => {
+                    const isTop = idx === 0 && e.count > 0;
+                    const color = idx < activeChartEntries.length ? palette[idx % palette.length] : '#94a3b8';
+                    const pct = totalBookingsCounted > 0 ? Math.round((e.count / totalBookingsCounted) * 100) : 0;
+                    const medalBadge = idx === 0 && e.count > 0 ? '🥇' : (idx === 1 && e.count > 0 ? '🥈' : (idx === 2 && e.count > 0 ? '🥉' : `${idx + 1}`));
+                    
+                    return `
+                        <div class="flex justify-between items-center text-sm py-1.5 px-2.5 rounded-xl ${isTop ? 'bg-secondary/10 border border-secondary/20' : 'hover:bg-surface-variant/40'} transition-colors">
+                            <div class="flex items-center gap-2 truncate pr-2">
+                                <span class="w-5 text-center text-xs font-bold ${isTop ? 'text-secondary' : 'text-outline'} shrink-0">${medalBadge}</span>
+                                <div class="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" style="background-color: ${color};"></div>
+                                <span class="truncate text-on-surface font-semibold text-xs sm:text-sm" title="${escapeHtml(e.name)}">${escapeHtml(e.name)}</span>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <span class="font-bold text-on-surface text-xs sm:text-sm">${pct}%</span>
+                                <span class="text-[11px] text-outline font-normal ml-1">(${e.count} คัน)</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
     }
 
-    // 3. รายการจองวันนี้ (Today's Bookings - Schedule Table) แสดงเวลา, ชื่อรายการ, เลขทะเบียนรถ, สถานะ
+    // 3. รายการจองวันนี้: ตารางเวลาแสดงชื่อรายการที่ลูกค้าเลือก และตัดช่องทะเบียนออก
     function renderTodayBookings(todayList) {
         const tbody = document.getElementById('today-bookings-tbody');
         const badgeCount = document.getElementById('today-bookings-badge');
@@ -593,7 +714,7 @@
         if (!todayList || todayList.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="4" class="p-8 text-center text-outline">
+                    <td colspan="3" class="p-8 text-center text-outline">
                         <div class="flex flex-col items-center justify-center gap-2 py-6">
                             <div class="w-12 h-12 rounded-full bg-surface-variant flex items-center justify-center text-outline/60">
                                 <span class="material-symbols-outlined text-[28px]">calendar_today</span>
@@ -624,26 +745,22 @@
                 timeDisplay = new Date(b.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
             }
 
-            const plate = escapeHtml(b.plate_number || b.carPlate || '-');
-            const service = escapeHtml(b.service_name || b.serviceName || (b.notes ? b.notes.split('-')[0].trim() : '') || 'บริการล้างรถ');
+            const serviceName = escapeHtml(extractBookingServiceName(b));
             const badge = getStatusBadge(b.status);
 
             return `
                 <tr class="hover:bg-surface-variant/40 transition-colors">
-                    <td class="py-3.5 px-4 whitespace-nowrap">
+                    <td class="py-3.5 px-4 whitespace-nowrap w-28">
                         <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-container-highest font-semibold text-on-surface text-xs">
                             <span class="material-symbols-outlined text-[14px] text-primary">schedule</span>
                             ${timeDisplay}
                         </div>
                     </td>
-                    <td class="py-3.5 px-4 whitespace-nowrap">
-                        <div class="font-bold text-on-surface text-sm sm:text-base">${service}</div>
-                    </td>
-                    <td class="py-3.5 px-4 whitespace-nowrap">
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-surface-container font-mono font-bold text-on-surface border border-outline-variant/70 text-xs sm:text-sm tracking-wide shadow-sm">
-                            <span class="w-2 h-2 rounded-full bg-secondary"></span>
-                            ${plate}
-                        </span>
+                    <td class="py-3.5 px-4">
+                        <div class="font-bold text-on-surface text-sm sm:text-base flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-secondary shrink-0"></span>
+                            <span>${serviceName}</span>
+                        </div>
                     </td>
                     <td class="py-3.5 px-4 whitespace-nowrap text-right">
                         ${badge}
@@ -980,6 +1097,18 @@
                     } catch (_) {}
                 }
 
+                // Merge with local ownerServices cache if available
+                try {
+                    const cachedS = JSON.parse(localStorage.getItem('ownerServices') || '[]');
+                    if (Array.isArray(cachedS) && cachedS.length > 0) {
+                        cachedS.forEach(cs => {
+                            if (cs && cs.name && !shopServices.some(s => s.name.trim().toLowerCase() === cs.name.trim().toLowerCase())) {
+                                shopServices.push(cs);
+                            }
+                        });
+                    }
+                } catch (_) {}
+
                 // Also merge any local bookings matching this shop
                 try {
                     const stored = localStorage.getItem('appBookingsList');
@@ -1296,7 +1425,7 @@
             if (mAvatar && e.newValue) mAvatar.src = e.newValue;
             if (dAvatar && e.newValue) dAvatar.src = e.newValue;
         }
-        if (e.key === 'appBookingsList' || e.key === 'activeCustomerBooking' || e.key === 'ownerReviewsReplies') {
+        if (e.key === 'appBookingsList' || e.key === 'activeCustomerBooking' || e.key === 'ownerReviewsReplies' || e.key === 'ownerServices') {
             loadOwnerDashboardData();
         }
     });
