@@ -131,7 +131,7 @@
 </header>
 
 <!-- Main Container -->
-<main class="w-full max-w-6xl mx-auto px-4 md:px-6 pt-5 md:pt-8 pb-8 flex-1">
+<main class="w-full max-w-6xl mx-auto px-4 md:px-6 pt-5 md:pt-8 pb-28 md:pb-8 flex-1">
     
     <!-- Top Banner & Controls -->
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
@@ -192,20 +192,23 @@
 
 </main>
 
-<!-- Mobile Bottom Navigation -->
-<nav class="md:hidden bg-surface-container/95 backdrop-blur-xl fixed bottom-6 left-4 right-4 rounded-2xl z-50 border border-outline-variant/30 shadow-xl shadow-background/50 flex justify-around items-center p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0))]">
-    <a class="flex flex-col items-center justify-center w-16 h-12 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-all active:scale-95" href="discovery.html">
-        <span class="material-symbols-outlined text-[22px]">explore</span>
-        <span class="text-[10px] font-medium mt-1">ค้นหา</span>
+<!-- Bottom Nav Bar (Mobile Only) -->
+<nav class="md:hidden flex justify-around items-center p-2.5 pb-[calc(0.6rem+env(safe-area-inset-bottom,0))] bg-white/95 backdrop-blur-xl fixed bottom-4 left-4 right-4 rounded-2xl z-50 border border-slate-200 shadow-[0_10px_35px_rgba(15,23,42,0.12)]">
+    <a class="flex flex-col items-center justify-center text-slate-500 hover:text-primary active:scale-95 transition-transform w-18 h-14" href="discovery.html">
+        <span class="material-symbols-outlined text-[26px]">explore</span>
+        <span class="text-xs font-semibold mt-1">ค้นหา</span>
     </a>
-    <a class="flex flex-col items-center justify-center w-16 h-12 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-all active:scale-95" href="booking-history-Customer.html">
-        <span class="material-symbols-outlined text-[22px]">receipt_long</span>
-        <span class="text-[10px] font-medium mt-1">การจอง</span>
+    <a class="flex flex-col items-center justify-center text-slate-500 hover:text-primary active:scale-95 transition-transform w-18 h-14" href="booking-history-Customer.html">
+        <span class="material-symbols-outlined text-[26px]">receipt_long</span>
+        <span class="text-xs font-semibold mt-1">การจอง</span>
     </a>
-    <a class="flex flex-col items-center justify-center w-16 h-12 rounded-xl text-primary font-bold active:scale-95 relative" href="Customer%20Profile.html">
-        <div class="absolute -top-1 w-8 h-1 bg-primary rounded-full"></div>
-        <span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' 1;">person</span>
-        <span class="text-[10px] font-bold mt-1">โปรไฟล์</span>
+    <a class="flex flex-col items-center justify-center bg-primary/10 text-primary rounded-xl w-18 h-14 shadow-sm active:scale-95 transition-transform" href="favorite-shops.html">
+        <span class="material-symbols-outlined text-[26px]" style="font-variation-settings: 'FILL' 1;">favorite</span>
+        <span class="text-xs font-bold mt-1">ร้านโปรด</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-slate-500 hover:text-primary active:scale-95 transition-transform w-18 h-14" href="Customer%20Profile.html">
+        <span class="material-symbols-outlined text-[26px]">person</span>
+        <span class="text-xs font-semibold mt-1">ฉัน</span>
     </a>
 </nav>
 
@@ -929,21 +932,7 @@
     });
 </script>
 
-<!-- Mobile Bottom Navigation -->
-<nav class="md:hidden bg-surface-container/95 backdrop-blur-xl fixed bottom-5 left-4 right-4 rounded-2xl z-50 border border-outline-variant/30 shadow-2xl shadow-background/80 flex justify-around items-center p-2.5 pb-[calc(0.6rem+env(safe-area-inset-bottom,0))]">
-    <a class="flex flex-col items-center justify-center w-20 h-14 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-all active:scale-95" href="discovery.html">
-        <span class="material-symbols-outlined text-[26px]">explore</span>
-        <span class="text-xs font-semibold mt-1">ค้นหา</span>
-    </a>
-    <a class="flex flex-col items-center justify-center w-20 h-14 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-all active:scale-95" href="booking-history-Customer.html">
-        <span class="material-symbols-outlined text-[26px]">receipt_long</span>
-        <span class="text-xs font-semibold mt-1">การจอง</span>
-    </a>
-    <a class="flex flex-col items-center justify-center w-20 h-14 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-all active:scale-95" href="Customer%20Profile.html">
-        <span class="material-symbols-outlined text-[26px]">person</span>
-        <span class="text-xs font-semibold mt-1">โปรไฟล์</span>
-    </a>
-</nav>
+
 
 </body>
 </html>
