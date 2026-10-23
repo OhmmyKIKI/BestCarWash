@@ -9,14 +9,6 @@
 <!-- Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-client.js?v=2.1"></script>
-<script>
-    if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
-        var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
-        var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
-        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    }
-    var supabaseClient = window.supabaseClient;
-</script>
 <script id="tailwind-config">
         tailwind.config = {
           darkMode: "class",
@@ -62,8 +54,6 @@
       </script>
 <style>
         body {
-            background-color: theme('colors.background');
-            color: theme('colors.on-background');
             -webkit-tap-highlight-color: transparent;
         }
         
@@ -916,9 +906,10 @@
 
             // Restore QR Code and Bank info from database if present in shop description
             if (shop && shop.description) {
-                const meta = extractShopMetadata(shop.description);
-                if (meta) {
-                    const dbQr = meta.qr_code || meta.promptpay_qr || meta.bank_info?.qr_code;
+                try {
+                    const meta = extractShopMetadata(shop.description);
+                    if (meta) {
+                        const dbQr = meta.qr_code || meta.promptpay_qr || meta.bank_info?.qr_code;
                         if (dbQr) {
                             currentQrBase64 = dbQr;
                             if (userId) localStorage.setItem('ownerQrCode_' + userId, dbQr);
@@ -955,8 +946,8 @@
                                 if (nameInput) nameInput.value = meta.bank_info.account_name;
                             }
                         }
-                    } catch (_) {}
-                }
+                    }
+                } catch (_) {}
             }
 
             // If still completely no shop registered
