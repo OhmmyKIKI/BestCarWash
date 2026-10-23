@@ -202,7 +202,7 @@
                 <span class="text-xs font-bold uppercase tracking-wide">คิวหลุด/ยกเลิก</span>
             </div>
             <div id="kpi-cancelled" class="text-3xl font-bold text-on-surface mt-1">0</div>
-            <div class="text-xs text-error mt-1">คัน</div>
+            <div class="text-xs text-error mt-1">คัน (วันนี้)</div>
         </div>
         <!-- สรุปรีวิว (เพิ่มใหม่) -->
         <a href="owner-reviews.html" class="glass-card rounded-2xl p-4 shadow-xl flex flex-col gap-2 relative overflow-hidden group border border-outline-variant/60 hover:border-secondary/50 cursor-pointer block">
@@ -219,14 +219,20 @@
     <!-- 2. Current Service Status -->
     <section class="flex flex-col gap-stack-sm">
         <div class="flex justify-between items-end">
-            <h3 class="text-xl font-semibold text-on-surface">สถานะการให้บริการปัจจุบัน</h3>
-            <a href="owner-bookings.html" class="text-sm text-secondary hover:underline">ดูทั้งหมด</a>
+            <div class="flex items-center gap-2">
+                <h3 class="text-xl font-semibold text-on-surface">สถานะการให้บริการปัจจุบัน</h3>
+                <span id="active-services-badge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-yellow-400/15 text-yellow-600 dark:text-yellow-400 border border-yellow-400/30">0 คิว</span>
+            </div>
+            <a href="owner-bookings.html" class="text-sm text-secondary hover:underline flex items-center gap-1 font-medium">
+                <span>ดูทั้งหมด</span>
+                <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+            </a>
         </div>
         <div id="active-services-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-stack-md mt-2">
             <div class="col-span-full py-12 px-6 glass-card rounded-2xl shadow-xl border border-dashed border-outline-variant/60 flex flex-col items-center justify-center text-center gap-2">
                 <span class="material-symbols-outlined text-[36px] text-outline opacity-40">local_car_wash</span>
                 <p class="text-sm font-bold text-on-surface">ยังไม่มีรถในคิวให้บริการขณะนี้</p>
-                <p class="text-xs text-outline">เมื่อมีลูกค้าจองคิวหรือนำรถเข้ามาใช้บริการ รายการจะปรากฏที่นี่แบบเรียลไทม์</p>
+                <p class="text-xs text-outline">เมื่อมีลูกค้าจองคิวหรือนำรถเข้ามาใช้บริการ รายการจะปรากฏที่นี่แบบเรียลไทม์ (แสดง 3 รายการล่าสุด)</p>
             </div>
         </div>
     </section>
@@ -236,18 +242,32 @@
         <!-- 3. Today's Bookings List (Span 2 cols) -->
         <section class="lg:col-span-2 flex flex-col gap-stack-sm">
             <div class="flex justify-between items-end">
-                <h3 class="text-xl font-semibold text-on-surface">รายการจองวันนี้</h3>
-                <a href="owner-bookings.html" class="text-sm text-secondary hover:underline">จัดการการจอง</a>
+                <div class="flex items-center gap-2">
+                    <h3 class="text-xl font-semibold text-on-surface">รายการจองวันนี้</h3>
+                    <span id="today-bookings-badge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">0 คิว</span>
+                </div>
+                <a href="owner-bookings.html" class="text-sm text-secondary hover:underline flex items-center gap-1 font-medium">
+                    <span>จัดการการจอง</span>
+                    <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </a>
             </div>
             <div class="glass-card rounded-2xl shadow-xl overflow-hidden flex flex-col border border-outline-variant/60">
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse min-w-[600px]">
+                    <table class="w-full text-left border-collapse min-w-[500px]">
                         <thead>
-                            <tr class="bg-surface-container-highest/50 text-outline text-sm border-b border-outline-variant/20">
-                                <th class="p-4 font-medium whitespace-nowrap">เวลา</th>
-                                <th class="p-4 font-medium whitespace-nowrap">ข้อมูลรถ</th>
-                                <th class="p-4 font-medium whitespace-nowrap">แพ็กเกจ</th>
-                                <th class="p-4 font-medium whitespace-nowrap text-right">สถานะ</th>
+                            <tr class="bg-surface-container-highest/60 text-outline text-xs font-semibold uppercase tracking-wider border-b border-outline-variant/20">
+                                <th class="py-3.5 px-4 whitespace-nowrap w-28">
+                                    <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-primary">schedule</span> เวลา</span>
+                                </th>
+                                <th class="py-3.5 px-4 whitespace-nowrap">
+                                    <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-secondary">dry_cleaning</span> รายการบริการ</span>
+                                </th>
+                                <th class="py-3.5 px-4 whitespace-nowrap">
+                                    <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-amber-500">pin</span> ทะเบียนรถ</span>
+                                </th>
+                                <th class="py-3.5 px-4 whitespace-nowrap text-right">
+                                    <span>สถานะ</span>
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="today-bookings-tbody" class="divide-y divide-outline-variant/20 text-sm">
@@ -267,7 +287,10 @@
 
         <!-- 4. Service Popularity -->
         <section class="flex flex-col gap-stack-sm">
-            <h3 class="text-xl font-semibold text-on-surface">สัดส่วนแพ็กเกจ</h3>
+            <div class="flex justify-between items-end">
+                <h3 class="text-xl font-semibold text-on-surface">สัดส่วนแพ็กเกจ</h3>
+                <span class="text-xs text-outline font-medium">บริการของร้าน</span>
+            </div>
             <div class="glass-card rounded-2xl p-5 shadow-xl flex flex-col items-center justify-center h-full min-h-[320px] border border-outline-variant/60">
                 <div class="w-full max-w-[220px] aspect-square relative">
                     <canvas id="popularityChart"></canvas>
@@ -282,8 +305,14 @@
     <!-- 5. Recent Reviews Section -->
     <section class="flex flex-col gap-stack-sm mt-4">
         <div class="flex justify-between items-end">
-            <h3 class="text-xl font-semibold text-on-surface">รีวิวล่าสุด</h3>
-            <a href="owner-reviews.html" class="text-sm text-secondary hover:underline">จัดการรีวิว</a>
+            <div class="flex items-center gap-2">
+                <h3 class="text-xl font-semibold text-on-surface">รีวิวล่าสุด</h3>
+                <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-secondary/15 text-secondary border border-secondary/30">2 รายการล่าสุด</span>
+            </div>
+            <a href="owner-reviews.html" class="text-sm text-secondary hover:underline flex items-center gap-1 font-medium">
+                <span>จัดการรีวิวทั้งหมด</span>
+                <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+            </a>
         </div>
         <div id="recent-reviews-container" class="grid grid-cols-1 md:grid-cols-2 gap-stack-md">
             <div class="col-span-full py-10 px-6 glass-card rounded-2xl shadow-xl border border-dashed border-outline-variant/40 flex flex-col items-center justify-center text-center gap-2">
@@ -381,14 +410,79 @@
         return `<span class="inline-block px-2.5 py-1 bg-surface-bright text-on-surface-variant text-xs font-semibold rounded-full border border-outline-variant">${escapeHtml(status || 'รอคิว')}</span>`;
     }
 
+    // Helper date utilities for 100% accurate daily summary
+    function getLocalTodayIso() {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function isBookingToday(b, todayIso) {
+        if (!b) return false;
+        if (b.booking_date) {
+            const bDate = String(b.booking_date).split('T')[0];
+            if (bDate === todayIso) return true;
+        }
+        if (typeof b.dateTime === 'string' && (b.dateTime.includes('วันนี้') || b.dateTime.includes(todayIso))) {
+            return true;
+        }
+        if (!b.booking_date && b.created_at) {
+            const cd = new Date(b.created_at);
+            const cy = cd.getFullYear();
+            const cm = String(cd.getMonth() + 1).padStart(2, '0');
+            const cday = String(cd.getDate()).padStart(2, '0');
+            if (`${cy}-${cm}-${cday}` === todayIso) return true;
+        }
+        return false;
+    }
+
     let popularityChartInstance = null;
 
-    function updatePopularityChart(list) {
+    // 4. สัดส่วนแพ็กเกจ (Package Proportion Chart) เชื่อมกับชื่อบริการจริงของร้าน
+    function updatePopularityChart(list, shopServices) {
         const canvas = document.getElementById('popularityChart');
         const legendEl = document.getElementById('popularityLegend');
         if (!canvas || !legendEl) return;
 
-        if (!list || list.length === 0) {
+        // Build service lookup map from shop's actual services
+        const validServicesMap = {};
+        if (Array.isArray(shopServices) && shopServices.length > 0) {
+            shopServices.forEach(s => {
+                if (s && s.name) {
+                    const cleanName = s.name.trim();
+                    validServicesMap[s.id] = cleanName;
+                    validServicesMap[cleanName.toLowerCase()] = cleanName;
+                }
+            });
+        }
+
+        const pkgCounts = {};
+        let totalCount = 0;
+
+        (list || []).forEach(b => {
+            let name = '';
+            if (b.service_name && validServicesMap[b.service_name.trim().toLowerCase()]) {
+                name = validServicesMap[b.service_name.trim().toLowerCase()];
+            } else if (b.service_id && validServicesMap[b.service_id]) {
+                name = validServicesMap[b.service_id];
+            } else if (b.service_name) {
+                name = b.service_name.trim();
+            } else if (b.serviceName) {
+                name = b.serviceName.trim();
+            } else if (b.notes) {
+                name = b.notes.split('-')[0].trim();
+            }
+
+            if (!name) name = 'บริการทั่วไป';
+            pkgCounts[name] = (pkgCounts[name] || 0) + 1;
+            totalCount++;
+        });
+
+        const entries = Object.entries(pkgCounts).sort((a, b) => b[1] - a[1]);
+
+        if (entries.length === 0 || totalCount === 0) {
             if (popularityChartInstance) {
                 popularityChartInstance.destroy();
                 popularityChartInstance = null;
@@ -400,14 +494,14 @@
                     labels: ['ยังไม่มีข้อมูลการจอง'],
                     datasets: [{
                         data: [1],
-                        backgroundColor: ['#2d3449'],
+                        backgroundColor: ['#e2e8f0'],
                         borderWidth: 0
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    cutout: '70%',
+                    cutout: '72%',
                     plugins: {
                         legend: { display: false },
                         tooltip: { enabled: false }
@@ -423,15 +517,7 @@
             return;
         }
 
-        const pkgCounts = {};
-        list.forEach(b => {
-            let name = (b.service_name || b.serviceName || (b.notes ? b.notes.split('-')[0].trim() : '') || 'บริการทั่วไป').trim();
-            pkgCounts[name] = (pkgCounts[name] || 0) + 1;
-        });
-
-        const entries = Object.entries(pkgCounts).sort((a, b) => b[1] - a[1]);
-        const totalCount = list.length;
-        const palette = ['#4edea3', '#b4c5ff', '#facc15', '#f472b6', '#a78bfa', '#38bdf8', '#fb923c', '#34d399'];
+        const palette = ['#0284c7', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#f97316', '#14b8a6'];
 
         const labels = entries.map(e => e[0]);
         const counts = entries.map(e => e[1]);
@@ -449,9 +535,10 @@
             data: {
                 labels: labels,
                 datasets: [{
-                    data: percentages,
+                    data: counts,
                     backgroundColor: bgColors,
-                    borderWidth: 0,
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
                     hoverOffset: 4
                 }]
             },
@@ -462,10 +549,16 @@
                 plugins: {
                     legend: { display: false },
                     tooltip: {
+                        backgroundColor: '#0f172a',
+                        titleColor: '#ffffff',
+                        bodyColor: '#e2e8f0',
+                        padding: 10,
+                        cornerRadius: 8,
                         callbacks: {
                             label: function(context) {
                                 const count = counts[context.dataIndex] || 0;
-                                return `${context.label}: ${context.parsed}% (${count} คัน)`;
+                                const pct = percentages[context.dataIndex] || 0;
+                                return ` ${context.label}: ${pct}% (${count} คัน)`;
                             }
                         }
                     }
@@ -477,7 +570,7 @@
             const color = palette[idx % palette.length];
             const pct = Math.round((e[1] / totalCount) * 100);
             return `
-                <div class="flex justify-between items-center text-sm py-0.5">
+                <div class="flex justify-between items-center text-sm py-1 border-b border-outline-variant/20 last:border-0">
                     <div class="flex items-center gap-2 truncate pr-2">
                         <div class="w-3 h-3 rounded-full shrink-0 shadow-sm" style="background-color: ${color};"></div>
                         <span class="truncate text-on-surface font-medium" title="${escapeHtml(e[0])}">${escapeHtml(e[0])}</span>
@@ -488,36 +581,25 @@
         }).join('');
     }
 
-    function renderTodayBookings(list) {
+    // 3. รายการจองวันนี้ (Today's Bookings - Schedule Table) แสดงเวลา, ชื่อรายการ, เลขทะเบียนรถ, สถานะ
+    function renderTodayBookings(todayList) {
         const tbody = document.getElementById('today-bookings-tbody');
+        const badgeCount = document.getElementById('today-bookings-badge');
+        if (badgeCount) {
+            badgeCount.textContent = `${(todayList || []).length} คิว`;
+        }
         if (!tbody) return;
 
-        const now = new Date();
-        const todayIso = now.toISOString().split('T')[0];
-
-        const todayList = (list || []).filter(b => {
-            if (b.booking_date) {
-                const bDate = String(b.booking_date).split('T')[0];
-                if (bDate === todayIso) return true;
-            }
-            if (typeof b.dateTime === 'string' && (b.dateTime.includes('วันนี้') || b.dateTime.includes(todayIso))) {
-                return true;
-            }
-            if (!b.booking_date && b.created_at) {
-                const cDate = String(b.created_at).split('T')[0];
-                if (cDate === todayIso) return true;
-            }
-            return false;
-        });
-
-        if (todayList.length === 0) {
+        if (!todayList || todayList.length === 0) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="4" class="p-8 text-center text-outline">
-                        <div class="flex flex-col items-center justify-center gap-1.5 py-4">
-                            <span class="material-symbols-outlined text-[32px] opacity-40">calendar_today</span>
-                            <p class="text-sm font-semibold text-on-surface">ไม่มีรายการจองสำหรับวันนี้</p>
-                            <p class="text-xs text-outline">เมื่อมีลูกค้าจองคิวในวันนี้ รายการจะแสดงที่นี่โดยอัตโนมัติ</p>
+                        <div class="flex flex-col items-center justify-center gap-2 py-6">
+                            <div class="w-12 h-12 rounded-full bg-surface-variant flex items-center justify-center text-outline/60">
+                                <span class="material-symbols-outlined text-[28px]">calendar_today</span>
+                            </div>
+                            <p class="text-sm font-bold text-on-surface">ไม่มีรายการจองสำหรับวันนี้</p>
+                            <p class="text-xs text-outline">เมื่อมีลูกค้าจองคิวในวันนี้ รายการจะแสดงในตารางเวลาโดยอัตโนมัติ</p>
                         </div>
                     </td>
                 </tr>
@@ -525,7 +607,14 @@
             return;
         }
 
-        tbody.innerHTML = todayList.map(b => {
+        // Sort chronologically by booking_time
+        const sorted = [...todayList].sort((a, b) => {
+            const timeA = a.booking_time || '99:99';
+            const timeB = b.booking_time || '99:99';
+            return timeA.localeCompare(timeB);
+        });
+
+        tbody.innerHTML = sorted.map(b => {
             let timeDisplay = '-';
             if (b.booking_time) {
                 timeDisplay = b.booking_time.slice(0, 5) + ' น.';
@@ -536,19 +625,27 @@
             }
 
             const plate = escapeHtml(b.plate_number || b.carPlate || '-');
-            const vehicle = escapeHtml(b.vehicle_info || b.carBrand || '');
             const service = escapeHtml(b.service_name || b.serviceName || (b.notes ? b.notes.split('-')[0].trim() : '') || 'บริการล้างรถ');
             const badge = getStatusBadge(b.status);
 
             return `
-                <tr class="hover:bg-surface-variant/30 transition-colors">
-                    <td class="p-4 text-on-surface whitespace-nowrap font-medium text-sm">${timeDisplay}</td>
-                    <td class="p-4 whitespace-nowrap">
-                        <div class="font-bold text-on-surface">${plate}</div>
-                        ${vehicle ? `<div class="text-xs text-outline">${vehicle}</div>` : ''}
+                <tr class="hover:bg-surface-variant/40 transition-colors">
+                    <td class="py-3.5 px-4 whitespace-nowrap">
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-container-highest font-semibold text-on-surface text-xs">
+                            <span class="material-symbols-outlined text-[14px] text-primary">schedule</span>
+                            ${timeDisplay}
+                        </div>
                     </td>
-                    <td class="p-4 text-outline whitespace-nowrap font-medium">${service}</td>
-                    <td class="p-4 whitespace-nowrap text-right">
+                    <td class="py-3.5 px-4 whitespace-nowrap">
+                        <div class="font-bold text-on-surface text-sm sm:text-base">${service}</div>
+                    </td>
+                    <td class="py-3.5 px-4 whitespace-nowrap">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-surface-container font-mono font-bold text-on-surface border border-outline-variant/70 text-xs sm:text-sm tracking-wide shadow-sm">
+                            <span class="w-2 h-2 rounded-full bg-secondary"></span>
+                            ${plate}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 whitespace-nowrap text-right">
                         ${badge}
                     </td>
                 </tr>
@@ -556,13 +653,14 @@
         }).join('');
     }
 
+    // 5. รีวิวล่าสุด (Recent Reviews) แสดงเฉพาะ 2 รีวิวล่าสุด
     async function loadOwnerReviews(client, shopId) {
         const container = document.getElementById('recent-reviews-container');
         const kpiRating = document.getElementById('kpi-rating');
         const kpiReviewsCount = document.getElementById('kpi-reviews-count');
 
         try {
-            const reviewsRes = await safeSupabaseRest(`reviews?select=*,customer:customer_id(full_name,avatar_url)&shop_id=eq.${shopId}&order=created_at.desc`);
+            const reviewsRes = await safeSupabaseRest(`reviews?select=*,customer:customer_id(full_name,avatar_url)&shop_id=eq.${shopId}&order=created_at.desc&limit=10`);
             let revList = Array.isArray(reviewsRes) ? reviewsRes : (reviewsRes?.data || []);
 
             // Dual-Engine Fallback: Query via official Supabase SDK if needed
@@ -572,12 +670,13 @@
                         .from('reviews')
                         .select('*, customer:customer_id(full_name, avatar_url)')
                         .eq('shop_id', shopId)
-                        .order('created_at', { ascending: false });
+                        .order('created_at', { ascending: false })
+                        .limit(10);
                     if (Array.isArray(sdkRev) && sdkRev.length > 0) revList = sdkRev;
                 } catch(_) {}
             }
 
-            // Update KPI card
+            // Update KPI card (Section 1)
             if (revList.length > 0) {
                 const sum = revList.reduce((acc, r) => acc + (parseFloat(r.rating) || 5), 0);
                 const avg = (sum / revList.length).toFixed(1);
@@ -588,7 +687,7 @@
                 if (kpiReviewsCount) kpiReviewsCount.textContent = 'ยังไม่มีรีวิว';
             }
 
-            // Reviews container
+            // Reviews container (Section 5: 2 reviews max)
             if (!container) return;
 
             if (revList.length === 0) {
@@ -611,7 +710,7 @@
                 storedReplies = JSON.parse(localStorage.getItem('ownerReviewsReplies') || '{}');
             } catch(e) {}
 
-            const recent = revList.slice(0, 4);
+            const recent = revList.slice(0, 2);
             container.innerHTML = recent.map(r => {
                 const customerName = r.customer?.full_name || 'ลูกค้าทั่วไป';
                 const firstChar = customerName.charAt(0).toUpperCase();
@@ -638,26 +737,30 @@
                                 <div class="flex gap-3 items-center">
                                     ${avatarHtml}
                                     <div>
-                                        <h4 class="font-semibold text-on-surface text-sm sm:text-base">${escapeHtml(customerName)}</h4>
-                                        <p class="text-xs text-on-surface-variant">${dateStr}</p>
+                                        <h4 class="font-bold text-on-surface text-sm sm:text-base">${escapeHtml(customerName)}</h4>
+                                        <p class="text-xs text-outline">${dateStr}</p>
                                     </div>
                                 </div>
                                 <div class="flex text-yellow-400 gap-0.5">
                                     ${starsHtml}
                                 </div>
                             </div>
-                            <p class="text-on-surface text-sm leading-relaxed line-clamp-2 mb-4">${escapeHtml(comment)}</p>
+                            <p class="text-on-surface text-sm leading-relaxed line-clamp-3 mb-4 font-normal">"${escapeHtml(comment)}"</p>
                         </div>
-                        ${replyText ? `
-                            <div class="bg-surface-container rounded-lg p-3 border-l-2 border-secondary">
-                                <p class="text-xs font-semibold text-secondary mb-1">ตอบกลับแล้ว</p>
-                                <p class="text-xs text-on-surface-variant line-clamp-1">${escapeHtml(replyText)}</p>
-                            </div>
-                        ` : `
-                            <a href="owner-reviews.html" class="inline-flex items-center justify-center gap-1 bg-secondary text-on-secondary-container px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity">
-                                <span class="material-symbols-outlined text-[16px]">reply</span> ตอบกลับลูกค้า
-                            </a>
-                        `}
+                        <div class="pt-3 border-t border-outline-variant/20">
+                            ${replyText ? `
+                                <div class="bg-surface-container rounded-xl p-3 border-l-2 border-secondary">
+                                    <p class="text-xs font-semibold text-secondary mb-1 flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[14px]">reply</span> ตอบกลับแล้ว
+                                    </p>
+                                    <p class="text-xs text-outline line-clamp-2">${escapeHtml(replyText)}</p>
+                                </div>
+                            ` : `
+                                <a href="owner-reviews.html" class="inline-flex items-center justify-center gap-1.5 bg-secondary/15 hover:bg-secondary text-secondary hover:text-on-secondary-container px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border border-secondary/30">
+                                    <span class="material-symbols-outlined text-[15px]">reply</span> ตอบกลับลูกค้า
+                                </a>
+                            `}
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -719,19 +822,22 @@
             let fastBookingsPromise = null;
             let fastShopPromise = null;
             let fastReviewsPromise = null;
+            let fastServicesPromise = null;
 
             if (savedShopId && savedShopId.length > 20 && fetcher) {
                 fastBookingsPromise = fetcher(`bookings?shop_id=eq.${savedShopId}&order=created_at.desc`);
                 fastShopPromise = fetcher(`shops?id=eq.${savedShopId}&limit=1`);
-                fastReviewsPromise = fetcher(`reviews?shop_id=eq.${savedShopId}&order=created_at.desc`);
+                fastReviewsPromise = fetcher(`reviews?shop_id=eq.${savedShopId}&order=created_at.desc&limit=10`);
+                fastServicesPromise = fetcher(`services?shop_id=eq.${savedShopId}&select=id,name,price`);
             }
 
             const sessionPromise = client.auth ? client.auth.getSession().catch(() => ({ data: null })) : Promise.resolve({ data: null });
 
-            const [bookingsRes, shopRes, reviewsRes, sessRes] = await Promise.all([
+            const [bookingsRes, shopRes, reviewsRes, servicesRes, sessRes] = await Promise.all([
                 fastBookingsPromise || Promise.resolve(null),
                 fastShopPromise || Promise.resolve(null),
                 fastReviewsPromise || Promise.resolve(null),
+                fastServicesPromise || Promise.resolve(null),
                 sessionPromise
             ]);
 
@@ -859,6 +965,21 @@
                 }
                 let list = Array.isArray(dbBookings) ? dbBookings : [];
 
+                // Retrieve shop services for accurate package matching (Section 4)
+                let shopServices = Array.isArray(servicesRes) ? servicesRes : [];
+                if (shopServices.length === 0 && fetcher) {
+                    try {
+                        const sList = await fetcher(`services?shop_id=eq.${shop.id}&select=id,name,price`);
+                        if (Array.isArray(sList)) shopServices = sList;
+                    } catch (_) {}
+                }
+                if (shopServices.length === 0 && client?.from) {
+                    try {
+                        const { data: sList } = await client.from('services').select('id, name, price').eq('shop_id', shop.id);
+                        if (Array.isArray(sList)) shopServices = sList;
+                    } catch (_) {}
+                }
+
                 // Also merge any local bookings matching this shop
                 try {
                     const stored = localStorage.getItem('appBookingsList');
@@ -876,10 +997,14 @@
                     }
                 } catch(e) {}
 
-                const delivered = list.filter(b => String(b.status).toLowerCase() === 'completed').length;
-                const inService = list.filter(b => ['washing', 'arrived', 'ready'].includes(String(b.status).toLowerCase())).length;
-                const cancelled = list.filter(b => ['refunded', 'declined', 'no_show', 'refund_requested', 'cancelled'].includes(String(b.status).toLowerCase())).length;
-                const total = list.length;
+                // 1. สรุปข้อมูลประจำวัน: กรองตรงตามฐานข้อมูลจริง 100% (คำนวณเฉพาะ "วันนี้")
+                const todayIso = getLocalTodayIso();
+                const todayList = list.filter(b => isBookingToday(b, todayIso));
+
+                const delivered = todayList.filter(b => String(b.status).toLowerCase() === 'completed').length;
+                const total = todayList.length;
+                const inService = list.filter(b => ['washing', 'arrived', 'ready', 'in_progress'].includes(String(b.status).toLowerCase())).length;
+                const cancelled = todayList.filter(b => ['refunded', 'declined', 'no_show', 'refund_requested', 'cancelled'].includes(String(b.status).toLowerCase())).length;
 
                 // Cache KPI for next 0ms instant display
                 localStorage.setItem('ownerDashboardKPI', JSON.stringify({ delivered, total, inService, cancelled }));
@@ -893,55 +1018,85 @@
                 const elCancelled = document.getElementById('kpi-cancelled');
                 if (elCancelled) elCancelled.textContent = cancelled;
 
-                // Render active service cards
-                const activeList = list.filter(b => ['washing', 'arrived', 'ready', 'confirmed'].includes(String(b.status).toLowerCase()));
+                // 2. สถานะการให้บริการปัจจุบัน: เชื่อมและแสดง 3 รายการล่าสุดเท่านั้น
+                const activeList = list.filter(b => ['washing', 'arrived', 'ready', 'in_progress', 'confirmed'].includes(String(b.status).toLowerCase()));
+                
+                // Sort: washing / in_progress first, then ready, then arrived / confirmed
+                activeList.sort((a, b) => {
+                    const sA = String(a.status || '').toLowerCase();
+                    const sB = String(b.status || '').toLowerCase();
+                    const rank = s => (s === 'washing' || s === 'in_progress' ? 1 : (s === 'ready' ? 2 : 3));
+                    return rank(sA) - rank(sB);
+                });
+
+                const activeBadge = document.getElementById('active-services-badge');
+                if (activeBadge) {
+                    activeBadge.textContent = `${activeList.length} คิว`;
+                }
+
+                const displayActive = activeList.slice(0, 3);
                 const container = document.getElementById('active-services-container');
                 if (container) {
-                    if (activeList.length === 0) {
+                    if (displayActive.length === 0) {
                         container.innerHTML = `
-                            <div class="col-span-full glass-card rounded-2xl p-8 shadow-xl border border-dashed border-outline-variant/40 text-center flex flex-col items-center justify-center">
-                                <span class="material-symbols-outlined text-4xl text-outline mb-2">car_crash</span>
-                                <p class="text-sm font-semibold text-on-surface">ยังไม่มีคิวที่กำลังให้บริการในขณะนี้</p>
-                                <p class="text-xs text-outline mt-1">เมื่อคุณกดยืนยันรับคิว รายการรถจะปรากฏในช่องนี้</p>
+                            <div class="col-span-full py-12 px-6 glass-card rounded-2xl shadow-xl border border-dashed border-outline-variant/60 flex flex-col items-center justify-center text-center gap-2">
+                                <span class="material-symbols-outlined text-[36px] text-outline opacity-40">local_car_wash</span>
+                                <p class="text-sm font-bold text-on-surface">ยังไม่มีรถในคิวให้บริการขณะนี้</p>
+                                <p class="text-xs text-outline">เมื่อมีลูกค้าจองคิวหรือนำรถเข้ามาใช้บริการ รายการจะปรากฏที่นี่แบบเรียลไทม์ (แสดง 3 รายการล่าสุด)</p>
                             </div>
                         `;
                     } else {
-                        container.innerHTML = activeList.map(b => {
-                            const isWashing = String(b.status).toLowerCase() === 'washing';
-                            const badgeColor = isWashing ? 'yellow-400' : 'primary';
-                            const badgeText = isWashing ? 'กำลังดำเนินการ' : (String(b.status).toLowerCase() === 'ready' ? 'พร้อมรับรถ' : 'รอรับบริการ');
+                        container.innerHTML = displayActive.map(b => {
+                            const st = String(b.status || '').toLowerCase();
+                            const isWashing = st === 'washing' || st === 'in_progress';
+                            const isReady = st === 'ready';
+                            
+                            let colorKey = 'primary';
+                            let statusText = 'รอรับบริการ';
+                            if (isWashing) {
+                                colorKey = 'yellow-400';
+                                statusText = 'กำลังให้บริการ';
+                            } else if (isReady) {
+                                colorKey = 'secondary';
+                                statusText = 'พร้อมส่งมอบ';
+                            } else if (st === 'arrived') {
+                                colorKey = 'sky-500';
+                                statusText = 'มาถึงร้านแล้ว';
+                            }
+
+                            const plate = escapeHtml(b.plate_number || b.carPlate || '-');
+                            const service = escapeHtml(b.service_name || b.serviceName || (b.notes ? b.notes.split('-')[0].trim() : '') || 'บริการล้างรถ');
+                            let timeText = b.booking_time ? (b.booking_time.slice(0, 5) + ' น.') : (b.dateTime || 'วันนี้');
+
                             return `
-                                <div class="glass-card rounded-2xl p-5 shadow-xl border border-${badgeColor}/40 flex flex-col gap-3 relative overflow-hidden hover:border-${badgeColor} transition-all">
-                                    <div class="absolute top-0 right-0 w-2 h-full bg-${badgeColor}"></div>
-                                    <div class="flex justify-between items-start">
-                                        <div>
-                                            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-${badgeColor}/20 text-${badgeColor} text-xs font-semibold rounded-full border border-${badgeColor}/30">
+                                <div class="glass-card rounded-2xl p-5 shadow-xl border border-outline-variant/60 hover:border-secondary/40 flex flex-col justify-between relative overflow-hidden transition-all group">
+                                    <div class="absolute top-0 left-0 right-0 h-1 bg-${colorKey}"></div>
+                                    <div class="flex flex-col gap-3">
+                                        <div class="flex justify-between items-center">
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-${colorKey}/15 text-${colorKey === 'yellow-400' ? 'yellow-600 dark:text-yellow-400' : (colorKey === 'secondary' ? 'secondary' : 'primary')} text-xs font-bold rounded-full border border-${colorKey}/30">
                                                 ${isWashing ? '<span class="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></span>' : ''}
-                                                ${badgeText}
+                                                ${statusText}
+                                            </span>
+                                            <span class="text-xs text-outline font-medium flex items-center gap-1">
+                                                <span class="material-symbols-outlined text-[14px]">schedule</span>
+                                                ${escapeHtml(timeText)}
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center gap-3 mt-1">
+                                            <div class="w-12 h-12 rounded-xl bg-surface-container-highest flex items-center justify-center text-primary shrink-0 border border-outline-variant/30">
+                                                <span class="material-symbols-outlined text-[24px]">directions_car</span>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <div class="text-xl font-extrabold text-on-surface tracking-tight truncate">${plate}</div>
+                                                <div class="text-xs font-semibold text-secondary truncate mt-0.5">${service}</div>
                                             </div>
                                         </div>
-                                        <div class="text-xs text-outline font-medium">${escapeHtml(b.booking_time || b.dateTime || 'วันนี้')}</div>
                                     </div>
-                                    <div class="flex flex-col gap-2 mt-1">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-10 h-10 rounded-lg bg-surface-variant flex items-center justify-center text-on-surface-variant">
-                                                <span class="material-symbols-outlined">directions_car</span>
-                                            </div>
-                                            <div>
-                                                <div class="text-lg font-bold text-on-surface">${escapeHtml(b.plate_number || b.carPlate || '-')}</div>
-                                                <div class="text-sm text-outline">${escapeHtml(b.vehicle_info || b.carBrand || 'รถยนต์')}</div>
-                                            </div>
-                                        </div>
-                                        <div class="p-3 bg-surface-variant/50 rounded-lg mt-1">
-                                            <div class="flex justify-between text-sm">
-                                                <span class="text-outline">แพ็กเกจ:</span>
-                                                <span class="font-semibold text-on-surface">${escapeHtml(b.service_name || b.serviceName || 'ล้างรถ')}</span>
-                                            </div>
-                                            <div class="flex justify-between text-sm mt-1">
-                                                <span class="text-outline">ลูกค้า:</span>
-                                                <span class="text-on-surface">${escapeHtml(b.customer_name || b.customerName || 'ลูกค้า')}</span>
-                                            </div>
-                                        </div>
+                                    <div class="mt-4 pt-3 border-t border-outline-variant/20 flex justify-between items-center text-xs">
+                                        <span class="text-outline">คิวที่ 1-3 ล่าสุด</span>
+                                        <a href="owner-bookings.html" class="text-secondary font-semibold hover:underline flex items-center gap-0.5">
+                                            จัดการคิว <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+                                        </a>
                                     </div>
                                 </div>
                             `;
@@ -949,13 +1104,13 @@
                     }
                 }
 
-                // Render 1: รายการจองวันนี้ (Today's Bookings)
-                renderTodayBookings(list);
+                // 3. รายการจองวันนี้: ตารางเวลาที่สวยงาม แสดงเฉพาะเวลา, ชื่อรายการ, เลขทะเบียนลูกค้า และสถานะ
+                renderTodayBookings(todayList);
 
-                // Render 2: สัดส่วนแพ็กเกจ (Package Breakdown)
-                updatePopularityChart(list);
+                // 4. สัดส่วนแพ็กเกจ: เชื่อมโยงกับชื่อแพ็กเกจจริงของร้าน
+                updatePopularityChart(list, shopServices);
 
-                // Render 3: รีวิวล่าสุด & Review KPI
+                // 5. รีวิวล่าสุด & Review KPI: แสดง 2 รีวิวล่าสุด
                 const rData = Array.isArray(reviewsRes) ? reviewsRes : (reviewsRes?.data || null);
                 if (Array.isArray(rData) && rData.length > 0) {
                     renderReviewsFromData(rData);
@@ -993,38 +1148,80 @@
         try {
             const list = Array.isArray(reviews) ? reviews : [];
             const avgRating = list.length > 0 ? (list.reduce((acc, r) => acc + (parseFloat(r.rating) || 5), 0) / list.length).toFixed(1) : '5.0';
-            const kpiAvg = document.getElementById('kpi-avg-rating');
-            if (kpiAvg) kpiAvg.textContent = avgRating;
-            const kpiCount = document.getElementById('kpi-review-count');
-            if (kpiCount) kpiCount.textContent = `จาก ${list.length} รีวิว`;
+            const kpiRating = document.getElementById('kpi-rating');
+            if (kpiRating) kpiRating.innerHTML = `${avgRating} <span class="text-sm text-yellow-400 font-normal">★</span>`;
+            const kpiReviewsCount = document.getElementById('kpi-reviews-count');
+            if (kpiReviewsCount) kpiReviewsCount.textContent = `${list.length} รีวิว`;
 
             const container = document.getElementById('recent-reviews-container');
             if (!container) return;
 
             if (list.length === 0) {
                 container.innerHTML = `
-                    <div class="col-span-full py-8 text-center text-outline">
-                        <span class="material-symbols-outlined text-3xl mb-1">rate_review</span>
-                        <p class="text-sm">ยังไม่มีรีวิวจากลูกค้า</p>
+                    <div class="col-span-full py-10 px-6 glass-card rounded-2xl shadow-xl border border-dashed border-outline-variant/40 flex flex-col items-center justify-center text-center gap-2">
+                        <span class="material-symbols-outlined text-[36px] text-yellow-400/50">rate_review</span>
+                        <p class="text-sm font-bold text-on-surface">ยังไม่มีรีวิวสำหรับร้านนี้</p>
+                        <p class="text-xs text-outline">เมื่อลูกค้าใช้บริการเสร็จสิ้นและเขียนรีวิว ความคิดเห็นจะแสดงที่นี่โดยอัตโนมัติ</p>
                     </div>
                 `;
                 return;
             }
 
-            container.innerHTML = list.slice(0, 4).map(r => {
-                const stars = '★'.repeat(Math.round(r.rating || 5)) + '☆'.repeat(5 - Math.round(r.rating || 5));
+            let storedReplies = {};
+            try {
+                storedReplies = JSON.parse(localStorage.getItem('ownerReviewsReplies') || '{}');
+            } catch(e) {}
+
+            // Exactly 2 latest reviews
+            container.innerHTML = list.slice(0, 2).map(r => {
+                const customerName = r.customer?.full_name || r.customer_name || 'ลูกค้าทั่วไป';
+                const firstChar = customerName.charAt(0).toUpperCase();
+                const avatarUrl = r.customer?.avatar_url || r.customer_avatar;
+                const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : 'เมื่อเร็วๆ นี้';
+                const starsHtml = renderStars(r.rating || 5);
+                const comment = r.comment || 'ลูกค้าไม่ได้ระบุความคิดเห็นเพิ่มเติม';
+                const replyText = r.reply || storedReplies[r.id]?.reply;
+
+                const avatarHtml = avatarUrl ? `
+                    <div class="w-10 h-10 rounded-full overflow-hidden border border-secondary/30 shrink-0">
+                        <img src="${escapeHtml(avatarUrl)}" class="w-full h-full object-cover" alt="${escapeHtml(customerName)}">
+                    </div>
+                ` : `
+                    <div class="w-10 h-10 rounded-full bg-secondary/15 text-secondary border border-secondary/30 flex items-center justify-center font-bold text-base shrink-0">
+                        ${escapeHtml(firstChar)}
+                    </div>
+                `;
+
                 return `
-                    <div class="bg-surface-container rounded-xl p-4 border border-outline-variant/30 flex flex-col justify-between">
+                    <div class="glass-card rounded-2xl p-5 shadow-xl border border-outline-variant/40 flex flex-col justify-between hover:border-secondary/40 transition-all">
                         <div>
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="font-bold text-sm text-on-surface">${escapeHtml(r.customer_name || 'ลูกค้า')}</span>
-                                <span class="text-amber-400 text-xs tracking-wider">${stars}</span>
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="flex gap-3 items-center">
+                                    ${avatarHtml}
+                                    <div>
+                                        <h4 class="font-bold text-on-surface text-sm sm:text-base">${escapeHtml(customerName)}</h4>
+                                        <p class="text-xs text-outline">${dateStr}</p>
+                                    </div>
+                                </div>
+                                <div class="flex text-yellow-400 gap-0.5">
+                                    ${starsHtml}
+                                </div>
                             </div>
-                            <p class="text-xs text-on-surface-variant line-clamp-2">"${escapeHtml(r.comment || 'บริการดีมาก รวดเร็ว ประทับใจ')}"</p>
+                            <p class="text-on-surface text-sm leading-relaxed line-clamp-3 mb-4 font-normal">"${escapeHtml(comment)}"</p>
                         </div>
-                        <div class="text-[11px] text-outline mt-3 flex justify-between">
-                            <span>${escapeHtml(r.service_name || 'บริการล้างรถ')}</span>
-                            <span>${r.created_at ? new Date(r.created_at).toLocaleDateString('th-TH') : 'เมื่อเร็วๆ นี้'}</span>
+                        <div class="pt-3 border-t border-outline-variant/20">
+                            ${replyText ? `
+                                <div class="bg-surface-container rounded-xl p-3 border-l-2 border-secondary">
+                                    <p class="text-xs font-semibold text-secondary mb-1 flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[14px]">reply</span> ตอบกลับแล้ว
+                                    </p>
+                                    <p class="text-xs text-outline line-clamp-2">${escapeHtml(replyText)}</p>
+                                </div>
+                            ` : `
+                                <a href="owner-reviews.html" class="inline-flex items-center justify-center gap-1.5 bg-secondary/15 hover:bg-secondary text-secondary hover:text-on-secondary-container px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border border-secondary/30">
+                                    <span class="material-symbols-outlined text-[15px]">reply</span> ตอบกลับลูกค้า
+                                </a>
+                            `}
                         </div>
                     </div>
                 `;
