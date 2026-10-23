@@ -547,16 +547,31 @@
                 targetShop = currentActiveBooking?.rawShopId || currentActiveBooking?.shopId || localStorage.getItem('currentShopId');
             }
 
+            function isValidUuid(id) {
+                return typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+            }
+
             const payload = {
                 rating: currentRating,
                 comment: comment || 'บริการดีมากครับ รวดเร็ว สะอาด ประทับใจมาก',
                 created_at: new Date().toISOString()
             };
-            if (targetShop) payload.shop_id = targetShop;
-            if (customerId) payload.customer_id = customerId;
-            if (currentReviewBookingId && currentReviewBookingId.length > 20) {
-                payload.booking_id = currentReviewBookingId;
+            if (isValidUuid(targetShop)) payload.shop_id = targetShop;
+            if (isValidUuid(customerId)) payload.customer_id = customerId;
+
+            let resolvedBookingUuid = null;
+            if (isValidUuid(currentReviewBookingId)) {
+                resolvedBookingUuid = currentReviewBookingId;
+            } else if (currentReviewBookingId) {
+                try {
+                    const hist = JSON.parse(localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
+                    const found = hist.find(h => h.rawBookingId === currentReviewBookingId || h.bookingId === currentReviewBookingId || h.id === currentReviewBookingId);
+                    if (isValidUuid(found?.id)) resolvedBookingUuid = found.id;
+                    else if (isValidUuid(found?.rawBookingId)) resolvedBookingUuid = found.rawBookingId;
+                    else if (isValidUuid(found?.dbId)) resolvedBookingUuid = found.dbId;
+                } catch (_) {}
             }
+            if (resolvedBookingUuid) payload.booking_id = resolvedBookingUuid;
 
             let savedReviewId = currentExistingReviewId;
             let syncSuccess = false;
