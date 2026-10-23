@@ -246,7 +246,7 @@
             <span class="material-symbols-outlined text-3xl">person_off</span>
         </div>
         <div>
-            <h3 class="text-xl font-bold text-on-surface mb-2">ลูกค้าไม่มาตามนัด (No-Show)?</h3>
+            <h3 class="text-xl font-bold text-on-surface mb-2">ลูกค้าไม่มาตามนัด</h3>
             <p class="text-sm text-outline">หากลูกค้าเลยเวลานัดเกิน 30 นาที และไม่สามารถติดต่อได้ ร้านมีสิทธิ์ริบเงินมัดจำ ฿50 ได้ตามเงื่อนไขข้อตกลง</p>
         </div>
         <div class="flex gap-3 w-full mt-2">
@@ -254,7 +254,7 @@
                 ยกเลิก
             </button>
             <button onclick="executeNoShow()" class="flex-1 py-3 rounded-xl bg-error text-white font-bold hover:bg-error/90 transition-colors shadow-md shadow-error/20">
-                ยืนยัน No-Show
+                ยืนยัน
             </button>
         </div>
     </div>
@@ -1552,7 +1552,7 @@
         if (currentActionButtonId) {
             updateBooking(currentActionButtonId, { status: 'no_show' });
             renderAllBookings();
-            showToast('บันทึก No-Show เรียบร้อย และริบเงินมัดจำตามเงื่อนไข');
+            showToast('บันทึกลูกค้าไม่มาตามนัดเรียบร้อย และริบเงินมัดจำตามเงื่อนไข');
         }
     }
 
