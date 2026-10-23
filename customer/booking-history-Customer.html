@@ -744,14 +744,10 @@
                 localStorage.removeItem('cachedShopReviews_' + targetShop);
             }
 
-            if (syncSuccess) {
-                showCustomerToast('ขอบคุณสำหรับรีวิว! บันทึกข้อมูลลงฐานข้อมูลเรียบร้อยแล้ว ⭐', 'star');
-            } else {
-                showCustomerToast('บันทึกรีวิวเรียบร้อยแล้ว (กำลังรอซิงค์ฐานข้อมูล)', 'done');
-            }
+            showCustomerToast('ขอบคุณสำหรับรีวิว! ⭐', 'star');
         } catch (err) {
             console.error('Submit review error:', err);
-            showCustomerToast('บันทึกรีวิวเรียบร้อยแล้ว', 'done');
+            showCustomerToast('ขอบคุณสำหรับรีวิว! ⭐', 'star');
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
