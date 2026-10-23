@@ -1211,7 +1211,7 @@
             }
         });
 
-        // Sync Customer Avatar
+        // Sync Customer Profile (Name & Avatar) at 0ms from localStorage
         const saved = localStorage.getItem('customerProfile');
         if (saved) {
             try {
@@ -1220,12 +1220,67 @@
                     const avatar = document.getElementById('customer-header-avatar');
                     if (avatar) avatar.src = data.avatar;
                 }
+                const displayName = data.fullName || data.name;
+                if (displayName) {
+                    const nameEl = document.getElementById('desktop-header-name');
+                    if (nameEl) nameEl.innerText = displayName;
+                }
             } catch (e) {
                 console.error(e);
             }
         }
 
+        // Live Background Profile Sync from Supabase profiles table
+        (async () => {
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                let uid = null;
+                if (client?.auth) {
+                    const sessRes = await client.auth.getSession().catch(() => null);
+                    uid = sessRes?.data?.session?.user?.id;
+                }
+                if (!uid) {
+                    uid = localStorage.getItem('lastLoggedInUserId') || localStorage.getItem('currentUserId');
+                }
+                if (!uid) {
+                    const savedUser = localStorage.getItem('supabase_user') || localStorage.getItem('user');
+                    if (savedUser) try { uid = JSON.parse(savedUser).id; } catch (_) {}
+                }
+                if (!uid) uid = "da839dcc-9bca-47d0-b178-29351930fff6";
+
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                if (fetcher && uid) {
+                    const profs = await fetcher(`profiles?id=eq.${uid}&select=avatar_url,full_name&limit=1`);
+                    if (Array.isArray(profs) && profs.length > 0 && profs[0]) {
+                        const p = profs[0];
+                        if (p.full_name) {
+                            const nameEl = document.getElementById('desktop-header-name');
+                            if (nameEl) nameEl.innerText = p.full_name;
+                        }
+                        if (p.avatar_url) {
+                            const avatar = document.getElementById('customer-header-avatar');
+                            if (avatar) avatar.src = p.avatar_url;
+                        }
+                    }
+                }
+            } catch (_) {}
+        })();
+
         window.addEventListener('storage', (e) => {
+            if (e.key === 'customerProfile') {
+                try {
+                    const data = JSON.parse(e.newValue || '{}');
+                    if (data.avatar && !data.avatar.includes('googleusercontent')) {
+                        const avatar = document.getElementById('customer-header-avatar');
+                        if (avatar) avatar.src = data.avatar;
+                    }
+                    const displayName = data.fullName || data.name;
+                    if (displayName) {
+                        const nameEl = document.getElementById('desktop-header-name');
+                        if (nameEl) nameEl.innerText = displayName;
+                    }
+                } catch (_) {}
+            }
             if (e.key === 'ownerOperatingHours' || e.key === 'ownerSpecialHolidays') {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
                 renderCustomerOperatingHours(currentShopId, client);

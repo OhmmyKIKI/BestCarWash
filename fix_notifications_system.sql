@@ -80,8 +80,8 @@ begin
     v_shop_name := 'ร้านคาร์แคร์';
   end if;
 
-  v_date_str := to_char(NEW.booking_date, 'DD/MM/YYYY');
-  v_time_str := coalesce(NEW.booking_time, '-');
+  v_date_str := coalesce(to_char(NEW.booking_date, 'DD/MM/YYYY'), '-');
+  v_time_str := coalesce(substring(NEW.booking_time::text from 1 for 5), '-');
 
   -- กรณี 1: มีการจองคิวใหม่เข้ามา (INSERT)
   if (TG_OP = 'INSERT') then
