@@ -140,8 +140,8 @@
     </div>
 
     <!-- Top Navigation -->
-    <div class="w-full max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl mb-3 sm:mb-0 sm:absolute sm:top-8 sm:left-8 z-20">
-        <a href="role-selection.html" class="inline-flex items-center gap-2 text-sm md:text-base lg:text-lg text-on-surface hover:text-secondary transition-colors py-2 px-3.5 rounded-lg hover:bg-surface-container/60">
+    <div class="w-full max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl px-1 sm:px-0 mb-3 sm:mb-0 sm:absolute sm:top-6 sm:left-8 z-20">
+        <a href="role-selection.html" class="inline-flex items-center gap-1.5 sm:gap-2 text-sm md:text-base lg:text-lg text-on-surface hover:text-secondary transition-colors py-1.5 px-3 rounded-lg hover:bg-surface-container/60">
             <span class="material-symbols-outlined text-[20px] sm:text-[24px]">arrow_back</span>
             <span class="font-medium">ย้อนกลับ</span>
         </a>
@@ -156,36 +156,36 @@
     </div>
 
     <!-- Main Content Canvas (Extra Large Card Web & App Container) -->
-    <main class="w-full max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl z-10 glass-panel rounded-2xl sm:rounded-3xl p-7 sm:p-11 md:p-14 flex flex-col shadow-2xl relative glow-effect border border-outline-variant/30 my-auto">
+    <main class="w-full max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl z-10 glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-8 md:p-14 flex flex-col shadow-2xl relative glow-effect border border-outline-variant/30 my-auto">
         
         <!-- Header -->
-        <header class="flex flex-col items-center gap-1.5 text-center mb-6 sm:mb-8 border-b border-outline-variant/30 pb-5 sm:pb-6">
-            <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-secondary tracking-tight">ร่วมเป็นพาร์ทเนอร์กับ BestCarWash</h1>
-            <p class="text-on-surface opacity-80 max-w-lg text-xs sm:text-base md:text-lg mt-1">ตั้งค่าบัญชีและข้อมูลร้านค้าของคุณให้ครบถ้วนใน 4 ขั้นตอน</p>
+        <header class="flex flex-col items-center gap-1.5 text-center mb-5 sm:mb-8 border-b border-outline-variant/30 pb-4 sm:pb-6">
+            <h1 class="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-secondary tracking-tight break-words leading-tight">ร่วมเป็นพาร์ทเนอร์กับ BestCarWash</h1>
+            <p class="text-on-surface opacity-80 max-w-lg text-xs sm:text-base md:text-lg mt-1 break-words leading-relaxed">ตั้งค่าบัญชีและข้อมูลร้านค้าของคุณให้ครบถ้วนใน 4 ขั้นตอน</p>
         </header>
 
         <!-- Progress Indicator (App & Web Responsive) -->
-        <div class="mb-6 sm:mb-8 md:mb-10">
-            <div class="flex justify-between items-center relative px-6 sm:px-14 md:px-24">
-                <div class="absolute top-1/2 left-6 right-6 sm:left-14 sm:right-14 md:left-24 md:right-24 h-1 bg-outline-variant/30 -translate-y-1/2 rounded-full z-0 overflow-hidden">
+        <div class="mb-5 sm:mb-8 md:mb-10">
+            <div class="flex justify-between items-center relative px-3 sm:px-14 md:px-24">
+                <div class="absolute top-1/2 left-3 right-3 sm:left-14 sm:right-14 md:left-24 md:right-24 h-1 bg-outline-variant/30 -translate-y-1/2 rounded-full z-0 overflow-hidden">
                     <div id="progressBar" class="absolute top-0 left-0 h-full bg-secondary rounded-full transition-all duration-500" style="width: 0%;"></div>
                 </div>
                 
                 <!-- Steps -->
                 <div class="step-indicator flex flex-col items-center relative z-10" data-step="1">
-                    <div class="w-9 h-9 sm:w-11 sm:h-11 md:w-13 md:h-13 rounded-full bg-secondary text-background font-bold text-xs sm:text-base md:text-lg flex items-center justify-center border-4 border-background transition-colors duration-300 shadow-md">1</div>
+                    <div class="w-8 h-8 sm:w-11 sm:h-11 md:w-13 md:h-13 rounded-full bg-secondary text-background font-bold text-xs sm:text-base md:text-lg flex items-center justify-center border-4 border-background transition-colors duration-300 shadow-md">1</div>
                     <span class="text-xs sm:text-sm md:text-base mt-1.5 sm:mt-2 font-medium text-secondary hidden sm:block">บัญชีผู้ใช้</span>
                 </div>
                 <div class="step-indicator flex flex-col items-center relative z-10" data-step="2">
-                    <div class="w-9 h-9 sm:w-11 sm:h-11 md:w-13 md:h-13 rounded-full bg-surface-container-highest text-on-surface-variant font-bold text-xs sm:text-base md:text-lg flex items-center justify-center border-4 border-background transition-colors duration-300">2</div>
+                    <div class="w-8 h-8 sm:w-11 sm:h-11 md:w-13 md:h-13 rounded-full bg-surface-container-highest text-on-surface-variant font-bold text-xs sm:text-base md:text-lg flex items-center justify-center border-4 border-background transition-colors duration-300">2</div>
                     <span class="text-xs sm:text-sm md:text-base mt-1.5 sm:mt-2 font-medium text-on-surface-variant hidden sm:block">ข้อมูลร้านค้า</span>
                 </div>
                 <div class="step-indicator flex flex-col items-center relative z-10" data-step="3">
-                    <div class="w-9 h-9 sm:w-11 sm:h-11 md:w-13 md:h-13 rounded-full bg-surface-container-highest text-on-surface-variant font-bold text-xs sm:text-base md:text-lg flex items-center justify-center border-4 border-background transition-colors duration-300">3</div>
+                    <div class="w-8 h-8 sm:w-11 sm:h-11 md:w-13 md:h-13 rounded-full bg-surface-container-highest text-on-surface-variant font-bold text-xs sm:text-base md:text-lg flex items-center justify-center border-4 border-background transition-colors duration-300">3</div>
                     <span class="text-xs sm:text-sm md:text-base mt-1.5 sm:mt-2 font-medium text-on-surface-variant hidden sm:block">บริการ & ราคา</span>
                 </div>
                 <div class="step-indicator flex flex-col items-center relative z-10" data-step="4">
-                    <div class="w-9 h-9 sm:w-11 sm:h-11 md:w-13 md:h-13 rounded-full bg-surface-container-highest text-on-surface-variant font-bold text-xs sm:text-base md:text-lg flex items-center justify-center border-4 border-background transition-colors duration-300">4</div>
+                    <div class="w-8 h-8 sm:w-11 sm:h-11 md:w-13 md:h-13 rounded-full bg-surface-container-highest text-on-surface-variant font-bold text-xs sm:text-base md:text-lg flex items-center justify-center border-4 border-background transition-colors duration-300">4</div>
                     <span class="text-xs sm:text-sm md:text-base mt-1.5 sm:mt-2 font-medium text-on-surface-variant hidden sm:block">เวลาทำการ</span>
                 </div>
             </div>
@@ -201,34 +201,34 @@
             
             <!-- STEP 1: Account Credentials -->
             <section id="step1" class="step-content active">
-                <h2 class="text-lg sm:text-2xl md:text-3xl font-bold text-secondary mb-5 sm:mb-6 flex items-center gap-2.5">
-                    <span class="material-symbols-outlined text-[26px] sm:text-[32px]">person</span> ข้อมูลบัญชีผู้ใช้
+                <h2 class="text-base sm:text-2xl md:text-3xl font-bold text-secondary mb-4 sm:mb-6 flex items-center gap-2 sm:gap-2.5 break-words leading-snug">
+                    <span class="material-symbols-outlined text-[22px] sm:text-[32px]">person</span> ข้อมูลบัญชีผู้ใช้
                 </h2>
-                <div class="space-y-4 sm:space-y-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <div class="space-y-3.5 sm:space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-6">
                         <div>
-                            <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">ชื่อ-นามสกุล <span class="text-error">*</span></label>
-                            <input type="text" id="fullName" required class="input-field w-full rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="สมชาย ใจดี">
+                            <label class="block text-xs sm:text-base md:text-lg font-semibold mb-1.5 sm:mb-2 text-slate-700 break-words">ชื่อ-นามสกุล <span class="text-error">*</span></label>
+                            <input type="text" id="fullName" required class="input-field w-full rounded-xl px-3.5 sm:px-5 py-2.5 sm:py-4 md:py-4.5 text-sm sm:text-base md:text-lg transition-all shadow-sm" placeholder="สมชาย ใจดี">
                         </div>
                         <div>
-                            <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">อีเมล <span class="text-error">*</span></label>
-                            <input type="email" id="email" required class="input-field w-full rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="somchai@example.com">
+                            <label class="block text-xs sm:text-base md:text-lg font-semibold mb-1.5 sm:mb-2 text-slate-700 break-words">อีเมล <span class="text-error">*</span></label>
+                            <input type="email" id="email" required class="input-field w-full rounded-xl px-3.5 sm:px-5 py-2.5 sm:py-4 md:py-4.5 text-sm sm:text-base md:text-lg transition-all shadow-sm" placeholder="somchai@example.com">
                         </div>
                     </div>
                     
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-6">
                         <div class="relative">
-                            <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">รหัสผ่าน <span class="text-error">*</span></label>
-                            <input type="password" id="password" required minlength="8" class="input-field w-full rounded-xl pl-4 sm:pl-5 pr-12 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="••••••••">
-                            <button type="button" class="absolute right-3.5 top-[38px] sm:top-[44px] md:top-[48px] text-slate-500 hover:text-slate-800 focus:outline-none p-1.5" onclick="togglePassword('password', 'eyeIcon1')">
-                                <span id="eyeIcon1" class="material-symbols-outlined text-[22px] sm:text-[24px]">visibility_off</span>
+                            <label class="block text-xs sm:text-base md:text-lg font-semibold mb-1.5 sm:mb-2 text-slate-700 break-words">รหัสผ่าน <span class="text-error">*</span></label>
+                            <input type="password" id="password" required minlength="8" class="input-field w-full rounded-xl pl-3.5 sm:pl-5 pr-11 py-2.5 sm:py-4 md:py-4.5 text-sm sm:text-base md:text-lg transition-all shadow-sm" placeholder="••••••••">
+                            <button type="button" class="absolute right-2 sm:right-3.5 top-[28px] sm:top-[44px] md:top-[48px] text-slate-500 hover:text-slate-800 focus:outline-none p-1.5" onclick="togglePassword('password', 'eyeIcon1')">
+                                <span id="eyeIcon1" class="material-symbols-outlined text-[20px] sm:text-[24px]">visibility_off</span>
                             </button>
                         </div>
                         <div class="relative">
-                            <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">ยืนยันรหัสผ่าน <span class="text-error">*</span></label>
-                            <input type="password" id="confirmPassword" required minlength="8" class="input-field w-full rounded-xl pl-4 sm:pl-5 pr-12 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="••••••••">
-                            <button type="button" class="absolute right-3.5 top-[38px] sm:top-[44px] md:top-[48px] text-slate-500 hover:text-slate-800 focus:outline-none p-1.5" onclick="togglePassword('confirmPassword', 'eyeIcon2')">
-                                <span id="eyeIcon2" class="material-symbols-outlined text-[22px] sm:text-[24px]">visibility_off</span>
+                            <label class="block text-xs sm:text-base md:text-lg font-semibold mb-1.5 sm:mb-2 text-slate-700 break-words">ยืนยันรหัสผ่าน <span class="text-error">*</span></label>
+                            <input type="password" id="confirmPassword" required minlength="8" class="input-field w-full rounded-xl pl-3.5 sm:pl-5 pr-11 py-2.5 sm:py-4 md:py-4.5 text-sm sm:text-base md:text-lg transition-all shadow-sm" placeholder="••••••••">
+                            <button type="button" class="absolute right-2 sm:right-3.5 top-[28px] sm:top-[44px] md:top-[48px] text-slate-500 hover:text-slate-800 focus:outline-none p-1.5" onclick="togglePassword('confirmPassword', 'eyeIcon2')">
+                                <span id="eyeIcon2" class="material-symbols-outlined text-[20px] sm:text-[24px]">visibility_off</span>
                             </button>
                             <p id="passwordError" class="text-error text-xs sm:text-sm mt-1.5 hidden">รหัสผ่านไม่ตรงกัน</p>
                         </div>
@@ -238,78 +238,78 @@
 
             <!-- STEP 2: Shop Details -->
             <section id="step2" class="step-content">
-                <h2 class="text-lg sm:text-2xl md:text-3xl font-bold text-secondary mb-5 sm:mb-6 flex items-center gap-2.5">
-                    <span class="material-symbols-outlined text-[26px] sm:text-[32px]">storefront</span> ข้อมูลร้านค้าและธุรกิจ
+                <h2 class="text-base sm:text-2xl md:text-3xl font-bold text-secondary mb-4 sm:mb-6 flex items-center gap-2 sm:gap-2.5 break-words leading-snug">
+                    <span class="material-symbols-outlined text-[22px] sm:text-[32px]">storefront</span> ข้อมูลร้านค้าและธุรกิจ
                 </h2>
                 
-                <div class="space-y-4 sm:space-y-6">
+                <div class="space-y-3.5 sm:space-y-6">
                     <!-- Media Upload -->
-                    <div class="flex flex-col sm:flex-row gap-5 sm:gap-7 mb-2">
+                    <div class="flex flex-col sm:flex-row gap-4 sm:gap-7 mb-2">
                         <div class="flex-grow relative">
-                            <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">รูปหน้าปกร้าน</label>
+                            <label class="block text-xs sm:text-base md:text-lg font-semibold mb-1.5 sm:mb-2 text-slate-700 break-words">รูปหน้าปกร้าน</label>
                             <input type="file" id="coverImageInput" accept="image/*" class="hidden" onchange="previewImage(this, 'coverImagePreview', 'coverImagePlaceholder')">
-                            <div onclick="document.getElementById('coverImageInput').click()" class="w-full h-36 sm:h-48 md:h-56 border-2 border-dashed border-outline-variant/60 rounded-2xl bg-surface-container/50 flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-secondary transition-colors cursor-pointer overflow-hidden group relative">
+                            <div onclick="document.getElementById('coverImageInput').click()" class="w-full h-32 sm:h-48 md:h-56 border-2 border-dashed border-outline-variant/60 rounded-2xl bg-surface-container/50 flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-secondary transition-colors cursor-pointer overflow-hidden group relative">
                                 <img id="coverImagePreview" src="" class="w-full h-full object-cover hidden absolute inset-0 z-10" alt="Cover Preview">
                                 <div id="coverImagePlaceholder" class="flex flex-col items-center justify-center z-0">
-                                    <span class="material-symbols-outlined text-3xl sm:text-4xl group-hover:scale-110 transition-transform">add_photo_alternate</span>
-                                    <span class="text-xs sm:text-base mt-1.5 font-medium">อัปโหลดรูปภาพ</span>
+                                    <span class="material-symbols-outlined text-2xl sm:text-4xl group-hover:scale-110 transition-transform">add_photo_alternate</span>
+                                    <span class="text-xs sm:text-base mt-1 font-medium">อัปโหลดรูปภาพ</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="w-28 sm:w-40 md:w-48 flex-shrink-0 relative">
-                            <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700 text-center">โลโก้ร้าน</label>
+                        <div class="w-full sm:w-40 md:w-48 flex-shrink-0 relative">
+                            <label class="block text-xs sm:text-base md:text-lg font-semibold mb-1.5 sm:mb-2 text-slate-700 text-center break-words">โลโก้ร้าน</label>
                             <input type="file" id="logoImageInput" accept="image/*" class="hidden" onchange="previewImage(this, 'logoImagePreview', 'logoImagePlaceholder')">
-                            <div onclick="document.getElementById('logoImageInput').click()" class="w-24 h-24 sm:w-36 sm:h-36 md:w-44 md:h-44 mx-auto border-2 border-dashed border-outline-variant/60 rounded-full bg-surface-container/50 flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-secondary transition-colors cursor-pointer overflow-hidden group relative">
+                            <div onclick="document.getElementById('logoImageInput').click()" class="w-20 h-20 sm:w-36 sm:h-36 md:w-44 md:h-44 mx-auto border-2 border-dashed border-outline-variant/60 rounded-full bg-surface-container/50 flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-secondary transition-colors cursor-pointer overflow-hidden group relative">
                                 <img id="logoImagePreview" src="" class="w-full h-full object-cover hidden absolute inset-0 z-10" alt="Logo Preview">
-                                <span id="logoImagePlaceholder" class="material-symbols-outlined text-3xl sm:text-4xl group-hover:scale-110 transition-transform z-0">add_a_photo</span>
+                                <span id="logoImagePlaceholder" class="material-symbols-outlined text-2xl sm:text-4xl group-hover:scale-110 transition-transform z-0">add_a_photo</span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-6">
                         <div>
-                            <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">ชื่อร้าน <span class="text-error">*</span></label>
-                            <input type="text" id="shopName" required class="input-field w-full rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="คลีนคาร์แคร์">
+                            <label class="block text-xs sm:text-base md:text-lg font-semibold mb-1.5 sm:mb-2 text-slate-700 break-words">ชื่อร้าน <span class="text-error">*</span></label>
+                            <input type="text" id="shopName" required class="input-field w-full rounded-xl px-3.5 sm:px-5 py-2.5 sm:py-4 md:py-4.5 text-sm sm:text-base md:text-lg transition-all shadow-sm" placeholder="คลีนคาร์แคร์">
                         </div>
                         <div>
-                            <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">เบอร์ติดต่อธุรกิจ <span class="text-error">*</span></label>
-                            <input type="tel" id="phone" required class="input-field w-full rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="081-234-5678">
+                            <label class="block text-xs sm:text-base md:text-lg font-semibold mb-1.5 sm:mb-2 text-slate-700 break-words">เบอร์ติดต่อธุรกิจ <span class="text-error">*</span></label>
+                            <input type="tel" id="phone" required class="input-field w-full rounded-xl px-3.5 sm:px-5 py-2.5 sm:py-4 md:py-4.5 text-sm sm:text-base md:text-lg transition-all shadow-sm" placeholder="081-234-5678">
                         </div>
                     </div>
                     
                     <div>
-                        <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">รายละเอียดร้านค้า <span class="text-error">*</span></label>
-                        <textarea id="shopDesc" required rows="3" class="input-field w-full rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all resize-none shadow-sm" placeholder="ให้บริการล้างรถ เคลือบแก้ว เคลือบเซรามิก และสปารถยนต์..."></textarea>
+                        <label class="block text-xs sm:text-base md:text-lg font-semibold mb-1.5 sm:mb-2 text-slate-700 break-words">รายละเอียดร้านค้า <span class="text-error">*</span></label>
+                        <textarea id="shopDesc" required rows="3" class="input-field w-full rounded-xl px-3.5 sm:px-5 py-2.5 sm:py-4 md:py-4.5 text-sm sm:text-base md:text-lg transition-all resize-none shadow-sm" placeholder="ให้บริการล้างรถ เคลือบแก้ว เคลือบเซรามิก และสปารถยนต์..."></textarea>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-6">
                         <div class="sm:col-span-2">
-                            <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">ที่อยู่ร้าน <span class="text-error">*</span></label>
-                            <input type="text" id="address" required class="input-field w-full rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="123 ถ.สุขุมวิท เขตวัฒนา">
+                            <label class="block text-xs sm:text-base md:text-lg font-semibold mb-1.5 sm:mb-2 text-slate-700 break-words">ที่อยู่ร้าน <span class="text-error">*</span></label>
+                            <input type="text" id="address" required class="input-field w-full rounded-xl px-3.5 sm:px-5 py-2.5 sm:py-4 md:py-4.5 text-sm sm:text-base md:text-lg transition-all shadow-sm" placeholder="123 ถ.สุขุมวิท เขตวัฒนา">
                         </div>
                         <div>
-                            <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">จังหวัด <span class="text-error">*</span></label>
-                            <input type="text" id="city" required class="input-field w-full rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="กรุงเทพมหานคร">
+                            <label class="block text-xs sm:text-base md:text-lg font-semibold mb-1.5 sm:mb-2 text-slate-700 break-words">จังหวัด <span class="text-error">*</span></label>
+                            <input type="text" id="city" required class="input-field w-full rounded-xl px-3.5 sm:px-5 py-2.5 sm:py-4 md:py-4.5 text-sm sm:text-base md:text-lg transition-all shadow-sm" placeholder="กรุงเทพมหานคร">
                         </div>
                         <div>
-                            <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">รหัสไปรษณีย์ <span class="text-error">*</span></label>
-                            <input type="text" id="zip" required class="input-field w-full rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="10110">
+                            <label class="block text-xs sm:text-base md:text-lg font-semibold mb-1.5 sm:mb-2 text-slate-700 break-words">รหัสไปรษณีย์ <span class="text-error">*</span></label>
+                            <input type="text" id="zip" required class="input-field w-full rounded-xl px-3.5 sm:px-5 py-2.5 sm:py-4 md:py-4.5 text-sm sm:text-base md:text-lg transition-all shadow-sm" placeholder="10110">
                         </div>
                     </div>
                     
-                    <div class="sm:col-span-2 mt-2">
-                        <label class="block text-sm sm:text-base md:text-lg font-semibold mb-2 text-slate-700">ลิงก์ Google Maps <span class="text-error">*</span></label>
-                        <input type="url" id="mapLink" required class="input-field w-full rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 md:py-4.5 text-base md:text-lg transition-all shadow-sm" placeholder="https://maps.app.goo.gl/...">
+                    <div class="sm:col-span-2 mt-1">
+                        <label class="block text-xs sm:text-base md:text-lg font-semibold mb-1.5 sm:mb-2 text-slate-700 break-words">ลิงก์ Google Maps <span class="text-error">*</span></label>
+                        <input type="url" id="mapLink" required class="input-field w-full rounded-xl px-3.5 sm:px-5 py-2.5 sm:py-4 md:py-4.5 text-sm sm:text-base md:text-lg transition-all shadow-sm" placeholder="https://maps.app.goo.gl/...">
                     </div>
                 </div>
             </section>
 
             <!-- STEP 3: Services & Pricing -->
             <section id="step3" class="step-content">
-                <h2 class="text-lg sm:text-2xl md:text-3xl font-bold text-secondary mb-3 sm:mb-4 flex items-center gap-2.5">
-                    <span class="material-symbols-outlined text-[26px] sm:text-[32px]">local_car_wash</span> บริการ & ราคา
+                <h2 class="text-base sm:text-2xl md:text-3xl font-bold text-secondary mb-2 sm:mb-4 flex items-center gap-2 sm:gap-2.5 break-words leading-snug">
+                    <span class="material-symbols-outlined text-[22px] sm:text-[32px]">local_car_wash</span> บริการ & ราคา
                 </h2>
-                <p class="text-sm sm:text-base md:text-lg text-on-surface-variant mb-5 sm:mb-6">ระบุบริการพื้นฐานของร้านค้าคุณ คุณสามารถเพิ่มหรือแก้ไขในภายหลังได้</p>
+                <p class="text-xs sm:text-base md:text-lg text-on-surface-variant mb-4 sm:mb-6 break-words leading-relaxed">ระบุบริการพื้นฐานของร้านค้าคุณ คุณสามารถเพิ่มหรือแก้ไขในภายหลังได้</p>
                 
                 <div id="servicesList" class="space-y-4">
                     <!-- Default Service 1: ล้างสีภายนอก -->
@@ -625,30 +625,30 @@
 
             <!-- STEP 4: Operating Hours & Terms -->
             <section id="step4" class="step-content">
-                <h2 class="text-lg sm:text-2xl md:text-3xl font-bold text-secondary mb-2 flex items-center gap-2.5">
-                    <span class="material-symbols-outlined text-[26px] sm:text-[32px]">schedule</span> เวลาเปิดทำการ
+                <h2 class="text-base sm:text-2xl md:text-3xl font-bold text-secondary mb-2 flex items-center gap-2 sm:gap-2.5 break-words leading-snug">
+                    <span class="material-symbols-outlined text-[22px] sm:text-[32px]">schedule</span> เวลาเปิดทำการ
                 </h2>
-                <div class="flex justify-between items-center mb-4 sm:mb-5 gap-2">
-                    <p class="text-sm sm:text-base md:text-lg text-on-surface-variant">ระบุเวลาเปิด-ปิดร้านในแต่ละวัน</p>
-                    <button type="button" onclick="copyHours()" class="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-secondary hover:text-primary-container bg-secondary/10 px-3.5 py-2 rounded-lg transition-colors active:scale-95 flex-shrink-0" id="copyBtn">
-                        <span class="material-symbols-outlined text-[18px]">content_copy</span> คัดลอก จ. ให้ทุกวัน
+                <div class="flex flex-wrap justify-between items-center mb-4 sm:mb-5 gap-2">
+                    <p class="text-xs sm:text-base md:text-lg text-on-surface-variant break-words">ระบุเวลาเปิด-ปิดร้านในแต่ละวัน</p>
+                    <button type="button" onclick="copyHours()" class="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-secondary hover:text-primary-container bg-secondary/10 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg transition-colors active:scale-95 shrink-0" id="copyBtn">
+                        <span class="material-symbols-outlined text-[16px] sm:text-[18px]">content_copy</span> คัดลอก จ. ให้ทุกวัน
                     </button>
                 </div>
 
-                <div class="space-y-0 divide-y divide-outline-variant/20 border border-outline-variant/30 rounded-xl sm:rounded-2xl bg-surface-container-low/30 overflow-hidden mb-6 sm:mb-7" id="hoursContainer">
+                <div class="space-y-0 divide-y divide-outline-variant/20 border border-outline-variant/30 rounded-xl sm:rounded-2xl bg-surface-container-low/30 overflow-hidden mb-5 sm:mb-7" id="hoursContainer">
                     <!-- Days will be generated by JS -->
                 </div>
 
                 <!-- Terms -->
-                <div class="flex flex-col gap-5 mt-4 p-4 sm:p-5 border border-outline-variant/30 rounded-xl bg-surface-container-low/20">
-                    <label class="flex items-start gap-3.5 cursor-pointer group">
-                        <div class="relative flex items-center pt-0.5 flex-shrink-0">
+                <div class="flex flex-col gap-5 mt-4 p-3.5 sm:p-5 border border-outline-variant/30 rounded-xl bg-surface-container-low/20">
+                    <label class="flex items-start gap-2.5 sm:gap-3.5 cursor-pointer group">
+                        <div class="relative flex items-center pt-0.5 shrink-0">
                             <input type="checkbox" id="termsCheckbox" required class="peer sr-only">
                             <div class="w-5 h-5 sm:w-6 sm:h-6 rounded border border-outline-variant bg-surface-container-high peer-checked:bg-secondary-container peer-checked:border-secondary-container transition-colors flex items-center justify-center group-hover:border-secondary/50">
                                 <span class="material-symbols-outlined text-white text-sm sm:text-base opacity-0 peer-checked:opacity-100 font-bold" style="font-variation-settings: 'FILL' 1;">check</span>
                             </div>
                         </div>
-                        <span class="text-xs sm:text-sm md:text-base opacity-90 leading-relaxed">
+                        <span class="text-xs sm:text-sm md:text-base opacity-90 leading-relaxed break-words">
                             ฉันยืนยันว่าข้อมูลข้างต้นถูกต้อง และยอมรับ <a href="../info/merchant-terms.html" class="text-secondary hover:underline font-semibold" target="_blank">เงื่อนไขการให้บริการสำหรับร้านค้า</a> และ <a href="../info/privacy-policy.html" class="text-secondary hover:underline font-semibold" target="_blank">นโยบายความเป็นส่วนตัว</a> ของ BestCarWash
                         </span>
                     </label>
@@ -656,21 +656,21 @@
             </section>
 
             <!-- Navigation Buttons -->
-            <div class="flex justify-between items-center mt-7 sm:mt-9 md:mt-11 pt-6 sm:pt-7 border-t border-outline-variant/30 gap-3">
-                <button type="button" id="prevBtn" class="px-6 sm:px-8 md:px-10 py-3 sm:py-3.5 md:py-4 rounded-xl font-bold text-sm sm:text-base md:text-lg text-on-surface bg-surface-container-highest hover:bg-surface-variant transition-colors invisible">
+            <div class="flex justify-between items-center mt-6 sm:mt-9 md:mt-11 pt-4 sm:pt-7 border-t border-outline-variant/30 gap-2 sm:gap-3">
+                <button type="button" id="prevBtn" class="px-4 sm:px-8 md:px-10 py-2.5 sm:py-3.5 md:py-4 rounded-xl font-bold text-xs sm:text-base md:text-lg text-on-surface bg-surface-container-highest hover:bg-surface-variant transition-colors invisible shrink-0">
                     ย้อนกลับ
                 </button>
-                <button type="button" id="nextBtn" class="px-7 sm:px-10 md:px-12 py-3 sm:py-3.5 md:py-4 rounded-xl font-bold text-sm sm:text-base md:text-lg text-background bg-secondary hover:bg-secondary-container transition-colors shadow-lg shadow-secondary/20 flex items-center gap-2.5 ml-auto">
-                    ถัดไป <span class="material-symbols-outlined text-[20px] sm:text-[22px]">arrow_forward</span>
+                <button type="button" id="nextBtn" class="px-5 sm:px-10 md:px-12 py-2.5 sm:py-3.5 md:py-4 rounded-xl font-bold text-xs sm:text-base md:text-lg text-background bg-secondary hover:bg-secondary-container transition-colors shadow-lg shadow-secondary/20 flex items-center gap-1.5 sm:gap-2.5 ml-auto shrink-0">
+                    <span>ถัดไป</span> <span class="material-symbols-outlined text-[18px] sm:text-[22px]">arrow_forward</span>
                 </button>
-                <button type="submit" id="submitBtn" class="hidden px-7 sm:px-10 md:px-12 py-3 sm:py-3.5 md:py-4 rounded-xl font-bold text-sm sm:text-base md:text-lg text-white bg-secondary-container hover:bg-emerald-600 transition-colors shadow-lg shadow-secondary-container/20 flex items-center gap-2.5 ml-auto">
-                    สร้างบัญชีเจ้าของร้าน <span class="material-symbols-outlined text-[20px] sm:text-[22px]">check_circle</span>
+                <button type="submit" id="submitBtn" class="hidden px-4 sm:px-10 md:px-12 py-2.5 sm:py-3.5 md:py-4 rounded-xl font-bold text-xs sm:text-base md:text-lg text-white bg-secondary-container hover:bg-emerald-600 transition-colors shadow-lg shadow-secondary-container/20 flex items-center gap-1.5 sm:gap-2.5 ml-auto shrink-0">
+                    <span>สร้างบัญชีเจ้าของร้าน</span> <span class="material-symbols-outlined text-[18px] sm:text-[22px]">check_circle</span>
                 </button>
             </div>
             
             <!-- Bottom Link (Only in Step 1) -->
-            <div id="loginLinkContainer" class="text-center mt-6">
-                <p class="text-sm sm:text-base md:text-lg opacity-80">
+            <div id="loginLinkContainer" class="text-center mt-5 sm:mt-6">
+                <p class="text-xs sm:text-base md:text-lg opacity-80 break-words leading-relaxed">
                     มีบัญชีร้านค้าอยู่แล้ว? <a href="login.html" class="text-secondary font-semibold hover:underline">เข้าสู่ระบบที่นี่</a>
                 </p>
             </div>

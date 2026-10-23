@@ -108,16 +108,16 @@
 </header>
 
 <!-- Mobile Dynamic Header -->
-<header id="mobile-header" class="md:hidden fixed top-0 w-full z-50 px-4 py-3 transition-all duration-300 flex justify-between items-center bg-transparent">
-    <a href="discovery.html" class="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/60 transition-colors text-white shadow-lg">
+<header id="mobile-header" class="md:hidden fixed top-0 w-full z-50 px-3 sm:px-4 py-2.5 sm:py-3 transition-all duration-300 flex justify-between items-center bg-transparent gap-2">
+    <a href="discovery.html" class="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/60 transition-colors text-white shadow-lg shrink-0">
         <span class="material-symbols-outlined">arrow_back</span>
     </a>
-    <h1 id="mobile-header-title" class="text-lg font-bold text-white tracking-tight opacity-0 transition-opacity duration-300 drop-shadow-md">ร้านคาร์แคร์</h1>
-    <div class="flex gap-2">
-        <button onclick="toggleFavorite(this)" class="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/60 transition-colors text-white shadow-lg">
+    <h1 id="mobile-header-title" class="text-sm sm:text-base font-bold text-white tracking-tight opacity-0 transition-opacity duration-300 drop-shadow-md truncate max-w-[150px] xs:max-w-[190px] sm:max-w-xs text-center px-1">ร้านคาร์แคร์</h1>
+    <div class="flex gap-1.5 sm:gap-2 shrink-0">
+        <button onclick="toggleFavorite(this)" class="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/60 transition-colors text-white shadow-lg shrink-0">
             <span class="material-symbols-outlined heart-icon transition-colors">favorite_border</span>
         </button>
-        <button onclick="shareShop()" class="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/60 transition-colors text-white shadow-lg">
+        <button onclick="shareShop()" class="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/60 transition-colors text-white shadow-lg shrink-0">
             <span class="material-symbols-outlined">share</span>
         </button>
     </div>
@@ -171,20 +171,20 @@
                         <span class="material-symbols-outlined text-[14px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span> <span id="shop-rating-text">5.0 (0 รีวิว)</span>
                     </span>
                 </div>
-                <h1 id="shop-title" class="text-3xl md:text-4xl font-extrabold text-on-surface tracking-tight mb-2">กำลังโหลดร้านค้า...</h1>
-                <p id="shop-address" class="text-on-surface-variant text-sm md:text-base flex items-center gap-1 mb-4">
+                <h1 id="shop-title" class="text-xl sm:text-3xl md:text-4xl font-extrabold text-on-surface tracking-tight mb-2 break-words leading-tight">กำลังโหลดร้านค้า...</h1>
+                <p id="shop-address" class="text-on-surface-variant text-xs sm:text-sm md:text-base flex items-center gap-1 mb-4 break-words leading-relaxed">
                     ที่อยู่ร้านค้า
                 </p>
-                <div class="flex flex-wrap gap-3">
-                    <a id="shop-phone-link" href="tel:" class="px-4 py-2 bg-surface-container-highest hover:bg-surface-variant text-on-surface text-sm font-bold rounded-xl flex items-center gap-2 border border-outline-variant/50 transition-colors">
-                        <span class="material-symbols-outlined text-[18px]">call</span> <span id="shop-phone-text">080-000-0000</span>
+                <div class="flex flex-wrap gap-2 sm:gap-3">
+                    <a id="shop-phone-link" href="tel:" class="px-3 sm:px-4 py-2 bg-surface-container-highest hover:bg-surface-variant text-on-surface text-xs sm:text-sm font-bold rounded-xl flex items-center gap-1.5 sm:gap-2 border border-outline-variant/50 transition-colors">
+                        <span class="material-symbols-outlined text-[16px] sm:text-[18px]">call</span> <span id="shop-phone-text">080-000-0000</span>
                     </a>
-                    <button id="desktop-fav-btn" onclick="toggleFavorite()" class="px-4 py-2 bg-surface-container-highest hover:bg-surface-variant text-on-surface text-sm font-bold rounded-xl flex items-center gap-2 border border-outline-variant/50 transition-colors active:scale-95">
-                        <span class="material-symbols-outlined heart-icon text-[18px] transition-colors">favorite_border</span>
+                    <button id="desktop-fav-btn" onclick="toggleFavorite()" class="px-3 sm:px-4 py-2 bg-surface-container-highest hover:bg-surface-variant text-on-surface text-xs sm:text-sm font-bold rounded-xl flex items-center gap-1.5 sm:gap-2 border border-outline-variant/50 transition-colors active:scale-95">
+                        <span class="material-symbols-outlined heart-icon text-[16px] sm:text-[18px] transition-colors">favorite_border</span>
                         <span id="desktop-fav-label">บันทึกร้านโปรด</span>
                     </button>
-                    <button onclick="shareShop()" class="px-4 py-2 bg-surface-container-highest hover:bg-surface-variant text-on-surface text-sm font-bold rounded-xl flex items-center gap-2 border border-outline-variant/50 transition-colors active:scale-95">
-                        <span class="material-symbols-outlined text-[18px]">share</span>
+                    <button onclick="shareShop()" class="px-3 sm:px-4 py-2 bg-surface-container-highest hover:bg-surface-variant text-on-surface text-xs sm:text-sm font-bold rounded-xl flex items-center gap-1.5 sm:gap-2 border border-outline-variant/50 transition-colors active:scale-95">
+                        <span class="material-symbols-outlined text-[16px] sm:text-[18px]">share</span>
                         <span>แชร์</span>
                     </button>
                 </div>
@@ -193,7 +193,7 @@
             <!-- Mobile Photo Gallery Preview Strip -->
             <section class="md:hidden">
                 <div class="flex items-center justify-between mb-2.5">
-                    <h3 class="text-base font-bold text-on-surface flex items-center gap-1.5">
+                    <h3 class="text-sm sm:text-base font-bold text-on-surface flex items-center gap-1.5 break-words">
                         <span class="material-symbols-outlined text-[18px] text-primary">photo_library</span> รูปภาพของร้าน (<span id="mobile-gallery-count">0</span>)
                     </h3>
                     <button type="button" onclick="openGallery(0)" class="text-xs text-primary font-bold hover:underline flex items-center gap-0.5">
@@ -207,18 +207,18 @@
 
             <!-- About -->
             <section>
-                <h3 class="text-xl font-bold text-on-surface mb-3">เกี่ยวกับร้าน</h3>
-                <p id="shop-about" class="text-on-surface-variant text-sm md:text-base leading-relaxed">
+                <h3 class="text-base sm:text-xl font-bold text-on-surface mb-2.5 sm:mb-3 break-words leading-snug">เกี่ยวกับร้าน</h3>
+                <p id="shop-about" class="text-on-surface-variant text-sm md:text-base leading-relaxed break-words">
                     บริการดูแลรถยนต์ระดับพรีเมียม ล้างมือ เคลือบเงา และทำความสะอาดภายในด้วยคุณภาพสูงสุด เราใช้ผลิตภัณฑ์นำเข้าจากญี่ปุ่นและเป็นมิตรต่อสิ่งแวดล้อม เพื่อความเงางามอย่างไร้ที่ติ พร้อมห้องรับรองแอร์เย็นฉ่ำและกาแฟฟรีสำหรับลูกค้าทุกท่าน
                 </p>
             </section>
 
             <!-- Booking Policy -->
             <section class="mt-2">
-                <h3 class="text-xl font-bold text-on-surface mb-3 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-secondary text-[22px]">policy</span> เงื่อนไขการให้บริการ
+                <h3 class="text-base sm:text-xl font-bold text-on-surface mb-2.5 sm:mb-3 flex items-center gap-2 break-words leading-snug">
+                    <span class="material-symbols-outlined text-secondary text-[20px] sm:text-[22px]">policy</span> เงื่อนไขการให้บริการ
                 </h3>
-                <ul class="text-sm text-on-surface-variant space-y-3 leading-relaxed bg-surface-container-highest/30 p-4 rounded-2xl border border-outline-variant/20">
+                <ul class="text-xs sm:text-sm text-on-surface-variant space-y-2.5 sm:space-y-3 leading-relaxed bg-surface-container-highest/30 p-3.5 sm:p-4 rounded-2xl border border-outline-variant/20 break-words">
                     <li class="flex gap-2 items-start">
                         <span class="material-symbols-outlined text-[18px] text-error shrink-0 mt-0.5">cancel</span>
                         <span><strong>การยกเลิกคิว:</strong> หากต้องการยกเลิกและขอรับเงินมัดจำคืน กรุณายกเลิกล่วงหน้าอย่างน้อย 1 ชั่วโมงก่อนถึงเวลานัดหมาย</span>
@@ -330,18 +330,18 @@
 </main>
 
 <!-- Mobile Sticky Bottom Bar -->
-<div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-container-low/95 backdrop-blur-xl border-t border-outline-variant/30 pb-[env(safe-area-inset-bottom,1rem)] pt-3 px-4 shadow-[0_-10px_40px_rgba(0,0,0,0.6)]">
-    <div class="flex justify-between items-center">
-        <div class="flex flex-col">
-            <span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mb-0.5 summary-name truncate max-w-[150px]">ล้างสีภายนอก</span>
+<div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-container-low/95 backdrop-blur-xl border-t border-outline-variant/30 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2.5 px-4 shadow-[0_-10px_40px_rgba(0,0,0,0.6)]">
+    <div class="flex justify-between items-center gap-2">
+        <div class="flex flex-col min-w-0">
+            <span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mb-0.5 summary-name truncate max-w-[130px] xs:max-w-[160px]">ล้างสีภายนอก</span>
             <div class="flex items-end gap-1.5">
-                <div class="text-[10px] text-on-surface-variant mb-1">เริ่ม</div>
-                <div class="text-2xl font-black text-primary summary-price transition-all leading-none">฿150</div>
+                <div class="text-[10px] text-on-surface-variant mb-1 shrink-0">เริ่ม</div>
+                <div class="text-xl xs:text-2xl font-black text-primary summary-price transition-all leading-none shrink-0">฿150</div>
             </div>
-            <div class="text-[9px] font-bold text-secondary bg-secondary/20 px-1.5 py-0.5 rounded w-fit mt-1 border border-secondary/30">โอนมัดจำ ฿50</div>
+            <div class="text-[9px] font-bold text-secondary bg-secondary/20 px-1.5 py-0.5 rounded w-fit mt-1 border border-secondary/30 shrink-0">โอนมัดจำ ฿50</div>
         </div>
-        <a id="mobile-book-btn" href="book and service.html" class="bg-primary-container hover:bg-primary-container/90 text-white font-bold px-8 py-3.5 rounded-2xl shadow-[0_4px_15px_rgba(37,99,235,0.4)] active:scale-95 transition-transform flex items-center gap-2">
-            จองเลย <span class="material-symbols-outlined" style="font-size: 18px;">arrow_forward</span>
+        <a id="mobile-book-btn" href="book and service.html" class="bg-primary-container hover:bg-primary-container/90 text-white font-bold px-5 xs:px-7 py-3 rounded-xl xs:rounded-2xl shadow-[0_4px_15px_rgba(37,99,235,0.4)] active:scale-95 transition-transform flex items-center gap-1.5 text-sm font-bold shrink-0">
+            <span>จองเลย</span> <span class="material-symbols-outlined" style="font-size: 18px;">arrow_forward</span>
         </a>
     </div>
 </div>

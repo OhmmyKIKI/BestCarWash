@@ -241,42 +241,42 @@ tailwind.config = {
     <!-- MOBILE OVERLAYS (Hidden on Desktop) -->
     
     <!-- Mobile Floating Header (Search & Filter) -->
-    <div class="md:hidden absolute top-0 left-0 w-full z-40 p-4 pointer-events-none flex flex-col gap-3 pt-4 bg-gradient-to-b from-slate-900/10 via-slate-900/5 to-transparent pb-6">
-        <div class="flex items-center gap-2.5 pointer-events-auto w-full">
+    <div class="md:hidden absolute top-0 left-0 w-full z-40 p-3 sm:p-4 pointer-events-none flex flex-col gap-2.5 sm:gap-3 pt-3 sm:pt-4 bg-gradient-to-b from-slate-900/10 via-slate-900/5 to-transparent pb-5 sm:pb-6">
+        <div class="flex items-center gap-2 sm:gap-2.5 pointer-events-auto w-full">
             <!-- Mobile Search Bar -->
             <div class="relative flex-1 shadow-md">
-                <input class="w-full bg-white/95 backdrop-blur-md rounded-full px-5 py-3.5 pl-12 border border-slate-200 text-base focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none shadow-sm text-slate-900 placeholder:text-slate-400" placeholder="ค้นหาร้านใกล้เคียง..." />
-                <span class="material-symbols-outlined absolute left-4 top-3.5 text-slate-400 text-[24px]">search</span>
+                <input class="w-full bg-white/95 backdrop-blur-md rounded-full px-4 sm:px-5 py-2.5 sm:py-3.5 pl-10 sm:pl-12 border border-slate-200 text-sm sm:text-base focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none shadow-sm text-slate-900 placeholder:text-slate-400" placeholder="ค้นหาร้านใกล้เคียง..." />
+                <span class="material-symbols-outlined absolute left-3.5 sm:left-4 top-2.5 sm:top-3.5 text-slate-400 text-[20px] sm:text-[24px]">search</span>
             </div>
             <!-- Notification Button -->
-            <a href="customer-notifications-list.html" class="w-12 h-12 flex-shrink-0 bg-white/95 backdrop-blur-md rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:text-primary transition-colors relative shadow-md active:scale-95" title="การแจ้งเตือน">
-                <span class="material-symbols-outlined text-[24px]">notifications</span>
-                <span class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-error rounded-full shadow-[0_0_5px_rgba(255,180,171,0.8)]"></span>
+            <a href="customer-notifications-list.html" class="w-10 sm:w-12 h-10 sm:h-12 flex-shrink-0 bg-white/95 backdrop-blur-md rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:text-primary transition-colors relative shadow-md active:scale-95" title="การแจ้งเตือน">
+                <span class="material-symbols-outlined text-[20px] sm:text-[24px]">notifications</span>
+                <span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full shadow-[0_0_5px_rgba(255,180,171,0.8)]"></span>
             </a>
         </div>
         
         <!-- Mobile Filters -->
-        <div class="flex gap-2 overflow-x-auto hide-scrollbar pointer-events-auto">
-            <button id="mob-แนะนำ" data-filter="แนะนำ" onclick="applyFilter('แนะนำ')" class="filter-btn flex-shrink-0 px-5 py-2.5 bg-primary text-white rounded-full text-sm font-bold border border-primary shadow-sm transition-all">แนะนำ</button>
-            <button id="mob-ใกล้ฉัน" data-filter="ใกล้ฉัน" onclick="applyFilter('ใกล้ฉัน')" class="filter-btn flex-shrink-0 px-5 py-2.5 bg-white/95 backdrop-blur-md text-slate-700 rounded-full text-sm font-semibold border border-slate-200 shadow-sm transition-all">ใกล้ฉัน</button>
-            <button id="mob-เรตติ้ง" data-filter="เรตติ้ง" onclick="applyFilter('เรตติ้ง')" class="filter-btn flex-shrink-0 px-5 py-2.5 bg-white/95 backdrop-blur-md text-slate-700 rounded-full text-sm font-semibold border border-slate-200 shadow-sm transition-all">เรตติ้ง</button>
+        <div class="flex gap-1.5 sm:gap-2 overflow-x-auto hide-scrollbar pointer-events-auto">
+            <button id="mob-แนะนำ" data-filter="แนะนำ" onclick="applyFilter('แนะนำ')" class="filter-btn flex-shrink-0 px-3.5 sm:px-5 py-1.5 sm:py-2.5 bg-primary text-white rounded-full text-xs sm:text-sm font-bold border border-primary shadow-sm transition-all">แนะนำ</button>
+            <button id="mob-ใกล้ฉัน" data-filter="ใกล้ฉัน" onclick="applyFilter('ใกล้ฉัน')" class="filter-btn flex-shrink-0 px-3.5 sm:px-5 py-1.5 sm:py-2.5 bg-white/95 backdrop-blur-md text-slate-700 rounded-full text-xs sm:text-sm font-semibold border border-slate-200 shadow-sm transition-all">ใกล้ฉัน</button>
+            <button id="mob-เรตติ้ง" data-filter="เรตติ้ง" onclick="applyFilter('เรตติ้ง')" class="filter-btn flex-shrink-0 px-3.5 sm:px-5 py-1.5 sm:py-2.5 bg-white/95 backdrop-blur-md text-slate-700 rounded-full text-xs sm:text-sm font-semibold border border-slate-200 shadow-sm transition-all">เรตติ้ง</button>
         </div>
         
         <!-- Mobile Weather Pill (Feature 3) -->
-        <div onclick="openWeatherModal()" class="flex items-center justify-between px-4 py-3 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200 shadow-md pointer-events-auto cursor-pointer active:scale-98 transition-transform">
-            <div class="flex items-center gap-3">
-                <span class="text-2xl drop-shadow select-none" id="mobWeatherEmoji">☀️</span>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <span class="font-bold text-slate-900 text-sm" id="mobWeatherTitle">เหมาะล้างรถ 95%</span>
-                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" id="mobWeatherDot"></span>
+        <div onclick="openWeatherModal()" class="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200 shadow-md pointer-events-auto cursor-pointer active:scale-98 transition-transform gap-2">
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                <span class="text-xl sm:text-2xl drop-shadow select-none shrink-0" id="mobWeatherEmoji">☀️</span>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-1.5 sm:gap-2">
+                        <span class="font-bold text-slate-900 text-xs sm:text-sm truncate" id="mobWeatherTitle">เหมาะล้างรถ 95%</span>
+                        <span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" id="mobWeatherDot"></span>
                     </div>
-                    <span class="text-xs text-slate-600 block font-medium leading-tight mt-0.5" id="mobWeatherSubtitle">โอกาสฝน 10% • แดดจัดตลอดวัน (เชียงใหม่ 32°C)</span>
+                    <span class="text-[11px] sm:text-xs text-slate-600 block font-medium leading-tight mt-0.5 truncate max-w-[170px] xs:max-w-[210px] sm:max-w-none" id="mobWeatherSubtitle">โอกาสฝน 10% • แดดจัดตลอดวัน (เชียงใหม่ 32°C)</span>
                 </div>
             </div>
-            <div class="flex items-center gap-1 text-primary text-xs font-bold bg-primary/10 px-2.5 py-1.5 rounded-xl border border-primary/20 shrink-0">
+            <div class="flex items-center gap-1 text-primary text-[11px] sm:text-xs font-bold bg-primary/10 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl border border-primary/20 shrink-0">
                 <span>3 วัน</span>
-                <span class="material-symbols-outlined text-[15px]">open_in_full</span>
+                <span class="material-symbols-outlined text-[13px] sm:text-[15px]">open_in_full</span>
             </div>
         </div>
     </div>
@@ -337,22 +337,22 @@ tailwind.config = {
     </div>
 
     <!-- Bottom Nav Bar (Mobile Only) -->
-    <nav class="md:hidden flex justify-around items-center p-2.5 pb-[calc(0.6rem+env(safe-area-inset-bottom,0))] bg-white/95 backdrop-blur-xl fixed bottom-4 left-4 right-4 rounded-2xl z-50 border border-slate-200 shadow-[0_10px_35px_rgba(15,23,42,0.12)]">
-        <a class="flex flex-col items-center justify-center bg-primary/10 text-primary rounded-xl w-18 h-14 shadow-sm active:scale-95 transition-transform" href="discovery.html">
-            <span class="material-symbols-outlined text-[26px]" style="font-variation-settings: 'FILL' 1;">explore</span>
-            <span class="text-xs font-bold mt-1">ค้นหา</span>
+    <nav class="md:hidden flex justify-around items-center p-2 sm:p-2.5 pb-[calc(0.5rem+env(safe-area-inset-bottom,0))] bg-white/95 backdrop-blur-xl fixed bottom-3 sm:bottom-4 left-3 sm:left-4 right-3 sm:right-4 rounded-2xl z-50 border border-slate-200 shadow-[0_10px_35px_rgba(15,23,42,0.12)]">
+        <a class="flex flex-col items-center justify-center bg-primary/10 text-primary rounded-xl flex-1 max-w-[80px] h-13 sm:h-14 shadow-sm active:scale-95 transition-transform" href="discovery.html">
+            <span class="material-symbols-outlined text-[22px] sm:text-[26px]" style="font-variation-settings: 'FILL' 1;">explore</span>
+            <span class="text-[11px] sm:text-xs font-bold mt-0.5 sm:mt-1">ค้นหา</span>
         </a>
-        <a class="flex flex-col items-center justify-center text-slate-500 hover:text-primary active:scale-95 transition-transform w-18 h-14" href="booking-history-Customer.html">
-            <span class="material-symbols-outlined text-[26px]">receipt_long</span>
-            <span class="text-xs font-semibold mt-1">การจอง</span>
+        <a class="flex flex-col items-center justify-center text-slate-500 hover:text-primary active:scale-95 transition-transform flex-1 max-w-[80px] h-13 sm:h-14" href="booking-history-Customer.html">
+            <span class="material-symbols-outlined text-[22px] sm:text-[26px]">receipt_long</span>
+            <span class="text-[11px] sm:text-xs font-semibold mt-0.5 sm:mt-1">การจอง</span>
         </a>
-        <a class="flex flex-col items-center justify-center text-slate-500 hover:text-primary active:scale-95 transition-transform w-18 h-14" href="favorite-shops.html">
-            <span class="material-symbols-outlined text-[26px]">favorite</span>
-            <span class="text-xs font-semibold mt-1">ร้านโปรด</span>
+        <a class="flex flex-col items-center justify-center text-slate-500 hover:text-primary active:scale-95 transition-transform flex-1 max-w-[80px] h-13 sm:h-14" href="favorite-shops.html">
+            <span class="material-symbols-outlined text-[22px] sm:text-[26px]">favorite</span>
+            <span class="text-[11px] sm:text-xs font-semibold mt-0.5 sm:mt-1">ร้านโปรด</span>
         </a>
-        <a class="flex flex-col items-center justify-center text-slate-500 hover:text-primary active:scale-95 transition-transform w-18 h-14" href="Customer%20Profile.html">
-            <span class="material-symbols-outlined text-[26px]">person</span>
-            <span class="text-xs font-semibold mt-1">ฉัน</span>
+        <a class="flex flex-col items-center justify-center text-slate-500 hover:text-primary active:scale-95 transition-transform flex-1 max-w-[80px] h-13 sm:h-14" href="Customer%20Profile.html">
+            <span class="material-symbols-outlined text-[22px] sm:text-[26px]">person</span>
+            <span class="text-[11px] sm:text-xs font-semibold mt-0.5 sm:mt-1">ฉัน</span>
         </a>
     </nav>
 
@@ -591,7 +591,7 @@ tailwind.config = {
                     </div>
                     
                     <!-- Content Area (Clean & Proportional) -->
-                    <div class="flex-1 min-w-0 flex flex-col justify-between h-20 py-0.5">
+                    <div class="flex-1 min-w-0 flex flex-col justify-between min-h-[80px] py-0.5">
                         <!-- Name & Rating -->
                         <div>
                             <div class="flex items-center justify-between gap-1">

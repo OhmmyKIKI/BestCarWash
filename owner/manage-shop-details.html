@@ -78,36 +78,36 @@
 
 <!-- Top Header (App Bar) -->
 <header class="sticky top-0 w-full z-50 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md">
-    <div class="w-full px-4 md:px-8 lg:px-10 h-20 flex items-center justify-between">
+    <div class="w-full px-3 sm:px-6 md:px-8 lg:px-10 min-h-[64px] sm:h-20 py-2 sm:py-0 flex items-center justify-between gap-2">
         <!-- Left: Back Button & Page Identification -->
-        <div class="flex items-center gap-3.5">
-            <a href="Owner%20Profile.html" class="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/40 transition-all active:scale-95 group" title="กลับไปโปรไฟล์">
-                <span class="material-symbols-outlined text-[22px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+        <div class="flex items-center gap-2 sm:gap-3.5 min-w-0">
+            <a href="Owner%20Profile.html" class="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-variant text-on-surface-variant hover:text-secondary border border-outline-variant/40 transition-all active:scale-95 group shrink-0" title="กลับไปโปรไฟล์">
+                <span class="material-symbols-outlined text-[20px] sm:text-[22px] group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
             </a>
-            <div>
-                <h1 class="text-lg md:text-xl font-bold text-on-surface tracking-tight flex items-center gap-2.5">
-                    <span class="material-symbols-outlined text-secondary text-[26px]">store</span>
-                    <span>จัดการข้อมูลร้านค้า</span>
+            <div class="min-w-0">
+                <h1 class="text-sm sm:text-lg md:text-xl font-bold text-on-surface tracking-tight flex items-center gap-1.5 sm:gap-2.5 truncate leading-tight">
+                    <span class="material-symbols-outlined text-secondary text-[22px] sm:text-[26px] shrink-0">store</span>
+                    <span class="truncate">จัดการข้อมูลร้านค้า</span>
                 </h1>
-                <div class="flex items-center gap-2 mt-0.5">
-                    <span id="shopContextSubtitle" class="text-xs font-semibold text-primary">ร้าน ohm Car Wash</span>
-                    <span class="text-outline text-xs">•</span>
-                    <div id="cloud-sync-badge" class="flex items-center gap-1.5 text-[11px] font-medium text-secondary opacity-0 transition-opacity duration-500">
-                        <span id="cloud-sync-icon" class="material-symbols-outlined text-[14px]">cloud_done</span>
-                        <span id="cloud-sync-text">ข้อมูลเป็นปัจจุบันแล้ว</span>
+                <div class="flex items-center gap-1.5 sm:gap-2 mt-0.5 truncate">
+                    <span id="shopContextSubtitle" class="text-[11px] sm:text-xs font-semibold text-primary truncate max-w-[120px] xs:max-w-[180px] sm:max-w-none">ร้าน ohm Car Wash</span>
+                    <span class="text-outline text-xs shrink-0">•</span>
+                    <div id="cloud-sync-badge" class="flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-secondary opacity-0 transition-opacity duration-500 shrink-0">
+                        <span id="cloud-sync-icon" class="material-symbols-outlined text-[13px] sm:text-[14px]">cloud_done</span>
+                        <span id="cloud-sync-text" class="hidden xs:inline">ข้อมูลเป็นปัจจุบันแล้ว</span>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Right: Action Buttons -->
-        <div class="flex items-center gap-2.5 sm:gap-3">
-            <a href="public-shop-preview.html" id="headerPreviewBtn" class="h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl bg-surface-container hover:bg-surface-variant border border-outline-variant/40 text-on-surface text-sm sm:text-base font-semibold flex items-center gap-2 transition-all hover:border-secondary/40 active:scale-95" title="ดูตัวอย่างหน้าร้าน">
-                <span class="material-symbols-outlined text-[20px] text-secondary">visibility</span>
+        <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            <a href="public-shop-preview.html" id="headerPreviewBtn" class="h-9 sm:h-11 px-2.5 sm:px-4 rounded-xl bg-surface-container hover:bg-surface-variant border border-outline-variant/40 text-on-surface text-xs sm:text-base font-semibold flex items-center gap-1.5 sm:gap-2 transition-all hover:border-secondary/40 active:scale-95 shrink-0" title="ดูตัวอย่างหน้าร้าน">
+                <span class="material-symbols-outlined text-[18px] sm:text-[20px] text-secondary">visibility</span>
                 <span class="hidden sm:inline">ดูตัวอย่างหน้าร้าน</span>
             </a>
-            <button form="editShopForm" type="submit" class="h-11 sm:h-12 px-4 sm:px-6 rounded-xl bg-secondary hover:bg-secondary-fixed text-on-secondary-container text-sm sm:text-base font-bold flex items-center gap-2 shadow-lg shadow-secondary/20 transition-all active:scale-95">
-                <span class="material-symbols-outlined text-[20px]">save</span>
+            <button form="editShopForm" type="submit" class="h-9 sm:h-11 px-3 sm:px-6 rounded-xl bg-secondary hover:bg-secondary-fixed text-on-secondary-container text-xs sm:text-base font-bold flex items-center gap-1.5 sm:gap-2 shadow-lg shadow-secondary/20 transition-all active:scale-95 shrink-0">
+                <span class="material-symbols-outlined text-[18px] sm:text-[20px]">save</span>
                 <span>บันทึก</span>
             </button>
         </div>
@@ -115,26 +115,26 @@
 </header>
 
 <!-- Main Container -->
-<main class="w-full max-w-7xl px-4 sm:px-6 pt-6 mx-auto flex-1">
+<main class="w-full max-w-7xl px-3 sm:px-6 pt-4 sm:pt-6 pb-24 md:pb-12 mx-auto flex-1">
     
     <!-- Unified Owner Shop Navigation Tabs -->
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-3 bg-surface-container-low p-2 rounded-2xl border border-outline-variant/40 shadow-sm">
-        <div class="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
-            <a id="navShopDetailsLink" href="manage-shop-details.html" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 bg-secondary text-on-secondary-container shadow-md shadow-secondary/20 transition-all">
-                <span class="material-symbols-outlined text-[18px]">store</span>
+    <div class="mb-5 sm:mb-6 flex items-center justify-between gap-3 bg-surface-container-low p-1.5 sm:p-2 rounded-2xl border border-outline-variant/40 shadow-sm overflow-hidden">
+        <div class="flex items-center gap-1.5 overflow-x-auto hide-scrollbar w-full sm:w-auto py-0.5">
+            <a id="navShopDetailsLink" href="manage-shop-details.html" class="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 bg-secondary text-on-secondary-container shadow-md shadow-secondary/20 transition-all shrink-0 whitespace-nowrap">
+                <span class="material-symbols-outlined text-[16px] sm:text-[18px]">store</span>
                 <span>ข้อมูลร้านค้า</span>
             </a>
-            <a id="navOperatingHoursLink" href="manage-operating-hours.html" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all">
-                <span class="material-symbols-outlined text-[18px]">schedule</span>
+            <a id="navOperatingHoursLink" href="manage-operating-hours.html" class="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all shrink-0 whitespace-nowrap">
+                <span class="material-symbols-outlined text-[16px] sm:text-[18px]">schedule</span>
                 <span>เวลาเปิด-ปิดทำการ</span>
             </a>
-            <a id="navServicesLink" href="manage-services.html" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all">
-                <span class="material-symbols-outlined text-[18px]">local_car_wash</span>
+            <a id="navServicesLink" href="manage-services.html" class="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all shrink-0 whitespace-nowrap">
+                <span class="material-symbols-outlined text-[16px] sm:text-[18px]">local_car_wash</span>
                 <span>บริการ & ราคา</span>
             </a>
         </div>
         <!-- Live Shop Badge -->
-        <div id="navShopBadge" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-container border border-outline-variant/30 text-xs">
+        <div id="navShopBadge" class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-container border border-outline-variant/30 text-xs shrink-0">
             <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
             <span class="text-outline">กำลังแก้ไขร้าน:</span>
             <span class="font-bold text-on-surface" id="navShopNameDisplay">ohm Car Wash</span>
@@ -271,9 +271,9 @@
         <div class="lg:col-span-7 space-y-6">
 
             <!-- Section 1: Basic Information -->
-            <div class="glass-card rounded-2xl p-6 shadow-xl space-y-4">
+            <div class="glass-card rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
                 <div class="flex items-center justify-between border-b border-outline-variant/20 pb-3">
-                    <h2 class="text-base font-bold text-on-surface flex items-center gap-2">
+                    <h2 class="text-sm sm:text-base font-bold text-on-surface flex items-center gap-2 break-words leading-snug">
                         <span class="material-symbols-outlined text-secondary text-[20px]">badge</span>
                         ข้อมูลพื้นฐานของร้านค้า
                     </h2>
@@ -311,9 +311,9 @@
             </div>
 
             <!-- Section 2: Location & Maps -->
-            <div class="glass-card rounded-2xl p-6 shadow-xl space-y-4">
+            <div class="glass-card rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
                 <div class="flex items-center justify-between border-b border-outline-variant/20 pb-3">
-                    <h2 class="text-base font-bold text-on-surface flex items-center gap-2">
+                    <h2 class="text-sm sm:text-base font-bold text-on-surface flex items-center gap-2 break-words leading-snug">
                         <span class="material-symbols-outlined text-secondary text-[20px]">pin_drop</span>
                         ที่ตั้งและพิกัดแผนที่
                     </h2>
