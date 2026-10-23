@@ -1388,12 +1388,22 @@ tailwind.config = {
                         // --- 1. RESOLVE SHOP MAIN COVER IMAGE (รูปปกร้านหลักที่เจ้าของร้านเลือก) ---
                         let coverImg = null;
 
-                        // Priority 0: Cloud-persisted metadata from shop description (Guaranteed across browsers/devices)
-                        if (cloudMeta?.cover_image && !isStockPhoto(cloudMeta.cover_image)) {
+                        // Priority 0: Direct Supabase Cloud Storage cover_image_url column (Highest priority, works on all devices & mobile)
+                        if (db.cover_image_url && !isStockPhoto(db.cover_image_url)) {
+                            coverImg = db.cover_image_url;
+                        }
+
+                        // Priority 1: Cloud-persisted metadata from shop description (Guaranteed across browsers/devices)
+                        if (!coverImg && cloudMeta?.cover_image && !isStockPhoto(cloudMeta.cover_image)) {
                             coverImg = cloudMeta.cover_image;
                         }
 
-                        // Priority 1: Shop-specific IndexedDB by shop ID or owner ID
+                        // Priority 2: Cloud gallery first image
+                        if (!coverImg && Array.isArray(cloudMeta?.gallery) && cloudMeta.gallery.length > 0 && !isStockPhoto(cloudMeta.gallery[0])) {
+                            coverImg = cloudMeta.gallery[0];
+                        }
+
+                        // Priority 3: Shop-specific IndexedDB by shop ID or owner ID
                         if (!coverImg && db.id) {
                             const idbC = await getIDBMedia('ownerCoverImage_' + db.id).catch(() => null);
                             if (idbC && !isStockPhoto(idbC)) coverImg = idbC;

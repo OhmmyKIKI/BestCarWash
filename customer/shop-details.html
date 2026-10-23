@@ -1393,37 +1393,40 @@
                     } catch (_) {}
 
                     let resolvedCover = null;
+                    // Priority 0: Direct Supabase Cloud Storage cover_image_url column (Highest priority, universal on all devices & mobile)
+                    if (dbShop.cover_image_url && !isStockPhoto(dbShop.cover_image_url)) {
+                        resolvedCover = dbShop.cover_image_url;
+                    }
                     // Priority 1: Cloud-persisted metadata from shop description (works across all browsers/devices)
-                    if (cloudMeta?.cover_image && !isStockPhoto(cloudMeta.cover_image)) {
+                    if (!resolvedCover && cloudMeta?.cover_image && !isStockPhoto(cloudMeta.cover_image)) {
                         resolvedCover = cloudMeta.cover_image;
                     }
-                    // Priority 2: IndexedDB (Version 2)
+                    // Priority 2: Cloud gallery first photo
+                    if (!resolvedCover && Array.isArray(cloudMeta?.gallery) && cloudMeta.gallery.length > 0 && !isStockPhoto(cloudMeta.gallery[0])) {
+                        resolvedCover = cloudMeta.gallery[0];
+                    }
+                    // Priority 3: IndexedDB (Version 2)
                     if (!resolvedCover && idbCover && !isStockPhoto(idbCover)) {
                         resolvedCover = idbCover;
                     }
-                    // Priority 3: LocalStorage
+                    // Priority 4: LocalStorage
                     if (!resolvedCover && localCover && !isStockPhoto(localCover)) {
                         resolvedCover = localCover;
-                    }
-                    // Priority 4: Supabase columns
-                    if (!resolvedCover && dbShop.cover_image_url && !isStockPhoto(dbShop.cover_image_url)) {
-                        resolvedCover = dbShop.cover_image_url;
-                    }
-                    if (!resolvedCover && dbShop.cover_image && !isStockPhoto(dbShop.cover_image)) {
-                        resolvedCover = dbShop.cover_image;
                     }
                     // Priority 5: Discovery cache
                     if (!resolvedCover && discoveryShopImg && !isStockPhoto(discoveryShopImg)) {
                         resolvedCover = discoveryShopImg;
                     }
-                    // Priority 6: First image of gallery
+                    // Priority 6: First image of local gallery
                     if (!resolvedCover && Array.isArray(localGallery) && localGallery.length > 0 && !isStockPhoto(localGallery[0])) {
                         resolvedCover = localGallery[0];
                     }
 
-                    const candidateGallery = (Array.isArray(localGallery) && localGallery.length > 0)
-                        ? localGallery
-                        : (Array.isArray(dbGallery) && dbGallery.length > 0 ? dbGallery : []);
+                    const candidateGallery = (Array.isArray(cloudMeta?.gallery) && cloudMeta.gallery.length > 0)
+                        ? cloudMeta.gallery
+                        : ((Array.isArray(dbGallery) && dbGallery.length > 0)
+                            ? dbGallery
+                            : ((Array.isArray(localGallery) && localGallery.length > 0) ? localGallery : []));
 
                     const resolvedGallery = buildFullGallery(resolvedCover, candidateGallery);
 

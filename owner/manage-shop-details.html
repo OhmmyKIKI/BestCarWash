@@ -739,6 +739,89 @@
                 .filter(Boolean);
         }
 
+        // Helper: Convert DataURL to Blob for Supabase Storage Upload
+        function dataURLtoBlob(dataurl) {
+            try {
+                if (!dataurl || typeof dataurl !== 'string') return null;
+                const arr = dataurl.split(',');
+                const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+                const bstr = atob(arr[1]);
+                let n = bstr.length;
+                const u8arr = new Uint8Array(n);
+                while (n--) {
+                    u8arr[n] = bstr.charCodeAt(n);
+                }
+                return new Blob([u8arr], { type: mime });
+            } catch (e) {
+                console.warn('dataURLtoBlob conversion notice:', e);
+                return null;
+            }
+        }
+
+        // Helper: Upload Image Blob / DataURL directly to Supabase Storage 'shop-media' bucket
+        async function uploadToShopMediaStorage(fileOrDataUrl, prefix = 'cover') {
+            try {
+                if (!fileOrDataUrl) return null;
+                // If it's already an active cloud URL, no upload required
+                if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('http')) {
+                    return fileOrDataUrl;
+                }
+
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                if (!client || !client.storage) {
+                    console.warn('Supabase storage client not available');
+                    return null;
+                }
+
+                let blob = null;
+                let ext = 'jpg';
+                let mimeType = 'image/jpeg';
+
+                if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('data:')) {
+                    blob = dataURLtoBlob(fileOrDataUrl);
+                    if (blob && blob.type) {
+                        mimeType = blob.type;
+                        ext = mimeType.split('/')[1] || 'jpg';
+                        if (ext === 'jpeg') ext = 'jpg';
+                    }
+                } else if (fileOrDataUrl instanceof Blob || fileOrDataUrl instanceof File) {
+                    blob = fileOrDataUrl;
+                    mimeType = blob.type || 'image/jpeg';
+                    ext = mimeType.split('/')[1] || 'jpg';
+                    if (ext === 'jpeg') ext = 'jpg';
+                }
+
+                if (!blob) return null;
+
+                const timestamp = Date.now();
+                const rand = Math.random().toString(36).substring(2, 8);
+                const fileName = `${prefix}_${timestamp}_${rand}.${ext}`;
+
+                const { data, error } = await client.storage
+                    .from('shop-media')
+                    .upload(fileName, blob, {
+                        cacheControl: '3600',
+                        upsert: true,
+                        contentType: mimeType
+                    });
+
+                if (error) {
+                    console.warn(`Supabase Storage upload warning for [${prefix}]:`, error.message || error);
+                    return null;
+                }
+
+                const { data: pubData } = client.storage.from('shop-media').getPublicUrl(fileName);
+                const publicUrl = pubData?.publicUrl || null;
+                if (publicUrl) {
+                    console.log(`✅ Uploaded [${prefix}] to Supabase Storage:`, publicUrl);
+                }
+                return publicUrl;
+            } catch (err) {
+                console.warn('uploadToShopMediaStorage exception:', err);
+                return null;
+            }
+        }
+
         // Parse Thai address string into separate components
         function parseAddress(raw) {
             if (!raw || typeof raw !== 'string') return { street: '', subDistrict: '', city: '', zip: '' };
@@ -1669,7 +1752,63 @@
                 }
             }
 
-            const mainCoverPhoto = (shopPhotos && shopPhotos[0]) || newCoverCompressed || (coverImg ? coverImg.src : null);
+            let mainCoverPhoto = (shopPhotos && shopPhotos[0]) || newCoverCompressed || (coverImg ? coverImg.src : null);
+
+            // --- 0. UPLOAD IMAGES TO SUPABASE STORAGE ('shop-media' bucket) ---
+            if (saveBtn) {
+                saveBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">cloud_upload</span> กำลังอัปโหลดรูปภาพขึ้น Cloud...';
+            }
+
+            let coverCloudUrl = null;
+            if (mainCoverPhoto) {
+                if (mainCoverPhoto.startsWith('http')) {
+                    coverCloudUrl = mainCoverPhoto;
+                } else {
+                    coverCloudUrl = await uploadToShopMediaStorage(mainCoverPhoto, 'cover');
+                    if (coverCloudUrl) {
+                        mainCoverPhoto = coverCloudUrl;
+                        if (coverImg) coverImg.src = coverCloudUrl;
+                    }
+                }
+            }
+
+            let logoCloudUrl = null;
+            if (newLogoCompressed) {
+                if (newLogoCompressed.startsWith('http')) {
+                    logoCloudUrl = newLogoCompressed;
+                } else {
+                    logoCloudUrl = await uploadToShopMediaStorage(newLogoCompressed, 'logo');
+                    if (logoCloudUrl) {
+                        newLogoCompressed = logoCloudUrl;
+                        if (logoImg) logoImg.src = logoCloudUrl;
+                    }
+                }
+            }
+
+            const uploadedGalleryUrls = [];
+            if (shopPhotos && shopPhotos.length > 0) {
+                for (let i = 0; i < shopPhotos.length; i++) {
+                    const p = shopPhotos[i];
+                    if (i === 0 && coverCloudUrl) {
+                        uploadedGalleryUrls.push(coverCloudUrl);
+                        shopPhotos[0] = coverCloudUrl;
+                    } else if (p && p.startsWith('http')) {
+                        uploadedGalleryUrls.push(p);
+                    } else if (p) {
+                        const upUrl = await uploadToShopMediaStorage(p, `gallery_${i}`);
+                        if (upUrl) {
+                            uploadedGalleryUrls.push(upUrl);
+                            shopPhotos[i] = upUrl;
+                        } else {
+                            uploadedGalleryUrls.push(p);
+                        }
+                    }
+                }
+            }
+
+            if (saveBtn) {
+                saveBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> กำลังบันทึกข้อมูล...';
+            }
 
             // 1. SAFELY CACHE IN LOCALSTORAGE & INDEXEDDB
             try {
@@ -1897,21 +2036,40 @@
             const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
 
             if (targetShopId && fetcher) {
+                // Try updating with extended columns (cover_image_url, logo_url) first
                 try {
                     let patchRes = await fetcher(`shops?id=eq.${targetShopId}`, {
                         method: 'PATCH',
                         headers: { 'Prefer': 'return=representation' },
-                        body: coreShopCols
+                        body: extendedShopCols
                     });
 
                     if (patchRes && !patchRes.error && (Array.isArray(patchRes) ? patchRes.length > 0 : true)) {
                         shopUpdated = true;
-                        console.log('✅ Shop table updated via safeSupabaseRest');
+                        console.log('✅ Shop table updated with extended columns via safeSupabaseRest');
                     } else if (patchRes?.error) {
                         lastUpdateError = patchRes.error.message || String(patchRes.error);
                     }
                 } catch (e) {
                     lastUpdateError = e.message || String(e);
+                }
+
+                // If extended columns are not yet present in table schema, fallback to coreShopCols
+                if (!shopUpdated) {
+                    try {
+                        let patchRes = await fetcher(`shops?id=eq.${targetShopId}`, {
+                            method: 'PATCH',
+                            headers: { 'Prefer': 'return=representation' },
+                            body: coreShopCols
+                        });
+
+                        if (patchRes && !patchRes.error && (Array.isArray(patchRes) ? patchRes.length > 0 : true)) {
+                            shopUpdated = true;
+                            console.log('✅ Shop table updated with coreShopCols fallback');
+                        }
+                    } catch (e) {
+                        lastUpdateError = e.message || String(e);
+                    }
                 }
             }
 
@@ -1921,7 +2079,7 @@
                     let insertRes = await fetcher('shops', {
                         method: 'POST',
                         headers: { 'Prefer': 'return=representation' },
-                        body: { owner_id: userId, ...coreShopCols }
+                        body: { owner_id: userId, ...extendedShopCols }
                     });
 
                     if (insertRes && !insertRes.error) {
@@ -1932,9 +2090,18 @@
                             safeLocalStorageSet('currentShopId', currentShopId);
                         }
                     }
-
-
-                } catch (_) {}
+                } catch (_) {
+                    try {
+                        let insertRes = await fetcher('shops', {
+                            method: 'POST',
+                            headers: { 'Prefer': 'return=representation' },
+                            body: { owner_id: userId, ...coreShopCols }
+                        });
+                        if (insertRes && !insertRes.error) {
+                            shopUpdated = true;
+                        }
+                    } catch (_) {}
+                }
             }
 
             // Background sync for Profile Avatar & Auth User Metadata

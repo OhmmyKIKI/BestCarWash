@@ -316,6 +316,11 @@
     function resolveShopCoverSync(s, idx = 0) {
         if (!s) return DEFAULT_COVER_IMAGES[idx % DEFAULT_COVER_IMAGES.length];
         
+        // 0. Direct Cloud cover_image_url column (Highest priority, works on all devices & mobile)
+        if (s.cover_image_url && !isStockPhoto(s.cover_image_url)) {
+            return s.cover_image_url;
+        }
+
         // 1. Cloud metadata embedded in shop description
         const { meta: cloudMeta } = extractShopMetadata(s.description);
         if (cloudMeta?.cover_image && !isStockPhoto(cloudMeta.cover_image)) {
