@@ -254,8 +254,11 @@
                 localStorage.removeItem('appBookingsList');
                 localStorage.removeItem('activeCustomerBooking');
                 localStorage.removeItem('favoriteShopIds');
-                localStorage.setItem('lastLoggedInUserId', user.id);
+                localStorage.removeItem('cachedCustomerNotifications');
+                localStorage.removeItem('cachedOwnerNotifications');
+                localStorage.removeItem('customerNotifications');
             }
+            localStorage.setItem('lastLoggedInUserId', user.id);
 
             let role = user.user_metadata?.role;
             const client = getClient();
@@ -531,6 +534,7 @@
                     avatar: profile?.avatar_url || user.user_metadata?.avatar_url || null
                 };
                 localStorage.setItem('customerProfile', JSON.stringify(customerData));
+                localStorage.setItem('lastLoggedInUserId', user.id);
 
                 // Pre-cache customer vehicles in parallel for 0ms discovery & booking flow via safeSupabaseRest
                 try {

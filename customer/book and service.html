@@ -2277,14 +2277,16 @@
                             is_read: false
                         };
                         
-                        // 1. Save to local cache immediately
-                        let cNotifs = JSON.parse(localStorage.getItem('cachedCustomerNotifications') || '[]');
+                        // 1. Save to local cache immediately (scoped to current customer)
+                        const custCacheKey = userId ? `cachedCustomerNotifications_${userId}` : 'cachedCustomerNotifications';
+                        let cNotifs = JSON.parse(localStorage.getItem(custCacheKey) || '[]');
                         cNotifs = cNotifs.filter(n => n.related_booking_id !== dbRow.id);
                         cNotifs.unshift({
                             ...notifPayload,
                             id: 'local_' + Date.now(),
                             created_at: new Date().toISOString()
                         });
+                        localStorage.setItem(custCacheKey, JSON.stringify(cNotifs.slice(0, 50)));
                         localStorage.setItem('cachedCustomerNotifications', JSON.stringify(cNotifs.slice(0, 50)));
 
                         // 2. Insert to Supabase notifications table

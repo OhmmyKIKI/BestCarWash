@@ -158,6 +158,11 @@
 
 <script>
     let userNotifications = [];
+    let currentCustomerUserId = null;
+
+    function getCustomerNotifCacheKey(uid) {
+        return uid ? `cachedCustomerNotifications_${uid}` : 'cachedCustomerNotifications';
+    }
 
     function formatTimeAgo(dateString) {
         if (!dateString) return 'เมื่อสักครู่';
@@ -250,7 +255,8 @@
             const idx = userNotifications.findIndex(n => String(n.id) === String(id));
             if (idx !== -1) {
                 userNotifications[idx].is_read = true;
-                localStorage.setItem('cachedCustomerNotifications', JSON.stringify(userNotifications));
+                const cacheKey = getCustomerNotifCacheKey(currentCustomerUserId);
+                localStorage.setItem(cacheKey, JSON.stringify(userNotifications));
                 updateUnreadBadgeUI(userNotifications);
             }
 
@@ -269,47 +275,6 @@
         }
     }
 
-    // Synthesize notifications from existing bookings in case DB is newly initialized
-    function generateFallbackNotifications() {
-        const generated = [];
-        try {
-            const active = JSON.parse(localStorage.getItem('activeCustomerBooking') || 'null');
-            if (active && active.shopName) {
-                generated.push({
-                    id: 'synth_act_' + (active.id || active.bookingId || '1'),
-                    title: 'การจองคิวสำเร็จ',
-                    message: `คุณได้ทำการจองคิวที่ ${active.shopName} (${active.dateTime || active.bookingDate || 'วันนี้'}) เรียบร้อยแล้ว`,
-                    type: 'BOOKING_UPDATE',
-                    related_booking_id: active.id || active.bookingId,
-                    is_read: false,
-                    created_at: active.createdAt || new Date().toISOString()
-                });
-            }
-
-            const list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
-            if (Array.isArray(list)) {
-                list.slice(0, 5).forEach(b => {
-                    if (b && b.shopName && (!active || b.bookingId !== active.bookingId)) {
-                        const isDone = ['completed', 'COMPLETED'].includes(b.status);
-                        const isCancel = ['cancelled', 'CANCELLED', 'declined', 'refunded'].includes(b.status);
-                        const title = isDone ? 'บริการล้างรถเสร็จสิ้นแล้ว' : (isCancel ? 'การจองคิวถูกยกเลิก' : 'การจองคิวสำเร็จ');
-                        const msg = isDone ? `การบริการที่ ${b.shopName} เสร็จเรียบร้อยแล้ว เชิญตรวจรับรถและร่วมรีวิว` : `คุณได้ทำการจองคิวที่ ${b.shopName} (${b.dateTime || b.bookingDate})`;
-                        generated.push({
-                            id: 'synth_bk_' + (b.id || b.bookingId || Math.random()),
-                            title: title,
-                            message: msg,
-                            type: 'BOOKING_UPDATE',
-                            related_booking_id: b.id || b.bookingId,
-                            is_read: true,
-                            created_at: b.createdAt || b.bookingDate || new Date().toISOString()
-                        });
-                    }
-                });
-            }
-        } catch (_) {}
-        return generated;
-    }
-
     async function loadLiveNotifications() {
         try {
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
@@ -318,50 +283,49 @@
                 const sessRes = await client.auth.getSession().catch(() => null);
                 user = sessRes?.data?.session?.user;
             }
-            const uid = user?.id || localStorage.getItem('lastLoggedInUserId') || 'da839dcc-9bca-47d0-b178-29351930fff6';
+            const uid = user?.id || localStorage.getItem('lastLoggedInUserId');
+            if (!uid) {
+                userNotifications = [];
+                showEmptyState(true);
+                updateUnreadBadgeUI([]);
+                return;
+            }
+            currentCustomerUserId = uid;
+            const cacheKey = getCustomerNotifCacheKey(uid);
             const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
 
             let dbNotifs = null;
-            if (fetcher && uid) {
+            if (fetcher) {
                 const res = await fetcher(`notifications?user_id=eq.${uid}&order=created_at.desc`).catch(() => null);
                 if (Array.isArray(res)) {
                     dbNotifs = res;
                 }
             }
 
-            if (Array.isArray(dbNotifs) && dbNotifs.length > 0) {
+            if (Array.isArray(dbNotifs)) {
+                // Valid DB response for this specific user
                 userNotifications = dbNotifs;
-                localStorage.setItem('cachedCustomerNotifications', JSON.stringify(userNotifications));
+                localStorage.setItem(cacheKey, JSON.stringify(userNotifications));
                 renderNotificationsList(userNotifications);
                 return;
             }
 
-            // If DB returned empty, check local cached notifications
-            const localCached = JSON.parse(localStorage.getItem('cachedCustomerNotifications') || '[]');
-            if (Array.isArray(localCached) && localCached.length > 0) {
+            // If offline, restore this specific user's cache only
+            const localCached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+            if (Array.isArray(localCached)) {
                 userNotifications = localCached;
                 renderNotificationsList(userNotifications);
                 return;
             }
 
-            // Fallback: generate from current customer bookings so user never sees a blank screen if they have bookings
-            const fallbacks = generateFallbackNotifications();
-            if (fallbacks.length > 0) {
-                userNotifications = fallbacks;
-                localStorage.setItem('cachedCustomerNotifications', JSON.stringify(userNotifications));
-                renderNotificationsList(userNotifications);
-            } else {
-                showEmptyState(true);
-            }
+            userNotifications = [];
+            showEmptyState(true);
+            updateUnreadBadgeUI([]);
         } catch (e) {
             console.warn('Notifications exception:', e);
-            const localCached = JSON.parse(localStorage.getItem('cachedCustomerNotifications') || '[]');
-            if (localCached.length > 0) {
-                userNotifications = localCached;
-                renderNotificationsList(userNotifications);
-            } else {
-                showEmptyState(true);
-            }
+            userNotifications = [];
+            showEmptyState(true);
+            updateUnreadBadgeUI([]);
         }
     }
 
@@ -419,18 +383,13 @@
 
         // Update in-memory state & localStorage
         userNotifications.forEach(n => { n.is_read = true; });
-        localStorage.setItem('cachedCustomerNotifications', JSON.stringify(userNotifications));
+        const cacheKey = getCustomerNotifCacheKey(currentCustomerUserId);
+        localStorage.setItem(cacheKey, JSON.stringify(userNotifications));
         updateUnreadBadgeUI(userNotifications);
 
         // Sync to Supabase
         try {
-            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            let user = null;
-            if (client?.auth) {
-                const sessRes = await client.auth.getSession().catch(() => null);
-                user = sessRes?.data?.session?.user;
-            }
-            const uid = user?.id || localStorage.getItem('lastLoggedInUserId') || 'da839dcc-9bca-47d0-b178-29351930fff6';
+            const uid = currentCustomerUserId || localStorage.getItem('lastLoggedInUserId');
             const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
             if (uid && fetcher) {
                 await fetcher(`notifications?user_id=eq.${uid}`, {
@@ -465,14 +424,18 @@
             }
         }
 
-        // Restore cached notifications at 0ms
+        // Restore cached notifications at 0ms ONLY if matching current user
         try {
-            const cached = localStorage.getItem('cachedCustomerNotifications');
-            if (cached) {
-                const parsed = JSON.parse(cached);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    userNotifications = parsed;
-                    renderNotificationsList(userNotifications);
+            const uid = localStorage.getItem('lastLoggedInUserId');
+            if (uid) {
+                currentCustomerUserId = uid;
+                const cached = localStorage.getItem(getCustomerNotifCacheKey(uid));
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        userNotifications = parsed;
+                        renderNotificationsList(userNotifications);
+                    }
                 }
             }
         } catch(e) {}

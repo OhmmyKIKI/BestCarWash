@@ -1179,9 +1179,10 @@
                     }
                     // Also sync to customer local notifications if on same browser
                     try {
-                        let cNotifs = JSON.parse(localStorage.getItem('cachedCustomerNotifications') || '[]');
+                        const custCacheKey = `cachedCustomerNotifications_${targetCustId}`;
+                        let cNotifs = JSON.parse(localStorage.getItem(custCacheKey) || '[]');
                         cNotifs.unshift({ ...custNotif, id: 'local_' + Date.now(), created_at: new Date().toISOString() });
-                        localStorage.setItem('cachedCustomerNotifications', JSON.stringify(cNotifs.slice(0, 50)));
+                        localStorage.setItem(custCacheKey, JSON.stringify(cNotifs.slice(0, 50)));
                     } catch (_) {}
                 }
             } catch (errN) {

@@ -562,8 +562,17 @@ window.fetchSupabaseRest = safeSupabaseRest;
 function syncNotificationBellBadges() {
     try {
         if (typeof window === 'undefined' || !window.localStorage) return;
-        const cached = localStorage.getItem('cachedCustomerNotifications');
-        const notifs = cached ? JSON.parse(cached) : [];
+        const uid = localStorage.getItem('lastLoggedInUserId');
+        const isOwner = (typeof window !== 'undefined' && window.location.pathname.includes('/owner/')) || !!localStorage.getItem('ownerShopName');
+        const cacheKey = uid 
+            ? (isOwner ? 'cachedOwnerNotifications_' + uid : 'cachedCustomerNotifications_' + uid)
+            : null;
+        
+        let notifs = [];
+        if (cacheKey) {
+            const cached = localStorage.getItem(cacheKey);
+            notifs = cached ? JSON.parse(cached) : [];
+        }
         const hasUnread = Array.isArray(notifs) && notifs.some(n => !n.is_read);
 
         const bellLinks = document.querySelectorAll('a[href*="notifications-list.html"]');

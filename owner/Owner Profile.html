@@ -372,7 +372,13 @@
             console.warn('Signout notice:', e);
         }
         try {
+            const uid = localStorage.getItem('lastLoggedInUserId');
+            if (uid) {
+                localStorage.removeItem(`cachedOwnerNotifications_${uid}`);
+            }
             sessionStorage.clear();
+            localStorage.removeItem('cachedOwnerNotifications');
+            localStorage.removeItem('appBookingsList');
             localStorage.removeItem('lastLoggedInUserId');
             localStorage.removeItem('currentShopId');
             localStorage.removeItem('ownerShopName');

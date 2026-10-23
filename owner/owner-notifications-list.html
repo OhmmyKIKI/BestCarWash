@@ -98,6 +98,11 @@
 
 <script>
     let ownerNotifications = [];
+    let currentOwnerUserId = null;
+
+    function getOwnerNotifCacheKey(uid) {
+        return uid ? `cachedOwnerNotifications_${uid}` : 'cachedOwnerNotifications';
+    }
 
     function formatTimeAgo(dateString) {
         if (!dateString) return 'เมื่อสักครู่';
@@ -201,7 +206,8 @@
             const idx = ownerNotifications.findIndex(n => String(n.id) === String(id));
             if (idx !== -1) {
                 ownerNotifications[idx].is_read = true;
-                localStorage.setItem('cachedOwnerNotifications', JSON.stringify(ownerNotifications));
+                const cacheKey = getOwnerNotifCacheKey(currentOwnerUserId);
+                localStorage.setItem(cacheKey, JSON.stringify(ownerNotifications));
                 updateUnreadBadgeUI(ownerNotifications);
             }
 
@@ -220,52 +226,6 @@
         }
     }
 
-    function generateFallbackOwnerNotifications() {
-        const generated = [];
-        try {
-            const list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
-            if (Array.isArray(list) && list.length > 0) {
-                list.slice(0, 10).forEach(b => {
-                    if (b) {
-                        const isIncoming = ['incoming', 'pending', 'PENDING'].includes(b.status);
-                        const isRefund = ['refund_requested', 'declined', 'cancelled', 'CANCELLED'].includes(b.status);
-                        const isCompleted = ['completed', 'COMPLETED'].includes(b.status);
-
-                        let title = 'การจองคิวใหม่';
-                        let msg = `มีลูกค้านัดหมายจองคิวบริการ ${b.serviceName || 'ล้างรถ'} (${b.dateTime || b.bookingDate || 'วันนี้'})`;
-                        let type = 'BOOKING_UPDATE';
-                        let isUnread = false;
-
-                        if (isIncoming) {
-                            title = 'มีคิวจองใหม่เข้ามา!';
-                            msg = `คุณ ${b.customerName || 'ลูกค้า'} นัดหมายจองคิว ${b.serviceName || 'ล้างรถ'} (${b.dateTime || b.bookingDate || 'วันนี้'}) กรุณาตรวจสอบ`;
-                            isUnread = true;
-                        } else if (isRefund) {
-                            title = 'มีคำขอยกเลิก / คืนเงิน';
-                            msg = `คุณ ${b.customerName || 'ลูกค้า'} มีการยกเลิกคิว (${b.refundReason || 'ลูกค้ายกเลิก'})`;
-                            isUnread = true;
-                        } else if (isCompleted) {
-                            title = 'งานบริการเสร็จสมบูรณ์';
-                            msg = `คิวบริการของคุณ ${b.customerName || 'ลูกค้า'} (${b.carBrand || 'รถยนต์'} ${b.carPlate || ''}) เสร็จสิ้นแล้ว`;
-                            isUnread = false;
-                        }
-
-                        generated.push({
-                            id: 'synth_owner_' + (b.id || b.bookingId || Math.random()),
-                            title: title,
-                            message: msg,
-                            type: type,
-                            related_booking_id: b.id || b.bookingId,
-                            is_read: !isUnread,
-                            created_at: b.createdAt || b.bookingDate || new Date().toISOString()
-                        });
-                    }
-                });
-            }
-        } catch (_) {}
-        return generated;
-    }
-
     async function loadOwnerNotifications() {
         try {
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
@@ -276,51 +236,48 @@
                     userId = s?.session?.user?.id;
                 } catch(_) {}
             }
-            userId = userId || localStorage.getItem('lastLoggedInUserId') || '4f152bfb-b550-4b5f-b06b-c7bb6e1eb51e';
-
+            userId = userId || localStorage.getItem('lastLoggedInUserId');
+            if (!userId) {
+                ownerNotifications = [];
+                showEmptyState(true);
+                updateUnreadBadgeUI([]);
+                return;
+            }
+            currentOwnerUserId = userId;
+            const cacheKey = getOwnerNotifCacheKey(userId);
             const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
-            let dbNotifs = null;
 
-            if (fetcher && userId) {
+            let dbNotifs = null;
+            if (fetcher) {
                 const res = await fetcher(`notifications?user_id=eq.${userId}&order=created_at.desc`).catch(() => null);
                 if (Array.isArray(res)) {
                     dbNotifs = res;
                 }
             }
 
-            if (Array.isArray(dbNotifs) && dbNotifs.length > 0) {
+            if (Array.isArray(dbNotifs)) {
                 ownerNotifications = dbNotifs;
-                localStorage.setItem('cachedOwnerNotifications', JSON.stringify(ownerNotifications));
+                localStorage.setItem(cacheKey, JSON.stringify(ownerNotifications));
                 renderOwnerNotifications(ownerNotifications);
                 return;
             }
 
-            // Local cached check
-            const cached = JSON.parse(localStorage.getItem('cachedOwnerNotifications') || '[]');
-            if (Array.isArray(cached) && cached.length > 0) {
+            // Local cached check for this owner only
+            const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+            if (Array.isArray(cached)) {
                 ownerNotifications = cached;
                 renderOwnerNotifications(ownerNotifications);
                 return;
             }
 
-            // Fallback from real bookings in system
-            const fallbacks = generateFallbackOwnerNotifications();
-            if (fallbacks.length > 0) {
-                ownerNotifications = fallbacks;
-                localStorage.setItem('cachedOwnerNotifications', JSON.stringify(ownerNotifications));
-                renderOwnerNotifications(ownerNotifications);
-            } else {
-                showEmptyState(true);
-            }
+            ownerNotifications = [];
+            showEmptyState(true);
+            updateUnreadBadgeUI([]);
         } catch(e) {
             console.warn('Owner notifications exception:', e);
-            const cached = JSON.parse(localStorage.getItem('cachedOwnerNotifications') || '[]');
-            if (cached.length > 0) {
-                ownerNotifications = cached;
-                renderOwnerNotifications(ownerNotifications);
-            } else {
-                showEmptyState(true);
-            }
+            ownerNotifications = [];
+            showEmptyState(true);
+            updateUnreadBadgeUI([]);
         }
     }
 
@@ -375,19 +332,12 @@
         }, 300);
 
         ownerNotifications.forEach(n => { n.is_read = true; });
-        localStorage.setItem('cachedOwnerNotifications', JSON.stringify(ownerNotifications));
+        const cacheKey = getOwnerNotifCacheKey(currentOwnerUserId);
+        localStorage.setItem(cacheKey, JSON.stringify(ownerNotifications));
         updateUnreadBadgeUI(ownerNotifications);
 
         try {
-            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-            let userId = null;
-            if (client?.auth) {
-                try {
-                    const { data: s } = await client.auth.getSession();
-                    userId = s?.session?.user?.id;
-                } catch(_) {}
-            }
-            userId = userId || localStorage.getItem('lastLoggedInUserId') || '4f152bfb-b550-4b5f-b06b-c7bb6e1eb51e';
+            const userId = currentOwnerUserId || localStorage.getItem('lastLoggedInUserId');
             const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
             if (userId && fetcher) {
                 await fetcher(`notifications?user_id=eq.${userId}`, {
@@ -403,15 +353,19 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         // ==========================================
-        // LAYER 1: INSTANT 0.00ms RENDER FROM CACHE
+        // LAYER 1: INSTANT 0.00ms RENDER FROM CACHE (ONLY IF MATCHING USER)
         // ==========================================
         try {
-            const cached = localStorage.getItem('cachedOwnerNotifications');
-            if (cached) {
-                const parsed = JSON.parse(cached);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    ownerNotifications = parsed;
-                    renderOwnerNotifications(ownerNotifications);
+            const uid = localStorage.getItem('lastLoggedInUserId');
+            if (uid) {
+                currentOwnerUserId = uid;
+                const cached = localStorage.getItem(getOwnerNotifCacheKey(uid));
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        ownerNotifications = parsed;
+                        renderOwnerNotifications(ownerNotifications);
+                    }
                 }
             }
         } catch(_) {}

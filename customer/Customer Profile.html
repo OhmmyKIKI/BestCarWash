@@ -761,6 +761,10 @@
             console.warn('Supabase signOut notice:', e);
         }
         try {
+            const uid = localStorage.getItem('lastLoggedInUserId');
+            if (uid) {
+                localStorage.removeItem(`cachedCustomerNotifications_${uid}`);
+            }
             sessionStorage.clear();
             localStorage.removeItem('customerProfile');
             localStorage.removeItem('customerCars');
@@ -768,6 +772,8 @@
             localStorage.removeItem('lastCustomerBooking');
             localStorage.removeItem('favoriteShopIds');
             localStorage.removeItem('customerNotifications');
+            localStorage.removeItem('cachedCustomerNotifications');
+            localStorage.removeItem('lastLoggedInUserId');
             localStorage.removeItem('appBookingsList');
         } catch (e) {}
 
