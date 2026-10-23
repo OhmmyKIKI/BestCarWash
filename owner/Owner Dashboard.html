@@ -934,20 +934,37 @@
 
             const recent = revList.slice(0, 2);
             container.innerHTML = recent.map(r => {
-                const customerName = r.customer?.full_name || 'ลูกค้าทั่วไป';
+                let customerName = r.customer?.full_name || r.customer_name;
+                const avatarUrl = (r.customer?.avatar_url && r.customer.avatar_url !== 'undefined' && r.customer.avatar_url !== 'null' && String(r.customer.avatar_url).trim()) ? r.customer.avatar_url : (r.customer_avatar || null);
+
+                // Fallback: Check local bookings matching booking_id for customer name
+                if (!customerName || customerName === 'ลูกค้าทั่วไป') {
+                    try {
+                        const localBookings = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
+                        const matchB = localBookings.find(b => String(b.id || b.bookingId || '').replace('#','') === String(r.booking_id || '').replace('#',''));
+                        if (matchB?.customerName || matchB?.customer_name) {
+                            customerName = matchB.customerName || matchB.customer_name;
+                        }
+                    } catch(_) {}
+                }
+
+                if (!customerName || !customerName.trim()) {
+                    customerName = 'ลูกค้า';
+                }
+                customerName = customerName.trim();
                 const firstChar = customerName.charAt(0).toUpperCase();
-                const avatarUrl = r.customer?.avatar_url;
+
                 const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : 'เมื่อเร็วๆ นี้';
                 const starsHtml = renderStars(r.rating || 5);
                 const comment = r.comment || 'ลูกค้าไม่ได้ระบุความคิดเห็นเพิ่มเติม';
                 const replyText = r.reply || storedReplies[r.id]?.reply;
 
                 const avatarHtml = avatarUrl ? `
-                    <div class="w-10 h-10 rounded-full overflow-hidden border border-secondary/30 shrink-0">
-                        <img src="${escapeHtml(avatarUrl)}" class="w-full h-full object-cover" alt="${escapeHtml(customerName)}">
+                    <div class="w-10 h-10 rounded-full overflow-hidden border border-secondary/30 shrink-0 shadow-sm bg-surface-container">
+                        <img src="${escapeHtml(avatarUrl)}" class="w-full h-full object-cover" alt="${escapeHtml(customerName)}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'w-full h-full bg-secondary/15 text-secondary flex items-center justify-center font-bold text-base\\'>${escapeHtml(firstChar)}</div>';">
                     </div>
                 ` : `
-                    <div class="w-10 h-10 rounded-full bg-secondary/15 text-secondary border border-secondary/30 flex items-center justify-center font-bold text-base shrink-0">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-secondary/20 to-primary/20 text-secondary border border-secondary/30 flex items-center justify-center font-bold text-base shrink-0 shadow-sm">
                         ${escapeHtml(firstChar)}
                     </div>
                 `;
@@ -1049,7 +1066,7 @@
             if (savedShopId && savedShopId.length > 20 && fetcher) {
                 fastBookingsPromise = fetcher(`bookings?shop_id=eq.${savedShopId}&order=created_at.desc`);
                 fastShopPromise = fetcher(`shops?id=eq.${savedShopId}&limit=1`);
-                fastReviewsPromise = fetcher(`reviews?shop_id=eq.${savedShopId}&order=created_at.desc&limit=10`);
+                fastReviewsPromise = fetcher(`reviews?select=*,customer:customer_id(full_name,avatar_url)&shop_id=eq.${savedShopId}&order=created_at.desc&limit=10`);
                 fastServicesPromise = fetcher(`services?shop_id=eq.${savedShopId}&select=id,name,price`);
             }
 
@@ -1433,22 +1450,65 @@
                 storedReplies = JSON.parse(localStorage.getItem('ownerReviewsReplies') || '{}');
             } catch(e) {}
 
+            // Asynchronously resolve missing customer profiles if any
+            const recent = list.slice(0, 2);
+            const missingCustomerIds = [...new Set(recent.filter(r => (!r.customer || !r.customer.full_name) && r.customer_id).map(r => r.customer_id))];
+            if (missingCustomerIds.length > 0 && typeof window.fetchSupabaseRest === 'function') {
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                fetcher(`profiles?id=in.(${missingCustomerIds.join(',')})&select=id,full_name,avatar_url`).then(pRes => {
+                    const profs = Array.isArray(pRes) ? pRes : (pRes?.data || []);
+                    if (profs && profs.length > 0) {
+                        let hasUpdate = false;
+                        recent.forEach(r => {
+                            const found = profs.find(p => p.id === r.customer_id);
+                            if (found && (found.full_name || found.avatar_url)) {
+                                r.customer = {
+                                    full_name: found.full_name || r.customer?.full_name || '',
+                                    avatar_url: found.avatar_url || r.customer?.avatar_url || null
+                                };
+                                hasUpdate = true;
+                            }
+                        });
+                        if (hasUpdate) {
+                            renderReviewsFromData(list);
+                        }
+                    }
+                }).catch(() => {});
+            }
+
             // Exactly 2 latest reviews
-            container.innerHTML = list.slice(0, 2).map(r => {
-                const customerName = r.customer?.full_name || r.customer_name || 'ลูกค้าทั่วไป';
+            container.innerHTML = recent.map(r => {
+                let customerName = r.customer?.full_name || r.customer_name;
+                const avatarUrl = (r.customer?.avatar_url && r.customer.avatar_url !== 'undefined' && r.customer.avatar_url !== 'null' && String(r.customer.avatar_url).trim()) ? r.customer.avatar_url : (r.customer_avatar || null);
+
+                // Fallback: Check local bookings matching booking_id for customer name
+                if (!customerName || customerName === 'ลูกค้าทั่วไป') {
+                    try {
+                        const localBookings = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
+                        const matchB = localBookings.find(b => String(b.id || b.bookingId || '').replace('#','') === String(r.booking_id || '').replace('#',''));
+                        if (matchB?.customerName || matchB?.customer_name) {
+                            customerName = matchB.customerName || matchB.customer_name;
+                        }
+                    } catch(_) {}
+                }
+
+                if (!customerName || !customerName.trim()) {
+                    customerName = 'ลูกค้า';
+                }
+                customerName = customerName.trim();
                 const firstChar = customerName.charAt(0).toUpperCase();
-                const avatarUrl = r.customer?.avatar_url || r.customer_avatar;
+
                 const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : 'เมื่อเร็วๆ นี้';
                 const starsHtml = renderStars(r.rating || 5);
                 const comment = r.comment || 'ลูกค้าไม่ได้ระบุความคิดเห็นเพิ่มเติม';
                 const replyText = r.reply || storedReplies[r.id]?.reply;
 
                 const avatarHtml = avatarUrl ? `
-                    <div class="w-10 h-10 rounded-full overflow-hidden border border-secondary/30 shrink-0">
-                        <img src="${escapeHtml(avatarUrl)}" class="w-full h-full object-cover" alt="${escapeHtml(customerName)}">
+                    <div class="w-10 h-10 rounded-full overflow-hidden border border-secondary/30 shrink-0 shadow-sm bg-surface-container">
+                        <img src="${escapeHtml(avatarUrl)}" class="w-full h-full object-cover" alt="${escapeHtml(customerName)}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'w-full h-full bg-secondary/15 text-secondary flex items-center justify-center font-bold text-base\\'>${escapeHtml(firstChar)}</div>';">
                     </div>
                 ` : `
-                    <div class="w-10 h-10 rounded-full bg-secondary/15 text-secondary border border-secondary/30 flex items-center justify-center font-bold text-base shrink-0">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-secondary/20 to-primary/20 text-secondary border border-secondary/30 flex items-center justify-center font-bold text-base shrink-0 shadow-sm">
                         ${escapeHtml(firstChar)}
                     </div>
                 `;
