@@ -353,6 +353,28 @@
         return typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     }
 
+    // Safe metadata helpers without literal HTML comment tokens inside script (prevents VS Code red squiggles)
+    function extractShopMetadata(description) {
+        if (!description || typeof description !== 'string') return {};
+        const metaRegex = new RegExp('<' + '!--BCW_META:([\\s\\S]*?)-' + '->');
+        const match = description.match(metaRegex);
+        if (match && match[1]) {
+            try { return JSON.parse(match[1]); } catch (_) {}
+        }
+        return {};
+    }
+
+    function stripShopMetadata(description) {
+        if (!description || typeof description !== 'string') return '';
+        const metaCleanRegex = new RegExp('<' + '!--BCW_META:[\\s\\S]*?-' + '->', 'g');
+        return description.replace(metaCleanRegex, '').trim();
+    }
+
+    function embedShopMetadata(cleanDescription, metadata) {
+        const metaTag = '<' + '!--BCW_META:' + JSON.stringify(metadata) + '-' + '->';
+        return (cleanDescription ? cleanDescription + '\n\n' : '') + metaTag;
+    }
+
     const callRest = (endpoint, options = {}) => {
         if (typeof window.safeSupabaseRest === 'function') return window.safeSupabaseRest(endpoint, options);
         if (typeof window.fetchSupabaseRest === 'function') return window.fetchSupabaseRest(endpoint, options);
@@ -780,10 +802,7 @@
                             const { data: sData } = await callRest(`shops?select=id,description&id=eq.${targetShopId}&limit=1`);
                             if (sData && sData.length > 0) {
                                 existingDesc = sData[0].description || '';
-                                const match = existingDesc.match(/<!--BCW_META:([\s\S]*?)-->/);
-                                if (match && match[1]) {
-                                    try { existingMeta = JSON.parse(match[1]); } catch (_) {}
-                                }
+                                existingMeta = extractShopMetadata(existingDesc);
                             }
 
                             // Embed real QR Code image & Bank Info into metadata payload
@@ -798,8 +817,8 @@
                                 qr_code: qrImg || existingMeta.qr_code || null
                             };
 
-                            const cleanDesc = (existingDesc || '').replace(/<!--BCW_META:[\s\S]*?-->/g, '').trim();
-                            const newDescWithMeta = (cleanDesc ? cleanDesc + '\n\n' : '') + `<!--BCW_META:${JSON.stringify(existingMeta)}-->`;
+                            const cleanDesc = stripShopMetadata(existingDesc);
+                            const newDescWithMeta = embedShopMetadata(cleanDesc, existingMeta);
 
                             const patchPayload = {
                                 description: newDescWithMeta,
@@ -897,11 +916,9 @@
 
             // Restore QR Code and Bank info from database if present in shop description
             if (shop && shop.description) {
-                const match = shop.description.match(/<!--BCW_META:([\s\S]*?)-->/);
-                if (match && match[1]) {
-                    try {
-                        const meta = JSON.parse(match[1]);
-                        const dbQr = meta.qr_code || meta.promptpay_qr || meta.bank_info?.qr_code;
+                const meta = extractShopMetadata(shop.description);
+                if (meta) {
+                    const dbQr = meta.qr_code || meta.promptpay_qr || meta.bank_info?.qr_code;
                         if (dbQr) {
                             currentQrBase64 = dbQr;
                             if (userId) localStorage.setItem('ownerQrCode_' + userId, dbQr);

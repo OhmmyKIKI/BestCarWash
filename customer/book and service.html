@@ -1554,6 +1554,17 @@
         }
     }
 
+    // Safe metadata helper without literal HTML comment tokens inside script (prevents VS Code red squiggles)
+    function extractShopMetadata(description) {
+        if (!description || typeof description !== 'string') return {};
+        const metaRegex = new RegExp('<' + '!--BCW_META:([\\s\\S]*?)-' + '->');
+        const match = description.match(metaRegex);
+        if (match && match[1]) {
+            try { return JSON.parse(match[1]); } catch (_) {}
+        }
+        return {};
+    }
+
     // Resolve owner's recorded QR Code image across memory, storage, and IDB
     async function resolveShopQrCode(shop) {
         const shopId = shop?.id;
@@ -1569,15 +1580,10 @@
 
         // 2. Check if shop.description contains database metadata bridge (Fast & 100% cloud-synced)
         if (shop?.description) {
-            const bcwMatch = shop.description.match(/<!--BCW_META:([\s\S]*?)-->/);
-            if (bcwMatch && bcwMatch[1]) {
-                try {
-                    const parsed = JSON.parse(bcwMatch[1]);
-                    if (parsed?.promptpay_qr) return parsed.promptpay_qr;
-                    if (parsed?.qr_code) return parsed.qr_code;
-                    if (parsed?.bank_info?.qr_code) return parsed.bank_info.qr_code;
-                } catch (_) {}
-            }
+            const meta = extractShopMetadata(shop.description);
+            if (meta?.promptpay_qr) return meta.promptpay_qr;
+            if (meta?.qr_code) return meta.qr_code;
+            if (meta?.bank_info?.qr_code) return meta.bank_info.qr_code;
             if (shop.description.includes('{')) {
                 try {
                     const metaMatch = shop.description.match(/\{[\s\S]*\}/);
@@ -1691,13 +1697,8 @@
         // Resolve Bank Info from shop metadata bridge if saved by owner
         let metaBank = null;
         if (currentShop?.description) {
-            const bcwMatch = currentShop.description.match(/<!--BCW_META:([\s\S]*?)-->/);
-            if (bcwMatch && bcwMatch[1]) {
-                try {
-                    const parsed = JSON.parse(bcwMatch[1]);
-                    metaBank = parsed?.bank_info || null;
-                } catch (_) {}
-            }
+            const parsed = extractShopMetadata(currentShop.description);
+            metaBank = parsed?.bank_info || null;
         }
 
         // Load Shop PromptPay number from current shop or customized
@@ -2640,10 +2641,7 @@
 
                     let metaFromDesc = {};
                     if (dbShop.description) {
-                        const match = dbShop.description.match(/<!--BCW_META:([\s\S]*?)-->/);
-                        if (match && match[1]) {
-                            try { metaFromDesc = JSON.parse(match[1]); } catch (_) {}
-                        }
+                        metaFromDesc = extractShopMetadata(dbShop.description);
                     }
 
                     const liveShopObj = {
