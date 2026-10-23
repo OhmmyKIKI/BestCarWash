@@ -552,6 +552,9 @@ async function safeSupabaseRest(endpoint, options = {}) {
         if (endpoint.startsWith('http')) break;
     }
 
+    return formatRestResponse(null, lastErr || new Error('Connection failed'));
+}
+
 window.safeSupabaseRest = safeSupabaseRest;
 window.fetchSupabaseRest = safeSupabaseRest;
 
