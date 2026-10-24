@@ -1008,27 +1008,30 @@
     });
 </script>
 
-<!-- BottomNavBar (Mobile Only - 5 Tabs) -->
-<nav class="md:hidden fixed bottom-4 left-4 right-4 rounded-2xl z-50 bg-surface-container-low/95 backdrop-blur-xl border border-outline-variant/50 shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex justify-around items-center p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0))]">
-    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform flex-1 max-w-[68px] h-13 sm:h-14" href="Owner%20Dashboard.html">
+<!-- BottomNavBar (Mobile Only - 5 Tabs with Raised Center Action) -->
+<nav class="md:hidden fixed bottom-4 left-4 right-4 rounded-2xl z-50 bg-surface-container-low/95 backdrop-blur-xl border border-outline-variant/50 shadow-[0_12px_45px_rgba(0,0,0,0.85)] flex justify-between items-center px-2 py-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom,0))]">
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform flex-1 max-w-[62px] h-13" href="Owner%20Dashboard.html">
         <span class="material-symbols-outlined text-[24px]">home</span>
-        <span class="text-[10.5px] sm:text-xs font-semibold mt-0.5">หน้าแรก</span>
+        <span class="text-[10.5px] font-semibold mt-0.5">หน้าแรก</span>
     </a>
-    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform flex-1 max-w-[68px] h-13 sm:h-14" href="owner-bookings.html">
-        <span class="material-symbols-outlined text-[24px]">calendar_month</span>
-        <span class="text-[10.5px] sm:text-xs font-semibold mt-0.5">การจอง</span>
-    </a>
-    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform flex-1 max-w-[68px] h-13 sm:h-14" href="owner-booking-history.html">
-        <span class="material-symbols-outlined text-[24px]">history</span>
-        <span class="text-[10.5px] sm:text-xs font-semibold mt-0.5">ประวัติ</span>
-    </a>
-    <a class="flex flex-col items-center justify-center bg-secondary-container/20 text-secondary rounded-xl flex-1 max-w-[68px] h-13 sm:h-14 shadow-sm active:scale-95 transition-transform" href="owner-reviews.html">
+    <a class="flex flex-col items-center justify-center bg-secondary-container/20 text-secondary rounded-xl flex-1 max-w-[62px] h-13 shadow-sm active:scale-95 transition-transform" href="owner-reviews.html">
         <span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">rate_review</span>
-        <span class="text-[10.5px] sm:text-xs font-bold mt-0.5">รีวิว</span>
+        <span class="text-[10.5px] font-bold mt-0.5">รีวิว</span>
     </a>
-    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform flex-1 max-w-[68px] h-13 sm:h-14" href="Owner%20Profile.html">
+    <!-- Hero Center Raised Button: การจอง -->
+    <div class="relative flex flex-col items-center justify-center -mt-6 mx-1 z-10 shrink-0">
+        <a href="owner-bookings.html" class="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-secondary text-background flex items-center justify-center shadow-[0_8px_22px_rgba(78,222,163,0.35)] border-4 border-background active:scale-90 transition-all group hover:brightness-110" title="จัดการคิวการจอง">
+            <span class="material-symbols-outlined text-[26px] group-hover:scale-110 transition-transform">calendar_month</span>
+        </a>
+        <span class="text-[10px] sm:text-[10.5px] font-semibold text-on-surface-variant mt-0.5 tracking-tight">การจอง</span>
+    </div>
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform flex-1 max-w-[62px] h-13" href="owner-booking-history.html">
+        <span class="material-symbols-outlined text-[24px]">history</span>
+        <span class="text-[10.5px] font-semibold mt-0.5">ประวัติ</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform flex-1 max-w-[62px] h-13" href="Owner%20Profile.html">
         <span class="material-symbols-outlined text-[24px]">person</span>
-        <span class="text-[10.5px] sm:text-xs font-semibold mt-0.5">โปรไฟล์</span>
+        <span class="text-[10.5px] font-semibold mt-0.5">โปรไฟล์</span>
     </a>
 </nav>
 
