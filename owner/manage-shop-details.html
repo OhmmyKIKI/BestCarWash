@@ -1073,8 +1073,8 @@
 
         // Check IndexedDB immediately for persisted user media (in case localStorage was cleared/quota-hit)
         (async () => {
-            const idbAvatar = (syncUserId ? await getMediaFromIDB('ownerProfileAvatar_' + syncUserId) : null) || await getMediaFromIDB('ownerProfileAvatar');
-            if (idbAvatar && logoImg && (!logoImg.src || logoImg.src.includes('googleusercontent.com'))) {
+            const idbAvatar = (syncUserId ? await getMediaFromIDB('ownerProfileAvatar_' + syncUserId) : null) || await getMediaFromIDB('ownerProfileAvatar') || await getMediaFromIDB('ownerShopLogo');
+            if (idbAvatar && logoImg) {
                 logoImg.src = idbAvatar;
                 safeLocalStorageSet('ownerProfileAvatar', idbAvatar);
             }
@@ -1374,6 +1374,8 @@
                                 finalLogo = profData[0].avatar_url;
                             }
                         } catch (_) {}
+                    if (!finalLogo && cloudMeta?.logo) {
+                        finalLogo = cloudMeta.logo;
                     }
                     if (!finalLogo && shop?.logo_url) {
                         finalLogo = shop.logo_url;
@@ -1689,19 +1691,30 @@
         logoInput.addEventListener('change', async (e) => {
             const file = e.target.files && e.target.files[0];
             if (file) {
-                const compressed = await compressImage(file, 300, 0.75);
+                // Smart 180x180 px compression at 0.70 quality keeps base64 under 12KB, immune to quota eviction and 494 headers
+                const compressed = await compressImage(file, 180, 0.70);
                 if (compressed) {
                     newLogoCompressed = compressed;
                     logoImg.src = compressed;
                     safeLocalStorageSet('ownerProfileAvatar', compressed);
-                    saveMediaToIDB('ownerProfileAvatar', compressed);
+                    safeLocalStorageSet('ownerShopLogo', compressed);
+                    await saveMediaToIDB('ownerProfileAvatar', compressed);
+                    await saveMediaToIDB('ownerShopLogo', compressed);
+
+                    const sId = currentShopId || localStorage.getItem('currentShopId');
+                    if (sId) {
+                        saveMediaToIDB('ownerShopLogo_' + sId, compressed).catch(() => {});
+                    }
 
                     const userId = currentUserId || localStorage.getItem('lastLoggedInUserId');
-                    if (userId && window.safeSupabaseRest) {
-                        window.safeSupabaseRest(`profiles?id=eq.${userId}`, {
-                            method: 'PATCH',
-                            body: { avatar_url: compressed }
-                        }).catch(() => {});
+                    if (userId) {
+                        saveMediaToIDB('ownerProfileAvatar_' + userId, compressed).catch(() => {});
+                        if (window.safeSupabaseRest) {
+                            window.safeSupabaseRest(`profiles?id=eq.${userId}`, {
+                                method: 'PATCH',
+                                body: { avatar_url: compressed }
+                            }).catch(() => {});
+                        }
                     }
                 }
             }
@@ -1826,7 +1839,12 @@
             // Save media to BOTH safeLocalStorageSet and saveMediaToIDB (immune to quota)
             if (newLogoCompressed) {
                 safeLocalStorageSet('ownerProfileAvatar', newLogoCompressed);
+                safeLocalStorageSet('ownerShopLogo', newLogoCompressed);
                 await saveMediaToIDB('ownerProfileAvatar', newLogoCompressed);
+                await saveMediaToIDB('ownerShopLogo', newLogoCompressed);
+                if (currentShopId) {
+                    saveMediaToIDB('ownerShopLogo_' + currentShopId, newLogoCompressed).catch(() => {});
+                }
             }
             if (mainCoverPhoto) {
                 safeLocalStorageSet('ownerCoverImage', mainCoverPhoto);
@@ -1979,12 +1997,16 @@
                 } catch (_) {}
             }
 
-            // Embed cover photo & gallery metadata bridge into description so it persists in Supabase Cloud
+            // Embed cover photo, logo & gallery metadata bridge into description so it persists in Supabase Cloud
             let descToSave = rawDesc;
             try {
                 const metaPayload = {};
                 if (mainCoverPhoto) {
                     metaPayload.cover_image = mainCoverPhoto;
+                }
+                const activeLogo = newLogoCompressed || await getMediaFromIDB('ownerProfileAvatar') || localStorage.getItem('ownerProfileAvatar');
+                if (activeLogo) {
+                    metaPayload.logo = activeLogo;
                 }
                 if (shopPhotos && shopPhotos.length > 0) {
                     metaPayload.gallery = shopPhotos.slice(0, 8);
