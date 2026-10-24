@@ -655,6 +655,17 @@
         }
     }
 
+    async function saveIDBMedia(key, val) {
+        if (!key || !val) return;
+        try {
+            const db = await openMediaDB().catch(() => null);
+            if (!db || !db.objectStoreNames || !db.objectStoreNames.contains('shop_media')) return;
+            const tx = db.transaction('shop_media', 'readwrite');
+            tx.onerror = () => {};
+            tx.objectStore('shop_media').put(val, key);
+        } catch (_) {}
+    }
+
     function extractShopMetadata(description) {
         if (!description || typeof description !== 'string') {
             return { cleanDesc: description || '', meta: {} };
@@ -1307,7 +1318,7 @@
             }
 
             // Extract metadata from description if present
-            const { cleanDesc, meta: cloudMeta } = extractShopMetadata(shop.description);
+            const { cleanDesc: metaDesc, meta: cloudMeta } = extractShopMetadata(shop.description);
 
             // Update Logo with full cascade
             let liveLogo = shop.logo_url || 
@@ -1326,8 +1337,11 @@
 
             if (liveLogo) {
                 updateShopLogoDOM(liveLogo);
+                saveIDBMedia('ownerProfileAvatar', liveLogo);
                 try {
-                    localStorage.setItem('ownerProfileAvatar', liveLogo);
+                    if (!liveLogo.startsWith('data:') || liveLogo.length < 25000) {
+                        localStorage.setItem('ownerProfileAvatar', liveLogo);
+                    }
                 } catch (_) {}
             }
 
@@ -1360,10 +1374,10 @@
             }
 
             const rawShopDesc = shop.description || user?.user_metadata?.shop_description || user?.user_metadata?.description || user?.user_metadata?.about || localStorage.getItem('ownerShopDesc') || localStorage.getItem('shopDescription');
-            const { cleanDesc, meta: cloudMeta } = extractShopMetadata(rawShopDesc);
+            const { cleanDesc: finalShopDesc } = extractShopMetadata(rawShopDesc);
             const aboutEl = document.getElementById('shop-about');
             if (aboutEl) {
-                aboutEl.textContent = cleanDesc || 'บริการดูแลรักษาและทำความสะอาดรถยนต์ระดับมืออาชีพ พร้อมดูแลรถของคุณด้วยมาตรฐานสูงสุด';
+                aboutEl.textContent = finalShopDesc || metaDesc || 'บริการดูแลรักษาและทำความสะอาดรถยนต์ระดับมืออาชีพ พร้อมดูแลรถของคุณด้วยมาตรฐานสูงสุด';
             }
 
             // Update Real Customer Link button
