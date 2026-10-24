@@ -1147,7 +1147,7 @@
                         const dAvatar = document.getElementById('owner-desktop-avatar');
                         if (mAvatar) mAvatar.src = profile.avatar_url;
                         if (dAvatar) dAvatar.src = profile.avatar_url;
-                        localStorage.setItem('ownerProfileAvatar', profile.avatar_url);
+                        if (effectiveUserId) localStorage.setItem('ownerProfileAvatar_' + effectiveUserId, profile.avatar_url);
                     }
                     if (profile?.full_name) {
                         const dName = document.getElementById('owner-desktop-name');
@@ -1157,26 +1157,13 @@
                 }).catch(() => {});
             }
 
-            // Resolve Shop: Use fast-track shop if found, else fallback
+            // Resolve Shop: Query strictly for THIS owner
             let shop = Array.isArray(shopRes) && shopRes.length > 0 ? shopRes[0] : (shopRes?.id ? shopRes : null);
+            if (shop && shop.owner_id && shop.owner_id !== effectiveUserId) shop = null;
+
             if (!shop && effectiveUserId && fetcher) {
                 const s = await fetcher(`shops?owner_id=eq.${effectiveUserId}&limit=1`);
                 if (Array.isArray(s) && s.length > 0) shop = s[0];
-            }
-            if (!shop && cachedShopName && fetcher) {
-                const s = await fetcher(`shops?name=eq.${encodeURIComponent(cachedShopName)}&limit=1`);
-                if (Array.isArray(s) && s.length > 0) shop = s[0];
-            }
-            // SDK Fallback for Shop
-            if (!shop && client?.from) {
-                try {
-                    let q = client.from('shops').select('*');
-                    if (savedShopId) q = q.eq('id', savedShopId);
-                    else if (effectiveUserId) q = q.eq('owner_id', effectiveUserId);
-                    else if (cachedShopName) q = q.eq('name', cachedShopName);
-                    const { data: sList } = await q.limit(1);
-                    if (Array.isArray(sList) && sList.length > 0) shop = sList[0];
-                } catch(_) {}
             }
 
             if (shop) {
@@ -1189,18 +1176,21 @@
                     localStorage.setItem('ownerShopName', shop.name);
                 }
                 if (shop.logo_url) {
-                    const curAv = localStorage.getItem('ownerProfileAvatar');
+                    const curAv = (effectiveUserId ? localStorage.getItem('ownerProfileAvatar_' + effectiveUserId) : null);
                     if (!curAv || curAv.includes('googleusercontent') || curAv.startsWith('data:image/svg')) {
                         const mAvatar = document.getElementById('owner-header-avatar');
                         const dAvatar = document.getElementById('owner-desktop-avatar');
                         if (mAvatar) mAvatar.src = shop.logo_url;
                         if (dAvatar) dAvatar.src = shop.logo_url;
-                        localStorage.setItem('ownerProfileAvatar', shop.logo_url);
+                        if (effectiveUserId) localStorage.setItem('ownerProfileAvatar_' + effectiveUserId, shop.logo_url);
                     }
                 }
-                if (shop.cover_image_url) {
-                    localStorage.setItem('ownerCoverImage', shop.cover_image_url);
+                if (shop.cover_image_url && effectiveUserId) {
+                    localStorage.setItem('ownerCoverImage_' + effectiveUserId, shop.cover_image_url);
                 }
+            } else {
+                localStorage.removeItem('currentShopId');
+            }
 
                 // Retrieve bookings (from fast-track or query now)
                 let dbBookings = Array.isArray(bookingsRes) ? bookingsRes : null;
@@ -1585,8 +1575,9 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        // Layer 1: Instant 0ms Render of Cached Profile & KPI
-        const savedAvatar = localStorage.getItem('ownerProfileAvatar');
+        // Layer 1: Instant 0ms Render of Cached Profile & KPI strictly for THIS user
+        const currentUid = localStorage.getItem('lastLoggedInUserId');
+        const savedAvatar = (currentUid ? localStorage.getItem('ownerProfileAvatar_' + currentUid) : null);
         if (savedAvatar && !savedAvatar.includes('googleusercontent')) {
             const mAvatar = document.getElementById('owner-header-avatar');
             const dAvatar = document.getElementById('owner-desktop-avatar');

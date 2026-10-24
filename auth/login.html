@@ -241,22 +241,34 @@
             // Clear old cache from any previous user account to ensure complete data isolation
             const lastLoggedInUser = localStorage.getItem('lastLoggedInUserId');
             if (lastLoggedInUser !== user.id) {
-                localStorage.removeItem('customerProfile');
-                localStorage.removeItem('customerCars');
-                localStorage.removeItem('ownerProfileAvatar');
-                localStorage.removeItem('ownerShopName');
-                localStorage.removeItem('currentShopId');
-                localStorage.removeItem('ownerOperatingHours');
-                localStorage.removeItem('ownerServices');
-                localStorage.removeItem('ownerSpecialHolidays');
-                localStorage.removeItem('ownerDashboardKPI');
-                localStorage.removeItem('ownerProfileName');
-                localStorage.removeItem('appBookingsList');
-                localStorage.removeItem('activeCustomerBooking');
-                localStorage.removeItem('favoriteShopIds');
-                localStorage.removeItem('cachedCustomerNotifications');
-                localStorage.removeItem('cachedOwnerNotifications');
-                localStorage.removeItem('customerNotifications');
+                [
+                    'customerProfile', 'customerCars', 'activeCustomerBooking', 'favoriteShopIds',
+                    'cachedCustomerNotifications', 'cachedOwnerNotifications', 'customerNotifications',
+                    'ownerProfileAvatar', 'ownerShopLogo', 'ownerShopName', 'currentShopId',
+                    'ownerOperatingHours', 'ownerServices', 'ownerSpecialHolidays', 'ownerDashboardKPI',
+                    'ownerProfileName', 'appBookingsList', 'ownerCoverImage', 'ownerShopGallery',
+                    'ownerShopDesc', 'shopDescription', 'ownerShopStreet', 'ownerShopSubDistrict',
+                    'ownerShopCity', 'ownerShopZip', 'ownerShopPhone', 'ownerShopLat', 'ownerShopLng',
+                    'ownerShopMapLink', 'ownerAvatarUserSet', 'ownerAvatarUpdatedAt', 'ownerReviewsReplies'
+                ].forEach(k => localStorage.removeItem(k));
+
+                // Clear un-scoped IndexedDB media from old user
+                if (typeof indexedDB !== 'undefined') {
+                    try {
+                        const req = indexedDB.open('BestCarWashMedia', 2);
+                        req.onsuccess = (e) => {
+                            const db = e.target.result;
+                            if (db.objectStoreNames.contains('shop_media')) {
+                                const tx = db.transaction('shop_media', 'readwrite');
+                                const store = tx.objectStore('shop_media');
+                                store.delete('ownerProfileAvatar');
+                                store.delete('ownerShopLogo');
+                                store.delete('ownerCoverImage');
+                                store.delete('ownerShopGallery');
+                            }
+                        };
+                    } catch (_) {}
+                }
             }
             localStorage.setItem('lastLoggedInUserId', user.id);
 
@@ -283,23 +295,27 @@
                 role = 'OWNER';
                 const avatar = profile?.avatar_url || user.user_metadata?.avatar_url || null;
                 const name = profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'เจ้าของร้าน';
-                if (avatar) localStorage.setItem('ownerProfileAvatar', avatar);
+                if (avatar) {
+                    localStorage.setItem('ownerProfileAvatar_' + user.id, avatar);
+                } else {
+                    localStorage.removeItem('ownerProfileAvatar_' + user.id);
+                }
                 if (name) localStorage.setItem('ownerProfileName', name);
                 localStorage.setItem('currentUser', JSON.stringify(user));
                 localStorage.setItem('lastLoggedInUserId', user.id);
 
                 const meta = user.user_metadata || {};
-                const immediateShopName = meta.shop_name || localStorage.getItem('ownerShopName') || `${name} Car Wash`;
+                const immediateShopName = meta.shop_name || `${name} Car Wash`;
                 if (immediateShopName) localStorage.setItem('ownerShopName', immediateShopName);
 
                 // Also fetch owner shop name, description, address & ensure services are synced
                 if (client) {
                     try {
-                        const fallbackDesc = meta.shop_description || meta.description || meta.about || localStorage.getItem('ownerShopDesc') || localStorage.getItem('shopDescription') || '';
-                        const fallbackAddr = meta.full_address || meta.address || [meta.street, meta.city, meta.zip].filter(Boolean).join(' ') || [localStorage.getItem('ownerShopStreet'), localStorage.getItem('ownerShopCity'), localStorage.getItem('ownerShopZip')].filter(Boolean).join(' ') || '';
-                        const fallbackPhone = meta.phone_number || localStorage.getItem('ownerShopPhone') || '';
-                        const fallbackLat = meta.latitude || parseFloat(localStorage.getItem('ownerShopLat')) || null;
-                        const fallbackLng = meta.longitude || parseFloat(localStorage.getItem('ownerShopLng')) || null;
+                        const fallbackDesc = meta.shop_description || meta.description || meta.about || '';
+                        const fallbackAddr = meta.full_address || meta.address || [meta.street, meta.city, meta.zip].filter(Boolean).join(' ') || '';
+                        const fallbackPhone = meta.phone_number || '';
+                        const fallbackLat = meta.latitude || null;
+                        const fallbackLng = meta.longitude || null;
 
                         let shop = null;
                         const { data: sList } = await safeSupabaseRest(`shops?owner_id=eq.${user.id}&limit=1`);
@@ -307,7 +323,7 @@
 
                         if (!shop && meta.shop_name) {
                             const { data: byName } = await safeSupabaseRest(`shops?name=eq.${encodeURIComponent(meta.shop_name)}&limit=1`);
-                            if (byName && byName.length > 0) shop = byName[0];
+                            if (byName && byName.length > 0 && (!byName[0].owner_id || byName[0].owner_id === user.id)) shop = byName[0];
                         }
 
                         if (!shop) {

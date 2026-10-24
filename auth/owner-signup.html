@@ -1334,7 +1334,15 @@
                 const userId = data.user.id;
                 submitBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> กำลังบันทึกข้อมูลร้านค้า...';
 
+                // Clean any previous session remnants to guarantee strict isolation
+                [
+                    'ownerProfileAvatar', 'ownerShopLogo', 'ownerCoverImage', 'ownerShopGallery',
+                    'ownerAvatarUserSet', 'ownerAvatarUpdatedAt', 'currentShopId', 'customerProfile',
+                    'customerCars', 'activeCustomerBooking', 'cachedOwnerNotifications', 'cachedCustomerNotifications'
+                ].forEach(k => localStorage.removeItem(k));
+
                 // Cache all shop details in local storage
+                localStorage.setItem('lastLoggedInUserId', userId);
                 localStorage.setItem('ownerShopName', shopName);
                 localStorage.setItem('ownerShopPhone', phone);
                 localStorage.setItem('ownerShopDesc', shopDesc);
@@ -1346,10 +1354,13 @@
                 localStorage.setItem('ownerShopLat', lat);
                 localStorage.setItem('ownerShopLng', lng);
                 if (uploadedCoverBase64) {
-                    localStorage.setItem('ownerCoverImage', uploadedCoverBase64);
-                    localStorage.setItem('ownerShopGallery', JSON.stringify([uploadedCoverBase64]));
+                    localStorage.setItem('ownerCoverImage_' + userId, uploadedCoverBase64);
+                    localStorage.setItem('ownerShopGallery_' + userId, JSON.stringify([uploadedCoverBase64]));
                 }
-                if (uploadedLogoBase64) localStorage.setItem('ownerProfileAvatar', uploadedLogoBase64);
+                if (uploadedLogoBase64) {
+                    localStorage.setItem('ownerProfileAvatar_' + userId, uploadedLogoBase64);
+                    localStorage.setItem('ownerAvatarUserSet_' + userId, 'true');
+                }
                 if (initialServices.length > 0) localStorage.setItem('ownerServices', JSON.stringify(initialServices));
                 if (initialOperatingHours.length > 0) localStorage.setItem('ownerOperatingHours', JSON.stringify(initialOperatingHours));
 

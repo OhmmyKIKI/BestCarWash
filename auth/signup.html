@@ -579,9 +579,33 @@
                 } catch (soErr) {
                     console.warn('Signout after signup notice:', soErr);
                 }
-                ['customerProfile', 'customerCars', 'ownerProfileAvatar', 'ownerShopName',
-                 'ownerProfileName', 'appBookingsList', 'activeCustomerBooking', 'favoriteShopIds',
-                 'cachedCustomerNotifications', 'cachedOwnerNotifications', 'customerNotifications', 'lastLoggedInUserId'].forEach(k => localStorage.removeItem(k));
+                [
+                    'customerProfile', 'customerCars', 'ownerProfileAvatar', 'ownerShopLogo', 'ownerShopName',
+                    'ownerProfileName', 'appBookingsList', 'activeCustomerBooking', 'favoriteShopIds',
+                    'cachedCustomerNotifications', 'cachedOwnerNotifications', 'customerNotifications',
+                    'lastLoggedInUserId', 'currentShopId', 'ownerCoverImage', 'ownerShopGallery',
+                    'ownerShopDesc', 'shopDescription', 'ownerShopStreet', 'ownerShopCity', 'ownerShopZip',
+                    'ownerShopPhone', 'ownerShopLat', 'ownerShopLng', 'ownerShopMapLink', 'ownerAvatarUserSet',
+                    'ownerAvatarUpdatedAt', 'ownerOperatingHours', 'ownerServices', 'ownerSpecialHolidays'
+                ].forEach(k => localStorage.removeItem(k));
+
+                // Clear un-scoped IndexedDB media from any old session
+                if (typeof indexedDB !== 'undefined') {
+                    try {
+                        const req = indexedDB.open('BestCarWashMedia', 2);
+                        req.onsuccess = (e) => {
+                            const db = e.target.result;
+                            if (db.objectStoreNames.contains('shop_media')) {
+                                const tx = db.transaction('shop_media', 'readwrite');
+                                const store = tx.objectStore('shop_media');
+                                store.delete('ownerProfileAvatar');
+                                store.delete('ownerShopLogo');
+                                store.delete('ownerCoverImage');
+                                store.delete('ownerShopGallery');
+                            }
+                        };
+                    } catch (_) {}
+                }
 
                 sessionStorage.removeItem('customerSignupDraft');
                 showToast('สร้างบัญชีสำเร็จ! กำลังเปลี่ยนหน้าไปเข้าสู่ระบบ...', true);

@@ -385,14 +385,30 @@
             const uid = localStorage.getItem('lastLoggedInUserId');
             if (uid) {
                 localStorage.removeItem(`cachedOwnerNotifications_${uid}`);
+                localStorage.removeItem(`ownerProfileAvatar_${uid}`);
+                localStorage.removeItem(`ownerAvatarUserSet_${uid}`);
+                localStorage.removeItem(`ownerCoverImage_${uid}`);
+                localStorage.removeItem(`ownerShopGallery_${uid}`);
+                saveIDBMedia('ownerProfileAvatar_' + uid, null).catch(() => {});
+                saveIDBMedia('ownerCoverImage_' + uid, null).catch(() => {});
+                saveIDBMedia('ownerShopGallery_' + uid, null).catch(() => {});
             }
+            // Clear un-scoped cache
+            saveIDBMedia('ownerProfileAvatar', null).catch(() => {});
+            saveIDBMedia('ownerShopLogo', null).catch(() => {});
+            saveIDBMedia('ownerCoverImage', null).catch(() => {});
+            saveIDBMedia('ownerShopGallery', null).catch(() => {});
+
             sessionStorage.clear();
+            localStorage.removeItem('ownerAvatarUserSet');
+            localStorage.removeItem('ownerAvatarUpdatedAt');
             localStorage.removeItem('cachedOwnerNotifications');
             localStorage.removeItem('appBookingsList');
             localStorage.removeItem('lastLoggedInUserId');
             localStorage.removeItem('currentShopId');
             localStorage.removeItem('ownerShopName');
             localStorage.removeItem('ownerProfileAvatar');
+            localStorage.removeItem('ownerShopLogo');
             localStorage.removeItem('ownerProfileName');
             localStorage.removeItem('ownerCoverImage');
             localStorage.removeItem('ownerShopGallery');
@@ -546,28 +562,29 @@
 
         const cachedOwnerUser = getCachedOwnerData();
         const cachedMeta = cachedOwnerUser?.user_metadata || {};
+        const currentUid = cachedOwnerUser?.id || localStorage.getItem('lastLoggedInUserId');
 
-        // Immediately populate avatar & shop name from localStorage / metadata
-        const savedAvatar = localStorage.getItem('ownerProfileAvatar') || cachedMeta.avatar_url || cachedMeta.logo_url;
+        // Immediately populate avatar strictly for THIS user
+        const savedAvatar = (currentUid ? localStorage.getItem('ownerProfileAvatar_' + currentUid) : null) || cachedMeta.avatar_url;
         if (savedAvatar && !savedAvatar.includes('googleusercontent')) {
             if (img) img.src = savedAvatar;
             if (headerImg) headerImg.src = savedAvatar;
             if (desktopAvatar) desktopAvatar.src = savedAvatar;
+        } else {
+            if (img) img.src = DEFAULT_OWNER_AVATAR;
+            if (headerImg) headerImg.src = DEFAULT_OWNER_AVATAR;
+            if (desktopAvatar) desktopAvatar.src = DEFAULT_OWNER_AVATAR;
         }
         updateResetBtn();
 
-        // Check IndexedDB immediately for persisted avatar (in case localStorage was evicted by Storage Guard)
+        // Check IndexedDB immediately for persisted avatar for THIS user ID
         (async () => {
-            const idbAvatar = await getIDBMedia('ownerProfileAvatar') || await getIDBMedia('ownerShopLogo');
-            if (idbAvatar && idbAvatar !== DEFAULT_OWNER_AVATAR) {
+            if (!currentUid) return;
+            const idbAvatar = await getIDBMedia('ownerProfileAvatar_' + currentUid);
+            if (idbAvatar && idbAvatar !== DEFAULT_OWNER_AVATAR && !idbAvatar.includes('googleusercontent')) {
                 if (img) img.src = idbAvatar;
                 if (headerImg) headerImg.src = idbAvatar;
                 if (desktopAvatar) desktopAvatar.src = idbAvatar;
-                try {
-                    if (!idbAvatar.startsWith('data:') || idbAvatar.length < 25000) {
-                        localStorage.setItem('ownerProfileAvatar', idbAvatar);
-                    }
-                } catch (_) {}
                 updateResetBtn();
             }
         })();
@@ -656,16 +673,25 @@
                             }
 
                             if (profile.avatar_url && !profile.avatar_url.includes('googleusercontent')) {
-                                const userExplicitSet = localStorage.getItem('ownerAvatarUserSet') === 'true';
-                                const curAv = localStorage.getItem('ownerProfileAvatar');
-                                if (!userExplicitSet || !curAv || curAv === DEFAULT_OWNER_AVATAR || curAv.includes('googleusercontent')) {
-                                    if (img) img.src = profile.avatar_url;
-                                    if (headerImg) headerImg.src = profile.avatar_url;
-                                    if (desktopAvatar) desktopAvatar.src = profile.avatar_url;
-                                    localStorage.setItem('ownerProfileAvatar', profile.avatar_url);
-                                    saveIDBMedia('ownerProfileAvatar', profile.avatar_url);
-                                    updateResetBtn();
+                                if (img) img.src = profile.avatar_url;
+                                if (headerImg) headerImg.src = profile.avatar_url;
+                                if (desktopAvatar) desktopAvatar.src = profile.avatar_url;
+                                localStorage.setItem('ownerProfileAvatar_' + effectiveUserId, profile.avatar_url);
+                                saveIDBMedia('ownerProfileAvatar_' + effectiveUserId, profile.avatar_url);
+                                updateResetBtn();
+                            } else {
+                                // If profile has no avatar, check user-specific local avatar or show default
+                                const userSpecificAvatar = (effectiveUserId ? localStorage.getItem('ownerProfileAvatar_' + effectiveUserId) : null) || (effectiveUserId ? await getIDBMedia('ownerProfileAvatar_' + effectiveUserId) : null);
+                                if (userSpecificAvatar && !userSpecificAvatar.includes('googleusercontent')) {
+                                    if (img) img.src = userSpecificAvatar;
+                                    if (headerImg) headerImg.src = userSpecificAvatar;
+                                    if (desktopAvatar) desktopAvatar.src = userSpecificAvatar;
+                                } else {
+                                    if (img) img.src = DEFAULT_OWNER_AVATAR;
+                                    if (headerImg) headerImg.src = DEFAULT_OWNER_AVATAR;
+                                    if (desktopAvatar) desktopAvatar.src = DEFAULT_OWNER_AVATAR;
                                 }
+                                updateResetBtn();
                             }
                             const pName = profile.full_name;
                             if (pName) {
@@ -679,18 +705,9 @@
                     }).catch(() => {});
                 }
 
-                // 3. Resolve Shop cleanly with graceful fallback via safeSupabaseRest
+                // 3. Resolve Shop cleanly strictly for THIS owner
                 let shop = null;
-                if (savedShopId && savedShopId.length > 20) {
-                    try {
-                        const { data: sList } = await safeSupabaseRest(`shops?select=*&id=eq.${savedShopId}&limit=1`);
-                        if (sList && sList.length > 0) shop = sList[0];
-                    } catch(e) {
-                        console.warn('Network sync notice (shop by id):', e);
-                    }
-                }
-
-                if (!shop && effectiveUserId) {
+                if (effectiveUserId) {
                     try {
                         const { data: sList } = await safeSupabaseRest(`shops?select=*&owner_id=eq.${effectiveUserId}&limit=1`);
                         if (sList && sList.length > 0) shop = sList[0];
@@ -699,19 +716,14 @@
                     }
                 }
 
-                // SDK Fallback for shop
-                if (!shop && client && client.from) {
+                if (!shop && savedShopId && savedShopId.length > 20) {
                     try {
-                        if (savedShopId && savedShopId.length > 20) {
-                            const { data: sdkShops } = await client.from('shops').select('*').eq('id', savedShopId).limit(1);
-                            if (sdkShops && sdkShops.length > 0) shop = sdkShops[0];
+                        const { data: sList } = await safeSupabaseRest(`shops?select=*&id=eq.${savedShopId}&limit=1`);
+                        if (sList && sList.length > 0 && (!sList[0].owner_id || sList[0].owner_id === effectiveUserId)) {
+                            shop = sList[0];
                         }
-                        if (!shop && effectiveUserId) {
-                            const { data: sdkShops } = await client.from('shops').select('*').eq('owner_id', effectiveUserId).limit(1);
-                            if (sdkShops && sdkShops.length > 0) shop = sdkShops[0];
-                        }
-                    } catch(sdkErr) {
-                        console.warn('SDK fallback notice (shop in profile):', sdkErr);
+                    } catch(e) {
+                        console.warn('Network sync notice (shop by id):', e);
                     }
                 }
 
@@ -725,7 +737,7 @@
                     localStorage.setItem('ownerShopName', finalShopName);
                 }
 
-                const targetShopId = shop?.id || savedShopId;
+                const targetShopId = shop?.id;
                 if (targetShopId) {
                     localStorage.setItem('currentShopId', targetShopId);
                     const finalAddr = shop?.address || meta.full_address || meta.address;
@@ -736,20 +748,17 @@
                     if (finalMapLink) localStorage.setItem('ownerShopMapLink', finalMapLink);
 
                     const { cleanDesc, meta: cloudMeta } = extractShopMetadata(shop?.description);
-                    const logoUrl = shop?.logo_url || cloudMeta?.logo || meta.avatar_url || meta.logo_url;
+                    const logoUrl = shop?.logo_url || cloudMeta?.logo;
                     if (logoUrl && !logoUrl.includes('googleusercontent')) {
-                        const userExplicitSet = localStorage.getItem('ownerAvatarUserSet') === 'true';
-                        const curAv = localStorage.getItem('ownerProfileAvatar');
-                        if (!userExplicitSet || !curAv || curAv === DEFAULT_OWNER_AVATAR || curAv.includes('googleusercontent') || curAv.startsWith('data:image/svg')) {
+                        const curAv = (effectiveUserId ? localStorage.getItem('ownerProfileAvatar_' + effectiveUserId) : null);
+                        if (!curAv || curAv === DEFAULT_OWNER_AVATAR || curAv.includes('googleusercontent')) {
                             if (img) img.src = logoUrl;
                             if (headerImg) headerImg.src = logoUrl;
                             if (desktopAvatar) desktopAvatar.src = logoUrl;
-                            saveIDBMedia('ownerProfileAvatar', logoUrl);
-                            try {
-                                if (!logoUrl.startsWith('data:') || logoUrl.length < 25000) {
-                                    localStorage.setItem('ownerProfileAvatar', logoUrl);
-                                }
-                            } catch (_) {}
+                            if (effectiveUserId) {
+                                saveIDBMedia('ownerProfileAvatar_' + effectiveUserId, logoUrl);
+                                localStorage.setItem('ownerProfileAvatar_' + effectiveUserId, logoUrl);
+                            }
                             updateResetBtn();
                         }
                     }
@@ -762,6 +771,8 @@
                             updateHoursSummaryOnProfile();
                         }
                     } catch (_) {}
+                } else {
+                    localStorage.removeItem('currentShopId');
                 }
             } catch (err) {
                 if (!isNetErr(err)) {
@@ -771,6 +782,12 @@
         })();
 
         window.resetOwnerDefaultAvatar = async function() {
+            const activeId = localStorage.getItem('lastLoggedInUserId');
+            if (activeId) {
+                localStorage.removeItem('ownerProfileAvatar_' + activeId);
+                localStorage.removeItem('ownerAvatarUserSet_' + activeId);
+                saveIDBMedia('ownerProfileAvatar_' + activeId, null);
+            }
             localStorage.removeItem('ownerProfileAvatar');
             localStorage.removeItem('ownerAvatarUserSet');
             localStorage.removeItem('ownerAvatarUpdatedAt');
@@ -782,15 +799,6 @@
             if (input) input.value = '';
             updateResetBtn();
             try {
-                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                let activeId = null;
-                if (client?.auth) {
-                    try {
-                        const s = await client.auth.getSession();
-                        activeId = s?.data?.session?.user?.id;
-                    } catch (_) {}
-                }
-                activeId = activeId || localStorage.getItem('lastLoggedInUserId');
                 if (activeId) {
                     await safeSupabaseRest(`profiles?id=eq.${activeId}`, {
                         method: 'PATCH',
@@ -841,15 +849,24 @@
                             img.src = compressed;
                             if (headerImg) headerImg.src = compressed;
                             if (desktopAvatar) desktopAvatar.src = compressed;
-                            saveIDBMedia('ownerProfileAvatar', compressed);
-                            saveIDBMedia('ownerShopLogo', compressed);
+
+                            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                            let activeId = null;
+                            if (client?.auth) {
+                                try {
+                                    const s = await client.auth.getSession();
+                                    activeId = s?.data?.session?.user?.id;
+                                } catch (_) {}
+                            }
+                            activeId = activeId || localStorage.getItem('lastLoggedInUserId');
+
+                            if (activeId) {
+                                localStorage.setItem('ownerProfileAvatar_' + activeId, compressed);
+                                localStorage.setItem('ownerAvatarUserSet_' + activeId, 'true');
+                                saveIDBMedia('ownerProfileAvatar_' + activeId, compressed);
+                            }
                             localStorage.setItem('ownerAvatarUserSet', 'true');
                             localStorage.setItem('ownerAvatarUpdatedAt', String(Date.now()));
-                            try {
-                                if (!compressed.startsWith('data:') || compressed.length < 25000) {
-                                    localStorage.setItem('ownerProfileAvatar', compressed);
-                                }
-                            } catch (_) {}
                             updateResetBtn();
 
                             // Show visual feedback toast
@@ -863,17 +880,7 @@
                             }, 2500);
 
                             try {
-                                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-                                let activeId = null;
-                                if (client?.auth) {
-                                    try {
-                                        const s = await client.auth.getSession();
-                                        activeId = s?.data?.session?.user?.id;
-                                    } catch (_) {}
-                                }
-                                activeId = activeId || localStorage.getItem('lastLoggedInUserId');
                                 if (activeId) {
-                                    saveIDBMedia('ownerProfileAvatar_' + activeId, compressed);
                                     if (client?.from) {
                                         try {
                                             await client.from('profiles').update({ avatar_url: compressed }).eq('id', activeId);
@@ -887,11 +894,11 @@
                                     }
                                 }
 
-                                // Also persist to shop description metadata bridge if shop exists
-                                const sId = localStorage.getItem('currentShopId') || 'bccb746a-18ba-4802-ac29-eb30b7af7dd1';
+                                // Also persist to shop description metadata bridge if shop belongs to this owner
+                                const sId = localStorage.getItem('currentShopId');
                                 if (sId && window.safeSupabaseRest) {
                                     const { data: curShop } = await safeSupabaseRest(`shops?id=eq.${sId}&limit=1`);
-                                    if (curShop && curShop[0]) {
+                                    if (curShop && curShop[0] && (!curShop[0].owner_id || curShop[0].owner_id === activeId)) {
                                         const { cleanDesc, meta: curMeta } = extractShopMetadata(curShop[0].description);
                                         const newMeta = { ...(curMeta || {}), logo: compressed };
                                         const newDesc = (cleanDesc ? cleanDesc + '\n\n' : '') + `\x3C!--BCW_META:${JSON.stringify(newMeta)}--\x3E`;

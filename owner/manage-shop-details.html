@@ -442,8 +442,8 @@
         let currentUserId = null;
         let currentShopId = null;
         let newLogoCompressed = null;
-        let newCoverCompressed = null;
         let shopPhotos = [];
+        const DEFAULT_OWNER_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='ograd' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%23064e3b'/><stop offset='100%' stop-color='%2310b981'/></linearGradient></defs><circle cx='50' cy='50' r='50' fill='url(%23ograd)'/><path d='M26 40l48 0l-5 14l-38 0zM28 58h44v24H28zM42 68h16v14H42z' fill='%23ffffff'/><circle cx='50' cy='30' r='7' fill='%23ffffff'/></svg>";
 
         // Helper: Compress image via canvas with optimal balance of quality and byte size
         function compressImage(file, maxDim = 750, quality = 0.75) {
@@ -996,8 +996,12 @@
             }
         } catch (_) {}
 
-        const localLogo = syncMeta.avatar_url || (syncUserId ? localStorage.getItem('ownerProfileAvatar_' + syncUserId) : null) || localStorage.getItem('ownerProfileAvatar');
-        if (localLogo && logoImg) logoImg.src = localLogo;
+        const localLogo = syncMeta.avatar_url || (syncUserId ? localStorage.getItem('ownerProfileAvatar_' + syncUserId) : null);
+        if (localLogo && logoImg) {
+            logoImg.src = localLogo;
+        } else if (logoImg) {
+            logoImg.src = DEFAULT_OWNER_AVATAR;
+        }
 
         const localName = syncMeta.shop_name || localStorage.getItem('ownerShopName');
         if (localName) shopNameInput.value = localName;
@@ -1044,17 +1048,13 @@
         // Resolve cover and gallery with strict priority for THIS user ID
         const localCover = (syncUserId ? localStorage.getItem('ownerCoverImage_' + syncUserId) : null) || 
                            syncMeta.cover_image_url || 
-                           syncMeta.shop_cover || 
-                           localStorage.getItem('ownerCoverImage');
+                           syncMeta.shop_cover;
         let localGallery = null;
         if (syncUserId) {
             try { localGallery = JSON.parse(localStorage.getItem('ownerShopGallery_' + syncUserId) || 'null'); } catch(_) {}
         }
         if (!localGallery && syncMeta.shop_images && Array.isArray(syncMeta.shop_images) && syncMeta.shop_images.length > 0) {
             localGallery = syncMeta.shop_images;
-        }
-        if (!localGallery) {
-            try { localGallery = JSON.parse(localStorage.getItem('ownerShopGallery') || 'null'); } catch(_) {}
         }
 
         if (localGallery && Array.isArray(localGallery) && localGallery.length > 0) {
@@ -1079,16 +1079,15 @@
         }
         renderPhotoGallery();
 
-        // Check IndexedDB immediately for persisted user media (in case localStorage was cleared/quota-hit)
+        // Check IndexedDB immediately for persisted user media (strictly scoped to THIS user ID)
         (async () => {
-            const idbAvatar = (syncUserId ? await getMediaFromIDB('ownerProfileAvatar_' + syncUserId) : null) || await getMediaFromIDB('ownerProfileAvatar') || await getMediaFromIDB('ownerShopLogo');
+            const idbAvatar = syncUserId ? await getMediaFromIDB('ownerProfileAvatar_' + syncUserId) : null;
             if (idbAvatar && logoImg) {
                 logoImg.src = idbAvatar;
-                safeLocalStorageSet('ownerProfileAvatar', idbAvatar);
             }
 
-            const idbCover = (syncUserId ? await getMediaFromIDB('ownerCoverImage_' + syncUserId) : null) || await getMediaFromIDB('ownerCoverImage');
-            const idbGallery = (syncUserId ? await getMediaFromIDB('ownerShopGallery_' + syncUserId) : null) || await getMediaFromIDB('ownerShopGallery');
+            const idbCover = syncUserId ? await getMediaFromIDB('ownerCoverImage_' + syncUserId) : null;
+            const idbGallery = syncUserId ? await getMediaFromIDB('ownerShopGallery_' + syncUserId) : null;
 
             if (Array.isArray(idbGallery) && idbGallery.length > 0) {
                 const cleanedG = sanitizeGalleryUrls(idbGallery);
@@ -1200,19 +1199,11 @@
                 }
                 const meta = currentUser?.user_metadata || {};
 
-                // 2. Fetch Shop row via safeSupabaseRest
+                // 2. Fetch Shop row strictly belonging to THIS owner
                 let shop = null;
                 const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
-                if (savedShopId && savedShopId.length > 20 && fetcher) {
-                    try {
-                        const shops = await fetcher(`shops?id=eq.${savedShopId}&limit=1`);
-                        if (Array.isArray(shops) && shops.length > 0) shop = shops[0];
-                    } catch (e) {
-                        console.warn('Network sync notice (shop by id exception):', e);
-                    }
-                }
 
-                if (!shop && effectiveUserId && fetcher) {
+                if (effectiveUserId && fetcher) {
                     try {
                         const shops = await fetcher(`shops?owner_id=eq.${effectiveUserId}&limit=1`);
                         if (Array.isArray(shops) && shops.length > 0) shop = shops[0];
@@ -1221,34 +1212,30 @@
                     }
                 }
 
-
-                // 2.2 Global Fallback if no shop found yet
-                if (!shop && fetcher) {
+                if (!shop && savedShopId && savedShopId.length > 20 && fetcher) {
                     try {
-                        const anyShops = await fetcher('shops?limit=1');
-                        if (Array.isArray(anyShops) && anyShops.length > 0) shop = anyShops[0];
-                    } catch (_) {}
+                        const shops = await fetcher(`shops?id=eq.${savedShopId}&limit=1`);
+                        if (Array.isArray(shops) && shops.length > 0) {
+                            if (!shops[0].owner_id || shops[0].owner_id === effectiveUserId) {
+                                shop = shops[0];
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Network sync notice (shop by id exception):', e);
+                    }
                 }
 
-                // 2.3 Direct known shop fallback
-                if (!shop && fetcher) {
-                    try {
-                        const directShop = await fetcher('shops?id=eq.bccb746a-18ba-4802-ac29-eb30b7af7dd1&limit=1');
-                        if (Array.isArray(directShop) && directShop.length > 0) shop = directShop[0];
-                    } catch (_) {}
-                }
-
-                // 2.4 Resilient fallback if shop is still null (e.g. offline or connection resets)
+                // If shop is still null, this owner does not have a shop yet!
                 if (!shop) {
                     shop = {
-                        id: savedShopId || localStorage.getItem('currentShopId') || 'bccb746a-18ba-4802-ac29-eb30b7af7dd1',
-                        name: meta.shop_name || localStorage.getItem('ownerShopName') || 'ohm Car Wash',
-                        phone_number: meta.phone_number || localStorage.getItem('ownerShopPhone') || '',
-                        description: meta.shop_description || meta.description || localStorage.getItem('ownerShopDesc') || '',
-                        address: meta.full_address || meta.street || localStorage.getItem('ownerShopAddress') || '',
-                        map_link: (effectiveUserId ? localStorage.getItem('ownerShopMapLink_' + effectiveUserId) : null) || meta.map_link || localStorage.getItem('ownerShopMapLink') || '',
-                        cover_image_url: (effectiveUserId ? localStorage.getItem('ownerCoverImage_' + effectiveUserId) : null) || meta.cover_image_url || localStorage.getItem('ownerCoverImage') || null,
-                        logo_url: (effectiveUserId ? localStorage.getItem('ownerProfileAvatar_' + effectiveUserId) : null) || meta.avatar_url || localStorage.getItem('ownerProfileAvatar') || null,
+                        id: null,
+                        name: meta.shop_name || '',
+                        phone_number: meta.phone_number || '',
+                        description: meta.shop_description || meta.description || '',
+                        address: meta.full_address || meta.street || '',
+                        map_link: meta.map_link || '',
+                        cover_image_url: null,
+                        logo_url: null,
                         owner_id: effectiveUserId
                     };
                 }
@@ -1367,50 +1354,45 @@
                 // Mark sync status as ONLINE!
                 setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
 
-                // 4. LOAD LOGO (Smart priority: User-set logo > Cloud metadata bridge / Shop logo_url > Profiles avatar_url)
+                // 4. LOAD LOGO strictly for THIS owner
                 try {
                     let finalLogo = null;
-                    const userExplicitSet = localStorage.getItem('ownerAvatarUserSet') === 'true';
-                    const idbLogo = (effectiveUserId ? await getMediaFromIDB('ownerProfileAvatar_' + effectiveUserId) : null) ||
-                                    (await getMediaFromIDB('ownerProfileAvatar')) ||
-                                    (await getMediaFromIDB('ownerShopLogo'));
-                    const localStoreLogo = (effectiveUserId ? localStorage.getItem('ownerProfileAvatar_' + effectiveUserId) : null) ||
-                                           localStorage.getItem('ownerProfileAvatar') ||
-                                           localStorage.getItem('ownerShopLogo');
+                    const idbLogo = effectiveUserId ? await getMediaFromIDB('ownerProfileAvatar_' + effectiveUserId) : null;
+                    const localStoreLogo = effectiveUserId ? localStorage.getItem('ownerProfileAvatar_' + effectiveUserId) : null;
+                    const userExplicitSet = effectiveUserId ? (localStorage.getItem('ownerAvatarUserSet_' + effectiveUserId) === 'true') : false;
 
                     if (userExplicitSet && (idbLogo || localStoreLogo)) {
                         finalLogo = idbLogo || localStoreLogo;
                     }
 
-                    if (!finalLogo && cloudMeta?.logo) {
-                        finalLogo = cloudMeta.logo;
-                    }
-                    if (!finalLogo && shop?.logo_url && !shop.logo_url.includes('googleusercontent')) {
-                        finalLogo = shop.logo_url;
-                    }
-                    if (!finalLogo) {
-                        const targetOwnerId = shop?.owner_id || effectiveUserId;
-                        if (targetOwnerId && fetcher) {
-                            try {
-                                const profData = await fetcher(`profiles?id=eq.${targetOwnerId}&limit=1`);
-                                if (Array.isArray(profData) && profData.length > 0 && profData[0].avatar_url && !profData[0].avatar_url.includes('googleusercontent')) {
-                                    finalLogo = profData[0].avatar_url;
-                                }
-                            } catch (_) {}
+                    if (!finalLogo && shop?.owner_id === effectiveUserId) {
+                        if (cloudMeta?.logo) finalLogo = cloudMeta.logo;
+                        if (!finalLogo && shop?.logo_url && !shop.logo_url.includes('googleusercontent')) {
+                            finalLogo = shop.logo_url;
                         }
                     }
+
+                    if (!finalLogo && effectiveUserId && fetcher) {
+                        try {
+                            const profData = await fetcher(`profiles?id=eq.${effectiveUserId}&limit=1`);
+                            if (Array.isArray(profData) && profData.length > 0 && profData[0].avatar_url && !profData[0].avatar_url.includes('googleusercontent')) {
+                                finalLogo = profData[0].avatar_url;
+                            }
+                        } catch (_) {}
+                    }
+
                     if (!finalLogo) {
                         finalLogo = idbLogo || localStoreLogo;
                     }
 
                     if (finalLogo && logoImg) {
                         logoImg.src = finalLogo;
-                        safeLocalStorageSet('ownerProfileAvatar', finalLogo);
-                        saveMediaToIDB('ownerProfileAvatar', finalLogo);
                         if (effectiveUserId) {
                             safeLocalStorageSet('ownerProfileAvatar_' + effectiveUserId, finalLogo);
                             saveMediaToIDB('ownerProfileAvatar_' + effectiveUserId, finalLogo);
                         }
+                    } else if (logoImg) {
+                        logoImg.src = DEFAULT_OWNER_AVATAR;
                     }
                 } catch (_) {}
 
@@ -1949,17 +1931,6 @@
                         targetShopId = myShops[0].id;
                     }
                 } catch (_) {}
-            }
-
-            if (!targetShopId && window.safeSupabaseRest) {
-                try {
-                    const anyData = await window.safeSupabaseRest('shops?limit=1');
-                    if (Array.isArray(anyData) && anyData.length > 0) targetShopId = anyData[0].id;
-                } catch (_) {}
-            }
-
-            if (!targetShopId) {
-                targetShopId = 'bccb746a-18ba-4802-ac29-eb30b7af7dd1';
             }
 
             if (targetShopId) {
