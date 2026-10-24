@@ -1621,7 +1621,22 @@
                 } catch(_) { return null; }
             })();
 
-            const reviewImages = Array.isArray(r.images) ? r.images.filter(Boolean) : [];
+            const reviewImages = (function() {
+                if (!r.images) return [];
+                if (Array.isArray(r.images)) return r.images.filter(Boolean);
+                if (typeof r.images === 'string') {
+                    const t = r.images.trim();
+                    if (t.startsWith('[') && t.endsWith(']')) {
+                        try { const p = JSON.parse(t); if (Array.isArray(p)) return p.filter(Boolean); } catch(_) {}
+                    }
+                    if (t.startsWith('{') && t.endsWith('}')) {
+                        const items = t.slice(1, -1).split(',').map(s => s.replace(/^"|"$/g, '').trim()).filter(Boolean);
+                        if (items.length > 0) return items;
+                    }
+                    if (t.startsWith('http') || t.startsWith('data:')) return [t];
+                }
+                return [];
+            })();
             const imagesHtml = reviewImages.length > 0 ? `
                 <div class="flex flex-wrap gap-2 mt-2.5">
                     ${reviewImages.map(img => `

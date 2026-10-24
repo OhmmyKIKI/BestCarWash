@@ -414,16 +414,31 @@
                         ${escapeHtml(r.comment || 'ลูกค้าไม่ได้ระบุความคิดเห็นเพิ่มเติม')}
                     </p>
 
-                    ${(Array.isArray(r.images) && r.images.filter(Boolean).length > 0) ? `
-                        <div class="flex flex-wrap gap-2 mb-4">
-                            ${r.images.filter(Boolean).map(img => `
-                                <div onclick="openReviewPhotoLightbox('${img.replace(/'/g, "\\'")}')" class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-outline-variant/40 bg-surface-container cursor-pointer hover:opacity-90 active:scale-95 transition-all shadow-sm group relative">
-                                    <img src="${img}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" alt="รูปภาพรีวิว">
-                                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
+                    ${(function() {
+                        let imgs = [];
+                        if (Array.isArray(r.images)) imgs = r.images.filter(Boolean);
+                        else if (typeof r.images === 'string') {
+                            const t = r.images.trim();
+                            if (t.startsWith('[') && t.endsWith(']')) {
+                                try { const p = JSON.parse(t); if (Array.isArray(p)) imgs = p.filter(Boolean); } catch(_) {}
+                            } else if (t.startsWith('{') && t.endsWith('}')) {
+                                imgs = t.slice(1, -1).split(',').map(s => s.replace(/^"|"$/g, '').trim()).filter(Boolean);
+                            } else if (t.startsWith('http') || t.startsWith('data:')) {
+                                imgs = [t];
+                            }
+                        }
+                        if (imgs.length === 0) return '';
+                        return `
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                ${imgs.map(img => `
+                                    <div onclick="openReviewPhotoLightbox('${img.replace(/'/g, "\\'")}')" class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-outline-variant/40 bg-surface-container cursor-pointer hover:opacity-90 active:scale-95 transition-all shadow-sm group relative">
+                                        <img src="${img}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" alt="รูปภาพรีวิว">
+                                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    })()}
 
                     <div id="reply-container-${r.id}" class="mt-3">
                         ${hasReply ? `
