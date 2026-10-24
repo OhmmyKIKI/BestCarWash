@@ -420,7 +420,7 @@
 </div>
 
 <!-- Toast Notification -->
-<div id="toastNotification" class="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 bg-secondary-container text-on-secondary-container px-6 py-3 rounded-full shadow-lg shadow-background/50 flex items-center gap-3 transition-all duration-300 translate-y-20 opacity-0 z-[110] pointer-events-none border border-secondary/30">
+<div id="toastNotification" class="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 bg-secondary-container text-on-secondary-container px-5 py-2.5 rounded-full shadow-lg shadow-background/50 flex items-center justify-center gap-2.5 transition-all duration-300 translate-y-20 opacity-0 z-[110] pointer-events-none border border-secondary/30 whitespace-nowrap max-w-[90vw]">
     <span class="material-symbols-outlined text-[20px]">check_circle</span>
     <span class="font-bold text-sm" id="toastMessage">บันทึกสำเร็จ</span>
 </div>
@@ -1480,19 +1480,19 @@
     function markCarArrived(bookingId) {
         updateBooking(bookingId, { status: 'arrived', step: 2 });
         renderAllBookings();
-        showToast('อัปเดต: รถถึงร้านแล้ว ลูกค้าจะได้รับแจ้งเตือนสถานะทันที');
+        showToast('รถถึงร้านแล้ว');
     }
 
     function startWashing(bookingId) {
         updateBooking(bookingId, { status: 'washing', step: 3 });
         renderAllBookings();
-        showToast('อัปเดต: เริ่มล้างทำความสะอาดแล้ว');
+        showToast('เริ่มล้างรถแล้ว');
     }
 
     function markReadyForPickup(bookingId) {
         updateBooking(bookingId, { status: 'ready', step: 4 });
         renderAllBookings();
-        showToast('อัปเดต: พร้อมรับรถ เรียบร้อย! ระบบส่งแจ้งเตือนให้ลูกค้ามารับรถแล้ว');
+        showToast('พร้อมรับรถแล้ว');
     }
 
     function finishService(bookingId) {
@@ -1503,7 +1503,7 @@
             completedAt: 'วันนี้, ' + nowTime 
         });
         renderAllBookings();
-        showToast('ส่งมอบรถสำเร็จ! บันทึกเข้าสู่ประวัติการให้บริการเรียบร้อย');
+        showToast('ส่งมอบรถสำเร็จ');
     }
 
     async function declineBooking(bookingId) {
@@ -1516,7 +1516,7 @@
             declineReason: 'ร้านค้าไม่สะดวกรับคิวในเวลาดังกล่าว'
         });
         renderAllBookings();
-        showToast('ปฏิเสธการจองแล้ว ย้ายไปที่ "คำขอยกเลิก & คืนเงินมัดจำ" เพื่อโอนคืนมัดจำให้ลูกค้า');
+        showToast('ปฏิเสธคิวแล้ว');
     }
 
     /* Modal Handlers */
@@ -1563,7 +1563,7 @@
         if (currentActionButtonId) {
             updateBooking(currentActionButtonId, { status: 'no_show' });
             renderAllBookings();
-            showToast('บันทึกลูกค้าไม่มาตามนัดเรียบร้อย และริบเงินมัดจำตามเงื่อนไข');
+            showToast('บันทึกไม่มาตามนัดแล้ว');
         }
     }
 
@@ -1651,7 +1651,7 @@
     function copyRefundPromptPay() {
         const num = document.getElementById('refundTargetNumber').innerText;
         navigator.clipboard.writeText(num.replace(/-/g, '')).then(() => {
-            showToast('คัดลอกหมายเลขพร้อมเพย์แล้ว: ' + num);
+            showToast('คัดลอกพร้อมเพย์แล้ว');
         });
     }
 
@@ -1697,7 +1697,7 @@
         const preview = document.getElementById('refundSlipPreview');
         const slipImg = preview ? preview.src : '';
         if (!slipImg || slipImg === window.location.href || slipImg.trim() === '') {
-            showToast('⚠️ กรุณาแนบรูปภาพสลิปการโอนเงินคืนก่อนกดยืนยัน');
+            showToast('⚠️ กรุณาแนบสลิปโอนคืน');
             return;
         }
 
@@ -1715,10 +1715,10 @@
             }
             closeRefundModal();
             renderAllBookings();
-            showToast('โอนเงินคืนและแนบสลิปสำเร็จ! ย้ายไปที่ประวัติเรียบร้อย');
+            showToast('โอนเงินคืนสำเร็จ');
         } catch(err) {
             console.error('Refund save error:', err);
-            showToast('เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่อีกครั้ง');
+            showToast('เกิดข้อผิดพลาดในการบันทึก');
         } finally {
             btn.innerHTML = 'ยืนยันการโอนคืน';
             btn.disabled = false;
