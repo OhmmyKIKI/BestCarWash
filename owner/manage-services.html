@@ -847,6 +847,7 @@
 
         let currentEditingCard = null;
         let currentEditingServiceId = null;
+        let currentEditingOldName = null;
         let currentShopId = localStorage.getItem('currentShopId') || localStorage.getItem('selectedShopId') || null;
         let currentUserId = localStorage.getItem('lastLoggedInUserId') || null;
         const serviceListEl = document.getElementById('service-list');
@@ -1558,7 +1559,9 @@
             setPickerIcon('editIconPickerContainer', 'editInputIcon', 'editIconLabel', currentIcon);
 
             const titleEl = card.querySelector('.card-title');
-            editInputName.value = titleEl ? titleEl.textContent.trim() : '';
+            const curTitle = titleEl ? titleEl.textContent.trim() : '';
+            currentEditingOldName = curTitle;
+            editInputName.value = curTitle;
 
             const descEl = card.querySelector('.card-desc');
             editInputDesc.value = descEl ? descEl.textContent.trim() : '';
@@ -1612,6 +1615,7 @@
                 editModal.classList.remove('flex');
                 currentEditingCard = null;
                 currentEditingServiceId = null;
+                currentEditingOldName = null;
             }, 300);
         };
 
@@ -1728,6 +1732,7 @@
             }
 
             const cardRef = targetCard;
+            const oldName = currentEditingOldName;
             hideEditModal();
             syncCurrentCardsToLocalStorage();
 
@@ -1755,6 +1760,39 @@
                     syncCurrentCardsToLocalStorage();
                 }
             });
+
+            // If service name changed, propagate update to historical bookings for consistency
+            if (oldName && oldName !== newName && shopIdToUse) {
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest || fetchSupabaseRest;
+                if (fetcher) {
+                    fetcher(`bookings?shop_id=eq.${encodeURIComponent(shopIdToUse)}&service_name=eq.${encodeURIComponent(oldName)}`, {
+                        method: 'PATCH',
+                        headers: { 'Prefer': 'return=minimal' },
+                        body: { service_name: newName }
+                    }).catch(() => {});
+                }
+                try {
+                    const rawAppB = localStorage.getItem('appBookingsList');
+                    if (rawAppB) {
+                        const appBList = JSON.parse(rawAppB);
+                        if (Array.isArray(appBList)) {
+                            let touched = false;
+                            appBList.forEach(ab => {
+                                if ((ab.shop_id === shopIdToUse || ab.shopId === shopIdToUse) &&
+                                    (ab.service_name === oldName || ab.serviceName === oldName || ab.service === oldName)) {
+                                    ab.service_name = newName;
+                                    ab.serviceName = newName;
+                                    ab.service = newName;
+                                    touched = true;
+                                }
+                            });
+                            if (touched) {
+                                localStorage.setItem('appBookingsList', JSON.stringify(appBList));
+                            }
+                        }
+                    }
+                } catch (_) {}
+            }
         });
 
         // Confirm Add New Service with Optimistic UI (0ms Instant Feedback)

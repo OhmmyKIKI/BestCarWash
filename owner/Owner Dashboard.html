@@ -555,12 +555,12 @@
     let popularityChartInstance = null;
 
     // 4. สัดส่วนแพ็กเกจ: เอาชื่อบริการที่เจ้าของร้านตั้งไว้มาแสดงสัดส่วนว่าลูกค้าเลือกบริการอะไรบ่อยสุด
-    function updatePopularityChart(list, shopServices) {
+    function updatePopularityChart(list, shopServices, bookingServicesMap = {}) {
         const canvas = document.getElementById('popularityChart');
         const legendEl = document.getElementById('popularityLegend');
         if (!canvas || !legendEl) return;
 
-        // 1. รวบรวมชื่อบริการทั้งหมดที่เจ้าของร้านตั้งไว้
+        // 1. รวบรวมชื่อบริการทั้งหมดที่เจ้าของร้านตั้งไว้ (Active Current Services)
         const ownerServiceNames = [];
         const canonicalMap = {};
         const idToNameMap = {};
@@ -591,9 +591,11 @@
         (list || []).forEach(b => {
             let matchedName = null;
 
-            // ตรวจสอบตาม service_id
-            if (b.service_id && idToNameMap[b.service_id]) {
-                matchedName = idToNameMap[b.service_id];
+            // ตรวจสอบตาม service_id จาก booking_services หรือในตัว booking
+            const bId = b.id || b.bookingId;
+            const bServiceId = b.service_id || b.serviceId || (bookingServicesMap && bId && bookingServicesMap[bId]) || (b.services && b.services.id);
+            if (bServiceId && idToNameMap[bServiceId]) {
+                matchedName = idToNameMap[bServiceId];
             }
 
             // ถ้าไม่พบตาม id ให้ตรวจสอบตามชื่อรายการบริการที่ลูกค้าเลือก
@@ -603,16 +605,16 @@
 
                 if (canonicalMap[sLower]) {
                     matchedName = canonicalMap[sLower];
-                } else {
+                } else if (ownerServiceNames.length > 0) {
                     const found = ownerServiceNames.find(os => {
                         const osLower = os.toLowerCase();
                         return sLower.includes(osLower) || osLower.includes(sLower);
                     });
                     if (found) {
                         matchedName = found;
-                    } else if (selectedName && selectedName !== 'บริการทั่วไป') {
-                        matchedName = selectedName;
                     }
+                } else if (selectedName && selectedName !== 'บริการทั่วไป') {
+                    matchedName = selectedName;
                 }
             }
 
@@ -623,8 +625,9 @@
         });
 
         // 2. จัดอันดับบริการว่าลูกค้าเลือกบริการอะไรบ่อยสุด (เรียงลำดับจากมากไปน้อย)
-        const allTrackedNames = Array.from(new Set([...ownerServiceNames, ...Object.keys(counts)]));
-        const rankedServices = allTrackedNames.map(name => {
+        // แสดงเฉพาะรายการบริการปัจจุบันของร้านเท่านั้น (ห้ามดึงชื่อเก่า/ชื่อขยะมาแสดงเป็นรายการใหม่)
+        const targetNames = ownerServiceNames.length > 0 ? ownerServiceNames : Object.keys(counts);
+        const rankedServices = targetNames.map(name => {
             return {
                 name: name,
                 count: counts[name] || 0
@@ -1219,17 +1222,20 @@
                     } catch (_) {}
                 }
 
-                // Merge with local ownerServices cache if available
-                try {
-                    const cachedS = JSON.parse(localStorage.getItem('ownerServices') || '[]');
-                    if (Array.isArray(cachedS) && cachedS.length > 0) {
-                        cachedS.forEach(cs => {
-                            if (cs && cs.name && !shopServices.some(s => s.name.trim().toLowerCase() === cs.name.trim().toLowerCase())) {
-                                shopServices.push(cs);
-                            }
-                        });
-                    }
-                } catch (_) {}
+                // If DB returned valid services, update localStorage cache with authoritative fresh list
+                if (shopServices.length > 0) {
+                    try {
+                        localStorage.setItem('ownerServices', JSON.stringify(shopServices));
+                    } catch (_) {}
+                } else {
+                    // Fallback to local ownerServices cache only if DB has none or offline
+                    try {
+                        const cachedS = JSON.parse(localStorage.getItem('ownerServices') || '[]');
+                        if (Array.isArray(cachedS) && cachedS.length > 0) {
+                            shopServices = cachedS;
+                        }
+                    } catch (_) {}
+                }
 
                 // Also merge any local bookings matching this shop
                 try {
@@ -1247,6 +1253,22 @@
                         }
                     }
                 } catch(e) {}
+
+                // Map booking_id to service_id for 100% accurate service tracking
+                const bookingServicesMap = {};
+                const bookingIds = list.map(b => b.id).filter(id => id && String(id).length > 20);
+                if (bookingIds.length > 0 && fetcher) {
+                    try {
+                        const bServices = await fetcher(`booking_services?booking_id=in.(${bookingIds.slice(0, 50).join(',')})&select=booking_id,service_id`);
+                        if (Array.isArray(bServices)) {
+                            bServices.forEach(bs => {
+                                if (bs && bs.booking_id && bs.service_id) {
+                                    bookingServicesMap[bs.booking_id] = bs.service_id;
+                                }
+                            });
+                        }
+                    } catch (_) {}
+                }
 
                 // 1. สรุปข้อมูลประจำวัน: กรองตรงตามฐานข้อมูลจริง 100% (คำนวณเฉพาะ "วันนี้")
                 const todayIso = getLocalTodayIso();
@@ -1386,7 +1408,7 @@
                 renderTodayBookings(todayList);
 
                 // 4. สัดส่วนแพ็กเกจ: เชื่อมโยงกับชื่อแพ็กเกจจริงของร้าน
-                updatePopularityChart(list, shopServices);
+                updatePopularityChart(list, shopServices, bookingServicesMap);
 
                 // 5. รีวิวล่าสุด & Review KPI: แสดง 2 รีวิวล่าสุด
                 const rData = Array.isArray(reviewsRes) ? reviewsRes : (reviewsRes?.data || null);
