@@ -72,7 +72,7 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
     </style>
 </head>
-<body class="antialiased flex flex-col min-h-screen bg-background text-on-background pb-16 md:pb-12">
+<body class="antialiased flex flex-col min-h-screen bg-background text-on-background pb-32 md:pb-12">
 
 <!-- Top Header (App Bar) -->
 <header class="sticky top-0 w-full z-50 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md">
@@ -102,7 +102,7 @@
 </header>
 
 <!-- Main Container -->
-<main class="w-full max-w-7xl px-4 sm:px-6 pt-6 pb-28 md:pb-12 mx-auto flex-1 space-y-6">
+<main class="w-full max-w-7xl px-4 sm:px-6 pt-6 pb-36 md:pb-12 mx-auto flex-1 space-y-6">
 
     <!-- Top Bento Summary -->
     <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
@@ -1007,6 +1007,30 @@
         });
     });
 </script>
+
+<!-- BottomNavBar (Mobile Only - 5 Tabs) -->
+<nav class="md:hidden fixed bottom-4 left-4 right-4 rounded-2xl z-50 bg-surface-container-low/95 backdrop-blur-xl border border-outline-variant/50 shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex justify-around items-center p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0))]">
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform flex-1 max-w-[68px] h-13 sm:h-14" href="Owner%20Dashboard.html">
+        <span class="material-symbols-outlined text-[24px]">home</span>
+        <span class="text-[10.5px] sm:text-xs font-semibold mt-0.5">หน้าแรก</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform flex-1 max-w-[68px] h-13 sm:h-14" href="owner-bookings.html">
+        <span class="material-symbols-outlined text-[24px]">calendar_month</span>
+        <span class="text-[10.5px] sm:text-xs font-semibold mt-0.5">การจอง</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform flex-1 max-w-[68px] h-13 sm:h-14" href="owner-booking-history.html">
+        <span class="material-symbols-outlined text-[24px]">history</span>
+        <span class="text-[10.5px] sm:text-xs font-semibold mt-0.5">ประวัติ</span>
+    </a>
+    <a class="flex flex-col items-center justify-center bg-secondary-container/20 text-secondary rounded-xl flex-1 max-w-[68px] h-13 sm:h-14 shadow-sm active:scale-95 transition-transform" href="owner-reviews.html">
+        <span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">rate_review</span>
+        <span class="text-[10.5px] sm:text-xs font-bold mt-0.5">รีวิว</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform flex-1 max-w-[68px] h-13 sm:h-14" href="Owner%20Profile.html">
+        <span class="material-symbols-outlined text-[24px]">person</span>
+        <span class="text-[10.5px] sm:text-xs font-semibold mt-0.5">โปรไฟล์</span>
+    </a>
+</nav>
 
 </body>
 </html>

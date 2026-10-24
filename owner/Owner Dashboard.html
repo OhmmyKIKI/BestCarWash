@@ -108,6 +108,9 @@
             <a class="text-base font-semibold text-on-surface-variant hover:text-secondary transition-colors flex items-center gap-1.5" href="owner-booking-history.html">
                 <span class="material-symbols-outlined text-[20px]">history</span> ประวัติ
             </a>
+            <a class="text-base font-semibold text-on-surface-variant hover:text-secondary transition-colors flex items-center gap-1.5" href="owner-reviews.html">
+                <span class="material-symbols-outlined text-[20px]">rate_review</span> รีวิว
+            </a>
             <a class="text-base font-semibold text-on-surface-variant hover:text-secondary transition-colors flex items-center gap-1.5" href="Owner%20Profile.html">
                 <span class="material-symbols-outlined text-[20px]">person</span> จัดการร้าน
             </a>
@@ -326,23 +329,27 @@
     </section>
 
 </main>
-<!-- BottomNavBar (Mobile Only) -->
-<nav class="md:hidden fixed bottom-4 left-4 right-4 rounded-2xl z-50 bg-surface-container-low/95 backdrop-blur-xl border border-outline-variant/50 shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex justify-around items-center p-2.5 pb-[calc(0.6rem+env(safe-area-inset-bottom,0))]">
-    <a class="flex flex-col items-center justify-center bg-secondary-container/20 text-secondary rounded-xl w-18 h-14 shadow-sm active:scale-95 transition-transform" href="Owner%20Dashboard.html">
-        <span class="material-symbols-outlined text-[26px] fill">home</span>
-        <span class="text-xs font-bold mt-0.5">หน้าแรก</span>
+<!-- BottomNavBar (Mobile Only - 5 Tabs) -->
+<nav class="md:hidden fixed bottom-4 left-4 right-4 rounded-2xl z-50 bg-surface-container-low/95 backdrop-blur-xl border border-outline-variant/50 shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex justify-around items-center p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0))]">
+    <a class="flex flex-col items-center justify-center bg-secondary-container/20 text-secondary rounded-xl flex-1 max-w-[68px] h-13 sm:h-14 shadow-sm active:scale-95 transition-transform" href="Owner%20Dashboard.html">
+        <span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">home</span>
+        <span class="text-[10.5px] sm:text-xs font-bold mt-0.5">หน้าแรก</span>
     </a>
-    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform w-18 h-14" href="owner-bookings.html">
-        <span class="material-symbols-outlined text-[26px]">calendar_month</span>
-        <span class="text-xs font-semibold mt-0.5">การจอง</span>
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform flex-1 max-w-[68px] h-13 sm:h-14" href="owner-bookings.html">
+        <span class="material-symbols-outlined text-[24px]">calendar_month</span>
+        <span class="text-[10.5px] sm:text-xs font-semibold mt-0.5">การจอง</span>
     </a>
-    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform w-18 h-14" href="owner-booking-history.html">
-        <span class="material-symbols-outlined text-[26px]">history</span>
-        <span class="text-xs font-semibold mt-0.5">ประวัติ</span>
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform flex-1 max-w-[68px] h-13 sm:h-14" href="owner-booking-history.html">
+        <span class="material-symbols-outlined text-[24px]">history</span>
+        <span class="text-[10.5px] sm:text-xs font-semibold mt-0.5">ประวัติ</span>
     </a>
-    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform w-18 h-14" href="Owner%20Profile.html">
-        <span class="material-symbols-outlined text-[26px]">person</span>
-        <span class="text-xs font-semibold mt-0.5">โปรไฟล์</span>
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform flex-1 max-w-[68px] h-13 sm:h-14" href="owner-reviews.html">
+        <span class="material-symbols-outlined text-[24px]">rate_review</span>
+        <span class="text-[10.5px] sm:text-xs font-semibold mt-0.5">รีวิว</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-outline hover:text-secondary active:scale-95 transition-transform flex-1 max-w-[68px] h-13 sm:h-14" href="Owner%20Profile.html">
+        <span class="material-symbols-outlined text-[24px]">person</span>
+        <span class="text-[10.5px] sm:text-xs font-semibold mt-0.5">โปรไฟล์</span>
     </a>
 </nav>
 
