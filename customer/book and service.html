@@ -413,12 +413,16 @@
 
             <!-- Account Details in QR Card - Clean horizontal rows -->
             <div class="w-full mt-3 pt-3 border-t border-slate-200 text-xs space-y-2">
+                <div id="shop-bank-name-row" class="flex items-center justify-between gap-2 hidden">
+                    <span class="text-slate-500 shrink-0">ธนาคาร:</span>
+                    <strong class="text-slate-800 text-right truncate" id="shop-bank-name">-</strong>
+                </div>
                 <div class="flex items-center justify-between gap-2">
                     <span class="text-slate-500 shrink-0">ชื่อบัญชีร้าน:</span>
                     <strong class="text-slate-800 text-right truncate" id="shop-account-name">บริษัท สปาร์คเคิล คาร์แคร์ จำกัด</strong>
                 </div>
                 <div class="flex items-center justify-between gap-2">
-                    <span class="text-slate-500 shrink-0">พร้อมเพย์:</span>
+                    <span class="text-slate-500 shrink-0" id="promptpay-type-label">พร้อมเพย์ / เลขบัญชี:</span>
                     <div class="flex items-center gap-1.5">
                         <span class="text-sm font-mono font-bold text-[#003b6d] tracking-wide" id="promptpay-number">089-123-4567</span>
                         <button type="button" onclick="copyPromptPayNumber()" class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded text-[11px] font-semibold flex items-center gap-0.5 active:scale-95 transition-all" title="คัดลอกหมายเลข">
@@ -1622,6 +1626,21 @@
             }
         }
 
+        // 2.5 Live Cloud Fallback if not yet present in cached object
+        if (shopId && isValidUuid(shopId)) {
+            try {
+                const fetcher = (typeof safeSupabaseRest === 'function') ? safeSupabaseRest : (typeof callRest === 'function' ? callRest : null);
+                if (fetcher) {
+                    const { data: dbData } = await fetcher(`shops?select=id,name,description,phone_number&id=eq.${shopId}&limit=1`);
+                    if (dbData && dbData.length > 0 && dbData[0].description) {
+                        const cloudMeta = extractShopMetadata(dbData[0].description);
+                        const cloudQr = cloudMeta?.promptpay_qr || cloudMeta?.qr_code || cloudMeta?.bank_info?.qr_code;
+                        if (cloudQr) return cloudQr;
+                    }
+                }
+            } catch (_) {}
+        }
+
         // 3. Shop-specific localStorage
         if (shopId) {
             const byShop = localStorage.getItem('ownerQrCode_' + shopId);
@@ -1720,18 +1739,33 @@
         }
 
         // Resolve Bank Info from shop metadata bridge if saved by owner
-        let metaBank = null;
-        if (currentShop?.description) {
+        let metaBank = currentShop?.bank_info || null;
+        if (!metaBank && currentShop?.description) {
             const parsed = extractShopMetadata(currentShop.description);
             metaBank = parsed?.bank_info || null;
+        }
+
+        // Display Bank Name if available
+        const bankNameRow = document.getElementById('shop-bank-name-row');
+        const bankNameEl = document.getElementById('shop-bank-name');
+        const promptPayTypeLabel = document.getElementById('promptpay-type-label');
+        if (metaBank?.bank_name) {
+            if (bankNameEl) bankNameEl.innerText = metaBank.bank_name;
+            if (bankNameRow) bankNameRow.classList.remove('hidden');
+            if (promptPayTypeLabel) {
+                promptPayTypeLabel.innerText = metaBank.bank_name.includes('พร้อมเพย์') ? 'พร้อมเพย์:' : 'เลขบัญชี / พร้อมเพย์:';
+            }
+        } else {
+            if (bankNameRow) bankNameRow.classList.add('hidden');
+            if (promptPayTypeLabel) promptPayTypeLabel.innerText = 'พร้อมเพย์:';
         }
 
         // Load Shop PromptPay number from current shop or customized
         const shopPhone = metaBank?.account_number ||
                           currentShop?.promptpay ||
+                          currentShop?.phone || 
                           (currentShop?.id ? localStorage.getItem('ownerAccountNumber_' + currentShop.id) : null) ||
                           (currentShop?.owner_id ? localStorage.getItem('ownerAccountNumber_' + currentShop.owner_id) : null) ||
-                          currentShop?.phone || 
                           localStorage.getItem('ownerAccountNumber') || localStorage.getItem('ownerPromptPay') || 
                           localStorage.getItem('shopPromptPay') || '080-000-0000';
         const promptPayEl = document.getElementById('promptpay-number');
@@ -2718,6 +2752,8 @@
                         promptpay: metaFromDesc.bank_info?.account_number || dbShop.phone_number || existingCached.promptpay || '080-000-0000',
                         promptpay_qr: metaFromDesc.promptpay_qr || metaFromDesc.qr_code || metaFromDesc.bank_info?.qr_code || dbShop.promptpay_qr || existingCached.promptpay_qr || null,
                         account_name: metaFromDesc.bank_info?.account_name || existingCached.account_name || dbShop.name || 'ร้านคาร์แคร์',
+                        bank_name: metaFromDesc.bank_info?.bank_name || existingCached.bank_name || 'ธนาคารกสิกรไทย (KBank)',
+                        bank_info: metaFromDesc.bank_info || existingCached.bank_info || null,
                         rating: existingCached.rating || (dbShop.rating ? Number(dbShop.rating).toFixed(1) : '5.0'),
                         reviews: existingCached.reviews || (dbShop.review_count ? `${dbShop.review_count} รีวิว` : '0 รีวิว'),
                         services: (dbServices && dbServices.length > 0) ? dbServices.map((s, idx) => ({

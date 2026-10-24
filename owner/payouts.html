@@ -445,6 +445,122 @@
         });
     }
 
+    // Helper to convert dataURL to Blob
+    function dataURLtoBlob(dataurl) {
+        if (!dataurl || typeof dataurl !== 'string') return null;
+        try {
+            const arr = dataurl.split(',');
+            const mimeMatch = arr[0].match(/:(.*?);/);
+            const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], { type: mime });
+        } catch (e) {
+            console.warn('dataURLtoBlob conversion notice:', e);
+            return null;
+        }
+    }
+
+    // Compress any image file or dataURL to high-quality lightweight JPEG Blob (max 800px, ~50-80KB)
+    function compressImageToBlob(fileOrDataUrl, maxDim = 800, quality = 0.85) {
+        return new Promise((resolve) => {
+            try {
+                if (!fileOrDataUrl) return resolve(null);
+                const img = new Image();
+                img.onload = () => {
+                    try {
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > height && width > maxDim) {
+                            height = Math.round((height * maxDim) / width);
+                            width = maxDim;
+                        } else if (height > maxDim) {
+                            width = Math.round((width * maxDim) / height);
+                            height = maxDim;
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        canvas.toBlob((blob) => {
+                            resolve(blob || dataURLtoBlob(canvas.toDataURL('image/jpeg', quality)));
+                        }, 'image/jpeg', quality);
+                    } catch (err) {
+                        console.warn('compressImageToBlob canvas error:', err);
+                        resolve(null);
+                    }
+                };
+                img.onerror = () => resolve(null);
+
+                if (typeof fileOrDataUrl === 'string') {
+                    img.src = fileOrDataUrl;
+                } else if (fileOrDataUrl instanceof Blob || fileOrDataUrl instanceof File) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => { img.src = e.target.result; };
+                    reader.onerror = () => resolve(null);
+                    reader.readAsDataURL(fileOrDataUrl);
+                } else {
+                    resolve(null);
+                }
+            } catch (_) {
+                resolve(null);
+            }
+        });
+    }
+
+    // Upload QR Code image directly to Supabase Storage 'shop-media' bucket under 'qr/'
+    async function uploadQrToShopMediaStorage(fileOrDataUrl, shopId = 'shop') {
+        try {
+            if (!fileOrDataUrl) return null;
+            // If already a public cloud URL, return directly
+            if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('http')) {
+                return fileOrDataUrl;
+            }
+
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (!client || !client.storage) {
+                console.warn('Supabase storage not available');
+                return null;
+            }
+
+            const blob = await compressImageToBlob(fileOrDataUrl, 800, 0.85);
+            if (!blob) return null;
+
+            const timestamp = Date.now();
+            const rand = Math.random().toString(36).substring(2, 7);
+            const safeShopId = (shopId && isValidUuid(shopId)) ? shopId : 'shop';
+            const fileName = `qr/qr_${safeShopId}_${timestamp}_${rand}.jpg`;
+
+            const { data, error } = await client.storage
+                .from('shop-media')
+                .upload(fileName, blob, {
+                    contentType: 'image/jpeg',
+                    upsert: true,
+                    cacheControl: '3600'
+                });
+
+            if (error) {
+                console.warn('Storage QR upload error:', error.message || error);
+                return null;
+            }
+
+            const { data: pubData } = client.storage.from('shop-media').getPublicUrl(fileName);
+            const publicUrl = pubData?.publicUrl || null;
+            if (publicUrl) {
+                console.log('✅ QR Code uploaded to Supabase Storage:', publicUrl);
+            }
+            return publicUrl;
+        } catch (err) {
+            console.warn('uploadQrToShopMediaStorage exception:', err);
+            return null;
+        }
+    }
+
     function updateQrDisplay(dataUrl) {
         const qrBox = document.getElementById('displayQrBox');
         if (qrBox) {
@@ -465,7 +581,7 @@
                 img.onload = function() {
                     try {
                         const canvas = document.createElement('canvas');
-                        const maxDim = 350; // Optimized size to prevent Supabase payload limit errors
+                        const maxDim = 800; // High resolution preview
                         let width = img.width;
                         let height = img.height;
                         if (width > height && width > maxDim) {
@@ -479,13 +595,13 @@
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        const compressed = canvas.toDataURL('image/jpeg', 0.75);
+                        const previewData = canvas.toDataURL('image/jpeg', 0.85);
 
-                        currentQrBase64 = compressed;
+                        currentQrBase64 = previewData; // Will be uploaded to Supabase Storage on save
                         const preview = document.getElementById('qrPreview');
                         const placeholder = document.getElementById('qrPlaceholder');
                         if (preview && placeholder) {
-                            preview.src = compressed;
+                            preview.src = previewData;
                             preview.classList.remove('hidden');
                             placeholder.classList.add('hidden');
                         }
@@ -505,28 +621,28 @@
         }
     };
 
-    function loadBankInformation(user) {
-        const metaBank = user?.user_metadata?.bank_info || {};
+    function loadBankInformation(user, cloudBank = null) {
+        const metaBank = cloudBank || user?.user_metadata?.bank_info || {};
         const uid = user?.id;
 
-        const savedBank = (uid ? localStorage.getItem('ownerBankName_' + uid) : null) || 
-                          localStorage.getItem('ownerBankName') || 
-                          metaBank.bank_name;
+        const savedBank = metaBank.bank_name ||
+                          (uid ? localStorage.getItem('ownerBankName_' + uid) : null) || 
+                          localStorage.getItem('ownerBankName');
 
-        const savedAcc = (uid ? localStorage.getItem('ownerAccountNumber_' + uid) : null) || 
+        const savedAcc = metaBank.account_number ||
+                         (uid ? localStorage.getItem('ownerAccountNumber_' + uid) : null) || 
                          localStorage.getItem('ownerAccountNumber') || 
-                         localStorage.getItem('ownerPromptPay') || 
-                         metaBank.account_number;
+                         localStorage.getItem('ownerPromptPay');
 
-        const savedName = (uid ? localStorage.getItem('ownerAccountName_' + uid) : null) || 
+        const savedName = metaBank.account_name ||
+                          (uid ? localStorage.getItem('ownerAccountName_' + uid) : null) || 
                           localStorage.getItem('ownerAccountName') || 
-                          localStorage.getItem('shopAccountName') || 
-                          metaBank.account_name;
+                          localStorage.getItem('shopAccountName');
 
-        const savedQr = (uid ? localStorage.getItem('ownerQrCode_' + uid) : null) || 
+        const savedQr = metaBank.qr_code ||
+                        (uid ? localStorage.getItem('ownerQrCode_' + uid) : null) || 
                         localStorage.getItem('ownerQrCode') || 
-                        localStorage.getItem('shopPromptPayQr') || 
-                        metaBank.qr_code;
+                        localStorage.getItem('shopPromptPayQr');
 
         if (savedBank) {
             const bankSelect = document.getElementById('bankName');
@@ -694,86 +810,22 @@
                 const bankName = document.getElementById('bankName')?.value || 'ธนาคารกสิกรไทย (KBank)';
                 const accNum = document.getElementById('accountNumber')?.value?.trim() || '';
                 const accName = document.getElementById('accountName')?.value?.trim() || '';
-                const qrImg = currentQrBase64 || (currentUserId ? localStorage.getItem('ownerQrCode_' + currentUserId) : null) || localStorage.getItem('ownerQrCode');
 
                 const saveBtn = document.getElementById('saveBankBtn');
                 if (saveBtn) {
                     saveBtn.disabled = true;
-                    saveBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> กำลังบันทึก...';
+                    saveBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> กำลังบันทึกข้อมูล...';
                 }
 
                 try {
-                    // 1. Save user-scoped keys
-                    if (currentUserId) {
-                        localStorage.setItem('ownerBankName_' + currentUserId, bankName);
-                        localStorage.setItem('ownerAccountNumber_' + currentUserId, accNum);
-                        localStorage.setItem('ownerAccountName_' + currentUserId, accName);
-                        if (qrImg) localStorage.setItem('ownerQrCode_' + currentUserId, qrImg);
-                    }
+                    // Resolve target shop ID
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const paramShopId = urlParams.get('shop_id') || urlParams.get('id') || urlParams.get('shopId');
+                    let targetShopId = (paramShopId && isValidUuid(paramShopId)) ? paramShopId : ((currentShopId && isValidUuid(currentShopId)) ? currentShopId : null);
 
-                    // 2. Save shop-scoped keys
-                    if (currentShopId) {
-                        localStorage.setItem('ownerBankName_' + currentShopId, bankName);
-                        localStorage.setItem('ownerAccountNumber_' + currentShopId, accNum);
-                        localStorage.setItem('ownerAccountName_' + currentShopId, accName);
-                        if (qrImg) localStorage.setItem('ownerQrCode_' + currentShopId, qrImg);
-                    }
-
-                    // 3. Save global keys for customer booking and service screen
-                    localStorage.setItem('ownerBankName', bankName);
-                    localStorage.setItem('ownerAccountNumber', accNum);
-                    localStorage.setItem('ownerAccountName', accName);
-                    localStorage.setItem('ownerPromptPay', accNum);
-                    localStorage.setItem('shopPromptPay', accNum);
-                    localStorage.setItem('shopAccountName', accName);
-                    if (qrImg) {
-                        localStorage.setItem('ownerQrCode', qrImg);
-                        localStorage.setItem('shopPromptPayQr', qrImg);
-                        localStorage.setItem('shopQrCode', qrImg);
-                    }
-
-                    // 4. Save to IndexedDB (BestCarWashMedia / shop_media)
-                    if (qrImg) {
-                        if (currentShopId) setIDBMedia('qr_' + currentShopId, qrImg);
-                        if (currentUserId) setIDBMedia('qr_' + currentUserId, qrImg);
-                        setIDBMedia('ownerQrCode', qrImg);
-                        setIDBMedia('shopPromptPayQr', qrImg);
-                    }
-
-                    // 5. Update UI immediately
-                    const dispTitle = document.getElementById('displayBankTitle');
-                    if (dispTitle) dispTitle.textContent = bankName;
-                    const dispAcc = document.getElementById('displayAccountNumber');
-                    if (dispAcc) dispAcc.textContent = accNum;
-                    const dispName = document.getElementById('displayAccountName');
-                    if (dispName) dispName.textContent = accName;
-                    if (qrImg) updateQrDisplay(qrImg);
-                    updateBankBrandStyle(bankName);
-
-                    // 6. Save to Supabase auth user_metadata if authenticated
-                    if (client?.auth && currentUserId) {
-                        try {
-                            const cleanBankInfo = {
-                                bank_name: bankName,
-                                account_number: accNum,
-                                account_name: accName,
-                                qr_code: qrImg || null
-                            };
-                            await client.auth.updateUser({
-                                data: {
-                                    bank_info: cleanBankInfo
-                                }
-                            });
-                        } catch(authErr) {
-                            console.warn('Supabase auth metadata update notice:', authErr);
-                        }
-                    }
-
-                    // 7. Save QR Code & Bank Info to Supabase Database (shops.description metadata bridge)
-                    let targetShopId = (currentShopId && isValidUuid(currentShopId)) ? currentShopId : null;
                     if (!targetShopId && currentUserId && isValidUuid(currentUserId)) {
                         try {
-                            const { data: userShops } = await callRest(`shops?select=id,description&owner_id=eq.${currentUserId}&limit=1`);
+                            const { data: userShops } = await callRest(`shops?select=id&owner_id=eq.${currentUserId}&limit=1`);
                             if (userShops && userShops.length > 0) {
                                 targetShopId = userShops[0].id;
                                 currentShopId = targetShopId;
@@ -784,7 +836,31 @@
                         const sId = localStorage.getItem('ownerShopId') || localStorage.getItem('selectedShopId') || localStorage.getItem('currentShopId');
                         if (isValidUuid(sId)) targetShopId = sId;
                     }
+                    if (!targetShopId) {
+                        try {
+                            const { data: anyShops } = await callRest(`shops?select=id&order=created_at.desc&limit=1`);
+                            if (anyShops && anyShops.length > 0) {
+                                targetShopId = anyShops[0].id;
+                                currentShopId = targetShopId;
+                            }
+                        } catch (_) {}
+                    }
 
+                    // Step 1: If QR image is a local dataURL (newly selected file), upload it directly to Supabase Storage 'shop-media' bucket
+                    let cloudQrUrl = null;
+                    if (currentQrBase64 && currentQrBase64.startsWith('data:')) {
+                        if (saveBtn) {
+                            saveBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> กำลังอัปโหลด QR Code...';
+                        }
+                        cloudQrUrl = await uploadQrToShopMediaStorage(currentQrBase64, targetShopId);
+                        if (cloudQrUrl) {
+                            currentQrBase64 = cloudQrUrl;
+                        }
+                    }
+
+                    const finalQr = cloudQrUrl || currentQrBase64 || (currentUserId ? localStorage.getItem('ownerQrCode_' + currentUserId) : null) || localStorage.getItem('ownerQrCode') || null;
+
+                    // Step 2: Save to Supabase Database (shops.description metadata bridge & phone_number)
                     if (targetShopId && isValidUuid(targetShopId)) {
                         try {
                             let existingDesc = '';
@@ -795,16 +871,26 @@
                                 existingMeta = extractShopMetadata(existingDesc);
                             }
 
-                            // Embed real QR Code image & Bank Info into metadata payload
-                            if (qrImg) {
-                                existingMeta.qr_code = qrImg;
-                                existingMeta.promptpay_qr = qrImg;
+                            // Clean legacy bloated base64 images so PATCH payload is tiny (< 5KB) and 100% reliable
+                            if (typeof existingMeta.cover_image === 'string' && existingMeta.cover_image.startsWith('data:')) {
+                                delete existingMeta.cover_image;
                             }
+                            if (Array.isArray(existingMeta.gallery)) {
+                                existingMeta.gallery = existingMeta.gallery.filter(item => typeof item === 'string' && item.startsWith('http'));
+                            }
+
+                            // Embed real cloud QR Code image & Bank Info into metadata payload
+                            if (finalQr) {
+                                existingMeta.qr_code = finalQr;
+                                existingMeta.promptpay_qr = finalQr;
+                            }
+                            existingMeta.promptpay = accNum;
+                            existingMeta.account_name = accName;
                             existingMeta.bank_info = {
                                 bank_name: bankName,
                                 account_number: accNum,
                                 account_name: accName,
-                                qr_code: qrImg || existingMeta.qr_code || null
+                                qr_code: finalQr || existingMeta.qr_code || null
                             };
 
                             const cleanDesc = stripShopMetadata(existingDesc);
@@ -819,33 +905,104 @@
                                 patchPayload.phone_number = digits;
                             }
 
-                            await callRest(`shops?id=eq.${targetShopId}`, {
+                            const patchRes = await callRest(`shops?id=eq.${targetShopId}`, {
                                 method: 'PATCH',
                                 headers: { 'Prefer': 'return=representation' },
                                 body: JSON.stringify(patchPayload)
                             });
 
+                            if (patchRes && !patchRes.error) {
+                                console.log('✅ QR Code & Bank Info successfully saved to Supabase shops table!');
+                            } else {
+                                console.warn('Supabase PATCH response notice:', patchRes?.error);
+                            }
+
                             // Also sync to cached shop details in browser
                             try {
                                 const cDetails = JSON.parse(localStorage.getItem('cachedShopDetails_' + targetShopId) || '{}');
-                                if (qrImg) {
-                                    cDetails.promptpay_qr = qrImg;
-                                    cDetails.qr_code = qrImg;
+                                if (finalQr) {
+                                    cDetails.promptpay_qr = finalQr;
+                                    cDetails.qr_code = finalQr;
                                 }
+                                cDetails.bank_info = existingMeta.bank_info;
                                 cDetails.account_name = accName;
                                 cDetails.promptpay = accNum;
                                 cDetails.description = newDescWithMeta;
                                 localStorage.setItem('cachedShopDetails_' + targetShopId, JSON.stringify(cDetails));
                             } catch (_) {}
-
-                            console.log('✅ QR Code & Bank Info saved to database shops table');
                         } catch(shopErr) {
                             console.warn('Shop database sync notice:', shopErr);
                         }
                     }
 
+                    // Step 3: Save user-scoped keys in localStorage
+                    if (currentUserId) {
+                        localStorage.setItem('ownerBankName_' + currentUserId, bankName);
+                        localStorage.setItem('ownerAccountNumber_' + currentUserId, accNum);
+                        localStorage.setItem('ownerAccountName_' + currentUserId, accName);
+                        if (finalQr) localStorage.setItem('ownerQrCode_' + currentUserId, finalQr);
+                    }
+
+                    // Step 4: Save shop-scoped keys in localStorage
+                    if (targetShopId) {
+                        localStorage.setItem('ownerBankName_' + targetShopId, bankName);
+                        localStorage.setItem('ownerAccountNumber_' + targetShopId, accNum);
+                        localStorage.setItem('ownerAccountName_' + targetShopId, accName);
+                        if (finalQr) localStorage.setItem('ownerQrCode_' + targetShopId, finalQr);
+                    }
+
+                    // Step 5: Save global keys for customer booking and service screen
+                    localStorage.setItem('ownerBankName', bankName);
+                    localStorage.setItem('ownerAccountNumber', accNum);
+                    localStorage.setItem('ownerAccountName', accName);
+                    localStorage.setItem('ownerPromptPay', accNum);
+                    localStorage.setItem('shopPromptPay', accNum);
+                    localStorage.setItem('shopAccountName', accName);
+                    if (finalQr) {
+                        localStorage.setItem('ownerQrCode', finalQr);
+                        localStorage.setItem('shopPromptPayQr', finalQr);
+                        localStorage.setItem('shopQrCode', finalQr);
+                    }
+
+                    // Step 6: Save to IndexedDB (BestCarWashMedia / shop_media)
+                    if (finalQr) {
+                        if (targetShopId) setIDBMedia('qr_' + targetShopId, finalQr);
+                        if (currentUserId) setIDBMedia('qr_' + currentUserId, finalQr);
+                        setIDBMedia('ownerQrCode', finalQr);
+                        setIDBMedia('shopPromptPayQr', finalQr);
+                    }
+
+                    // Step 7: Update UI immediately
+                    const dispTitle = document.getElementById('displayBankTitle');
+                    if (dispTitle) dispTitle.textContent = bankName;
+                    const dispAcc = document.getElementById('displayAccountNumber');
+                    if (dispAcc) dispAcc.textContent = accNum;
+                    const dispName = document.getElementById('displayAccountName');
+                    if (dispName) dispName.textContent = accName;
+                    if (finalQr) updateQrDisplay(finalQr);
+                    updateBankBrandStyle(bankName);
+
+                    // Step 8: Save to Supabase auth user_metadata if authenticated
+                    if (client?.auth && currentUserId) {
+                        try {
+                            const cleanBankInfo = {
+                                bank_name: bankName,
+                                account_number: accNum,
+                                account_name: accName,
+                                qr_code: finalQr || null
+                            };
+                            await client.auth.updateUser({
+                                data: {
+                                    bank_info: cleanBankInfo
+                                }
+                            });
+                        } catch(authErr) {
+                            console.warn('Supabase auth metadata update notice:', authErr);
+                        }
+                    }
+
                     closeModal();
-                    showToast('บันทึกข้อมูลบัญชีและ QR Code ลงฐานข้อมูลเรียบร้อยแล้ว');
+                    showToast('บันทึกข้อมูลบัญชีและ QR Code ลงระบบคลาวด์เรียบร้อยแล้ว');
                 } catch (err) {
                     console.error('Save bank error:', err);
                     closeModal();
@@ -868,9 +1025,17 @@
         try {
             let shop = null;
 
+            // Step 0: Check URL query parameters (?shop_id=... or ?id=...)
+            const urlParams = new URLSearchParams(window.location.search);
+            const paramShopId = urlParams.get('shop_id') || urlParams.get('id') || urlParams.get('shopId');
+            if (paramShopId && isValidUuid(paramShopId)) {
+                const { data } = await callRest(`shops?select=id,name,description,phone_number,owner_id&id=eq.${paramShopId}&limit=1`);
+                if (data && data.length > 0) shop = data[0];
+            }
+
             // Step 1: Lookup shop by owner_id in Supabase via callRest
-            if (userId && isValidUuid(userId)) {
-                const { data } = await callRest(`shops?select=id,name,description,phone_number&owner_id=eq.${userId}&limit=1`);
+            if (!shop && userId && isValidUuid(userId)) {
+                const { data } = await callRest(`shops?select=id,name,description,phone_number,owner_id&owner_id=eq.${userId}&limit=1`);
                 if (data && data.length > 0) shop = data[0];
             }
 
@@ -878,7 +1043,7 @@
             if (!shop) {
                 const storedShopId = localStorage.getItem('currentShopId') || localStorage.getItem('selectedShopId') || localStorage.getItem('ownerShopId');
                 if (storedShopId && isValidUuid(storedShopId)) {
-                    const { data } = await callRest(`shops?select=id,name,description,phone_number&id=eq.${storedShopId}&limit=1`);
+                    const { data } = await callRest(`shops?select=id,name,description,phone_number,owner_id&id=eq.${storedShopId}&limit=1`);
                     if (data && data.length > 0) shop = data[0];
                 }
             }
@@ -887,12 +1052,18 @@
             if (!shop) {
                 const storedShopName = localStorage.getItem('ownerShopName') || localStorage.getItem('userShopName');
                 if (storedShopName) {
-                    const { data } = await callRest(`shops?select=id,name,description,phone_number&name=ilike.*${encodeURIComponent(storedShopName)}*&limit=1`);
+                    const { data } = await callRest(`shops?select=id,name,description,phone_number,owner_id&name=ilike.*${encodeURIComponent(storedShopName)}*&limit=1`);
                     if (data && data.length > 0) shop = data[0];
                 }
             }
 
-            // Step 4: Fallback to local storage shop info if DB offline or not yet linked
+            // Step 4: Universal fallback to active shop in Supabase (Guarantees other devices & shared links see live bank data)
+            if (!shop) {
+                const { data } = await callRest(`shops?select=id,name,description,phone_number,owner_id&order=created_at.desc&limit=1`);
+                if (data && data.length > 0) shop = data[0];
+            }
+
+            // Step 5: Fallback to local storage shop info if DB offline or not yet linked
             if (!shop) {
                 const localShopName = localStorage.getItem('ownerShopName') || localStorage.getItem('userShopName');
                 const localShopId = localStorage.getItem('selectedShopId') || localStorage.getItem('ownerShopId');
@@ -926,24 +1097,24 @@
                             }
                         }
                         if (meta.bank_info) {
+                            loadBankInformation(null, {
+                                bank_name: meta.bank_info.bank_name,
+                                account_number: meta.bank_info.account_number || shop.phone_number,
+                                account_name: meta.bank_info.account_name || shop.name,
+                                qr_code: dbQr || meta.bank_info.qr_code
+                            });
+
                             if (meta.bank_info.bank_name) {
-                                const dispTitle = document.getElementById('displayBankTitle');
-                                if (dispTitle) dispTitle.textContent = meta.bank_info.bank_name;
-                                const bankSelect = document.getElementById('bankName');
-                                if (bankSelect) bankSelect.value = meta.bank_info.bank_name;
-                                updateBankBrandStyle(meta.bank_info.bank_name);
+                                localStorage.setItem('ownerBankName', meta.bank_info.bank_name);
+                                if (shop.id) localStorage.setItem('ownerBankName_' + shop.id, meta.bank_info.bank_name);
                             }
                             if (meta.bank_info.account_number) {
-                                const dispAcc = document.getElementById('displayAccountNumber');
-                                if (dispAcc) dispAcc.textContent = meta.bank_info.account_number;
-                                const accInput = document.getElementById('accountNumber');
-                                if (accInput) accInput.value = meta.bank_info.account_number;
+                                localStorage.setItem('ownerAccountNumber', meta.bank_info.account_number);
+                                if (shop.id) localStorage.setItem('ownerAccountNumber_' + shop.id, meta.bank_info.account_number);
                             }
                             if (meta.bank_info.account_name) {
-                                const dispName = document.getElementById('displayAccountName');
-                                if (dispName) dispName.textContent = meta.bank_info.account_name;
-                                const nameInput = document.getElementById('accountName');
-                                if (nameInput) nameInput.value = meta.bank_info.account_name;
+                                localStorage.setItem('ownerAccountName', meta.bank_info.account_name);
+                                if (shop.id) localStorage.setItem('ownerAccountName_' + shop.id, meta.bank_info.account_name);
                             }
                         }
                     }
