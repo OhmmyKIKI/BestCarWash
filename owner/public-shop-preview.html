@@ -11,16 +11,9 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <!-- Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-client.js"></script>
-<script>
-    if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
-        var SUPABASE_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
-        var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
-        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    }
-    var supabaseClient = window.supabaseClient;
-</script>
-<script>
+<script src="supabase-client.js?v=2.1"></script>
+<script src="../supabase-client.js?v=2.1"></script>
+<script id="tailwind-config">
     tailwind.config = {
         darkMode: "class",
         theme: {
@@ -44,16 +37,16 @@
                   "on-primary-container": "#ffffff", // Pure White
                   "secondary-container": "#ecfdf5",  // Mint 50
                   "on-secondary-container": "#065f46", // Mint 900
-                  "error": "#e11d48",                // Rose 600
+                  "error": "#e11d48",                // Rose 600 (ธีมสีแดงแจ้งเตือน / text-error)
                   "error-container": "#ffe4e6",
                   "secondary-fixed": "#10b981",
-              },
+                },
                 fontFamily: {
                     sans: ["Prompt", "Inter", "sans-serif"],
                 }
             }
         }
-    }
+    };
 </script>
 <style>
     ::-webkit-scrollbar { width: 6px; height: 6px; }
