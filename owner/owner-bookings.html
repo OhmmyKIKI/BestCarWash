@@ -1474,7 +1474,7 @@
         const targetId = (found && (found.dbId || found.id || found.rawBookingId)) ? (found.dbId || found.id || found.rawBookingId) : bookingId;
         await updateBooking(targetId, { status: 'confirmed', step: 1, isNew: false });
         renderAllBookings();
-        showToast('ยืนยันรับคิวสำเร็จ! ย้ายไปที่ Service Pipeline เรียบร้อย');
+        showToast('ยืนยันแล้ว');
     }
 
     function markCarArrived(bookingId) {
