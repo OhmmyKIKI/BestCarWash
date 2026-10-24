@@ -589,8 +589,38 @@
         return street || 'ที่อยู่ร้านค้า';
     }
 
+    const isValidUuid = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id.trim());
+
     function getLocalShopLogo() {
-        return localStorage.getItem('ownerShopLogo') || localStorage.getItem('ownerProfileAvatar') || '';
+        const uId = localStorage.getItem('lastLoggedInUserId');
+        const sId = localStorage.getItem('selectedShopId') || localStorage.getItem('currentShopId');
+        
+        let direct = localStorage.getItem('ownerShopLogo') || 
+                     (sId ? localStorage.getItem('ownerShopLogo_' + sId) : null) ||
+                     localStorage.getItem('ownerProfileAvatar') ||
+                     (uId ? localStorage.getItem('ownerProfileAvatar_' + uId) : null);
+        if (direct && direct.length > 20 && !direct.includes('googleusercontent')) return direct;
+
+        try {
+            const rawUser = localStorage.getItem('currentUser');
+            if (rawUser) {
+                const u = JSON.parse(rawUser);
+                const meta = u?.user_metadata || {};
+                if (meta.avatar_url && !meta.avatar_url.includes('googleusercontent')) return meta.avatar_url;
+                if (meta.logo_url) return meta.logo_url;
+            }
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+                    const parsed = JSON.parse(localStorage.getItem(k));
+                    const meta = parsed?.user?.user_metadata;
+                    if (meta?.avatar_url && !meta?.avatar_url.includes('googleusercontent')) return meta.avatar_url;
+                    if (meta?.logo_url) return meta.logo_url;
+                }
+            }
+        } catch (_) {}
+
+        return direct || '';
     }
 
     function updateShopLogoDOM(logoUrl) {
@@ -852,7 +882,20 @@
 
         updateGalleryDOM(galleryImages);
 
-        // Async check IDB to immediately swap stock images if user has custom cover/gallery
+        // Async check IDB to immediately swap stock images if user has custom cover/gallery/logo
+        const sId = localStorage.getItem('selectedShopId') || localStorage.getItem('currentShopId');
+        const uId = localStorage.getItem('lastLoggedInUserId');
+
+        getIDBMedia('ownerShopLogo').then(async logo => {
+            let found = logo;
+            if (!found && sId) found = await getIDBMedia('ownerShopLogo_' + sId);
+            if (!found) found = await getIDBMedia('ownerProfileAvatar');
+            if (!found && uId) found = await getIDBMedia('ownerProfileAvatar_' + uId);
+            if (found) {
+                updateShopLogoDOM(found);
+            }
+        }).catch(() => {});
+
         getIDBMedia('ownerCoverImage').then(cover => {
             if (cover) {
                 galleryImages[0] = cover;
@@ -1259,10 +1302,40 @@
             // Store active shop id
             localStorage.setItem('selectedShopId', shop.id);
 
-            // Update Logo
-            const liveLogo = shop.logo_url || user?.user_metadata?.avatar_url || getLocalShopLogo();
+            // 2. Fetch owner profile for avatar if not in shop.logo_url
+            let ownerProfile = null;
+            const effectiveOwnerId = shop.owner_id || user?.id || localStorage.getItem('lastLoggedInUserId');
+            if (effectiveOwnerId && isValidUuid(effectiveOwnerId)) {
+                try {
+                    const profRes = await safeSupabaseRest(`profiles?id=eq.${effectiveOwnerId}&select=avatar_url,full_name&limit=1`);
+                    const profData = Array.isArray(profRes) ? profRes : (profRes?.data || []);
+                    if (profData && profData.length > 0) ownerProfile = profData[0];
+                } catch (_) {}
+            }
+
+            // Extract metadata from description if present
+            const { cleanDesc, meta: cloudMeta } = extractShopMetadata(shop.description);
+
+            // Update Logo with full cascade
+            let liveLogo = shop.logo_url || 
+                           cloudMeta?.logo || 
+                           ownerProfile?.avatar_url || 
+                           user?.user_metadata?.avatar_url || 
+                           user?.user_metadata?.logo_url || 
+                           getLocalShopLogo();
+
+            if (!liveLogo) {
+                liveLogo = await getIDBMedia('ownerShopLogo') || 
+                           (shop.id ? await getIDBMedia('ownerShopLogo_' + shop.id) : null) ||
+                           await getIDBMedia('ownerProfileAvatar') || 
+                           (effectiveOwnerId ? await getIDBMedia('ownerProfileAvatar_' + effectiveOwnerId) : null);
+            }
+
             if (liveLogo) {
                 updateShopLogoDOM(liveLogo);
+                try {
+                    localStorage.setItem('ownerProfileAvatar', liveLogo);
+                } catch (_) {}
             }
 
             // Update Title & Identity
