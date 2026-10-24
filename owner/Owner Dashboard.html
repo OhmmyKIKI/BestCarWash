@@ -1054,6 +1054,30 @@
         }
     }
 
+    const IDB_NAME = 'BestCarWashMedia';
+    const IDB_STORE = 'shop_media';
+
+    function getIDBMedia(key) {
+        return new Promise((resolve) => {
+            if (typeof indexedDB === 'undefined') return resolve(null);
+            try {
+                const req = indexedDB.open(IDB_NAME, 2);
+                req.onerror = () => resolve(null);
+                req.onsuccess = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(IDB_STORE)) return resolve(null);
+                    const tx = db.transaction(IDB_STORE, 'readonly');
+                    const store = tx.objectStore(IDB_STORE);
+                    const g = store.get(key);
+                    g.onsuccess = () => resolve(g.result || null);
+                    g.onerror = () => resolve(null);
+                };
+            } catch (_) {
+                resolve(null);
+            }
+        });
+    }
+
     // Dual-Layer Loading: Cache-First (0ms Instant Display) + Fast-Track Background Sync
     async function loadOwnerDashboardData() {
         try {
@@ -1176,13 +1200,15 @@
                     localStorage.setItem('ownerShopName', shop.name);
                 }
                 if (shop.logo_url) {
-                    const curAv = (effectiveUserId ? localStorage.getItem('ownerProfileAvatar_' + effectiveUserId) : null);
-                    if (!curAv || curAv.includes('googleusercontent') || curAv.startsWith('data:image/svg')) {
+                    const userExplicitSet = (effectiveUserId ? localStorage.getItem('ownerAvatarUserSet_' + effectiveUserId) : null) === 'true' || localStorage.getItem('ownerAvatarUserSet') === 'true';
+                    const curAv = (effectiveUserId ? localStorage.getItem('ownerProfileAvatar_' + effectiveUserId) : null) || localStorage.getItem('ownerProfileAvatar') || localStorage.getItem('ownerShopLogo');
+                    if (!userExplicitSet && (!curAv || curAv.includes('googleusercontent') || curAv.startsWith('data:image/svg'))) {
                         const mAvatar = document.getElementById('owner-header-avatar');
                         const dAvatar = document.getElementById('owner-desktop-avatar');
                         if (mAvatar) mAvatar.src = shop.logo_url;
                         if (dAvatar) dAvatar.src = shop.logo_url;
                         if (effectiveUserId) localStorage.setItem('ownerProfileAvatar_' + effectiveUserId, shop.logo_url);
+                        localStorage.setItem('ownerProfileAvatar', shop.logo_url);
                     }
                 }
                 if (shop.cover_image_url && effectiveUserId) {
@@ -1575,13 +1601,24 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Layer 1: Instant 0ms Render of Cached Profile & KPI strictly for THIS user
         const currentUid = localStorage.getItem('lastLoggedInUserId');
-        const savedAvatar = (currentUid ? localStorage.getItem('ownerProfileAvatar_' + currentUid) : null);
-        if (savedAvatar && !savedAvatar.includes('googleusercontent')) {
+        const savedAvatar = (currentUid ? localStorage.getItem('ownerProfileAvatar_' + currentUid) : null) || localStorage.getItem('ownerProfileAvatar') || localStorage.getItem('ownerShopLogo');
+        if (savedAvatar && !savedAvatar.includes('googleusercontent') && !savedAvatar.startsWith('data:image/svg')) {
             const mAvatar = document.getElementById('owner-header-avatar');
             const dAvatar = document.getElementById('owner-desktop-avatar');
             if (mAvatar) mAvatar.src = savedAvatar;
             if (dAvatar) dAvatar.src = savedAvatar;
         }
+
+        // Instant IDB avatar retrieval for fast render
+        (async () => {
+            const idbAvatar = (currentUid ? await getIDBMedia('ownerProfileAvatar_' + currentUid) : null) || await getIDBMedia('ownerProfileAvatar') || await getIDBMedia('ownerShopLogo');
+            if (idbAvatar && !idbAvatar.includes('googleusercontent') && !idbAvatar.startsWith('data:image/svg')) {
+                const mAvatar = document.getElementById('owner-header-avatar');
+                const dAvatar = document.getElementById('owner-desktop-avatar');
+                if (mAvatar) mAvatar.src = idbAvatar;
+                if (dAvatar) dAvatar.src = idbAvatar;
+            }
+        })();
         const savedName = localStorage.getItem('ownerProfileName');
         if (savedName) {
             const dName = document.getElementById('owner-desktop-name');

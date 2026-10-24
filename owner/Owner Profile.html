@@ -493,6 +493,77 @@
         } catch (_) {}
     }
 
+    function dataURLtoBlob(dataurl) {
+        if (!dataurl || typeof dataurl !== 'string') return null;
+        try {
+            const arr = dataurl.split(',');
+            const mimeMatch = arr[0].match(/:(.*?);/);
+            const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], { type: mime });
+        } catch (_) {
+            return null;
+        }
+    }
+
+    async function uploadToShopMediaStorage(fileOrDataUrl, prefix = 'avatar') {
+        try {
+            if (!fileOrDataUrl) return null;
+            if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('http')) {
+                return fileOrDataUrl;
+            }
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (!client || !client.storage) return null;
+
+            let blob = null;
+            let ext = 'jpg';
+            let mimeType = 'image/jpeg';
+
+            if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('data:')) {
+                blob = dataURLtoBlob(fileOrDataUrl);
+                if (blob && blob.type) {
+                    mimeType = blob.type;
+                    ext = mimeType.split('/')[1] || 'jpg';
+                    if (ext === 'jpeg') ext = 'jpg';
+                }
+            } else if (fileOrDataUrl instanceof Blob || fileOrDataUrl instanceof File) {
+                blob = fileOrDataUrl;
+                mimeType = blob.type || 'image/jpeg';
+                ext = mimeType.split('/')[1] || 'jpg';
+                if (ext === 'jpeg') ext = 'jpg';
+            }
+            if (!blob) return null;
+
+            const timestamp = Date.now();
+            const rand = Math.random().toString(36).substring(2, 8);
+            const fileName = `${prefix}_${timestamp}_${rand}.${ext}`;
+
+            const { data, error } = await client.storage
+                .from('shop-media')
+                .upload(fileName, blob, {
+                    cacheControl: '3600',
+                    upsert: true,
+                    contentType: mimeType
+                });
+
+            if (error) {
+                console.warn(`Supabase Storage upload warning for [${prefix}]:`, error.message || error);
+                return null;
+            }
+
+            const { data: pubData } = client.storage.from('shop-media').getPublicUrl(fileName);
+            return pubData?.publicUrl || null;
+        } catch (err) {
+            console.warn('uploadToShopMediaStorage exception:', err);
+            return null;
+        }
+    }
+
     function extractShopMetadata(description) {
         if (!description || typeof description !== 'string') return { cleanDesc: description || '', meta: null };
         const match = description.match(new RegExp('\\x3C!--BCW_META:([\\s\\S]*?)--\\x3E'));
@@ -506,7 +577,7 @@
         return { cleanDesc: description, meta: null };
     }
 
-    const DEFAULT_OWNER_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='ograd' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%23064e3b'/><stop offset='100%' stop-color='%2310b981'/></linearGradient></defs><circle cx='50' cy='50' r='50' fill='url(%23ograd)'/><path d='M26 40l48 0l-5 14l-38 0zM28 58h44v24H28zM42 68h16v14H42z' fill='%23ffffff'/><circle cx='50' cy='30' r='7' fill='%23ffffff'/></svg>";
+    const DEFAULT_OWNER_AVATAR = "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='ograd' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23064e3b'/%3E%3Cstop offset='100%25' stop-color='%2310b981'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='50' fill='url(%23ograd)'/%3E%3Cpath d='M26 40l48 0l-5 14l-38 0zM28 58h44v24H28zM42 68h16v14H42z' fill='%23ffffff'/%3E%3Ccircle cx='50' cy='30' r='7' fill='%23ffffff'/%3E%3C/svg%3E";
 
     document.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('editOwnerProfileBtn');
@@ -517,26 +588,16 @@
         const resetBtn = document.getElementById('resetOwnerAvatarBtn');
 
         function updateResetBtn() {
-            const saved = localStorage.getItem('ownerProfileAvatar');
+            const currentUid = localStorage.getItem('lastLoggedInUserId');
+            const saved = (currentUid ? localStorage.getItem('ownerProfileAvatar_' + currentUid) : null) || localStorage.getItem('ownerProfileAvatar');
             if (resetBtn) {
-                if (saved && saved !== DEFAULT_OWNER_AVATAR && !saved.includes('googleusercontent')) {
+                if (saved && saved !== DEFAULT_OWNER_AVATAR && !saved.includes('googleusercontent') && !saved.startsWith('data:image/svg')) {
                     resetBtn.classList.remove('hidden');
                 } else {
                     resetBtn.classList.add('hidden');
                 }
             }
         }
-
-        window.resetOwnerDefaultAvatar = function() {
-            localStorage.removeItem('ownerProfileAvatar');
-            saveIDBMedia('ownerProfileAvatar', null);
-            saveIDBMedia('ownerShopLogo', null);
-            if (img) img.src = DEFAULT_OWNER_AVATAR;
-            if (headerImg) headerImg.src = DEFAULT_OWNER_AVATAR;
-            if (desktopAvatar) desktopAvatar.src = DEFAULT_OWNER_AVATAR;
-            if (input) input.value = '';
-            updateResetBtn();
-        };
 
         // Helper to extract cached user and metadata directly from localStorage
         function getCachedOwnerData() {
@@ -564,8 +625,8 @@
         const cachedMeta = cachedOwnerUser?.user_metadata || {};
         const currentUid = cachedOwnerUser?.id || localStorage.getItem('lastLoggedInUserId');
 
-        // Immediately populate avatar strictly for THIS user
-        const savedAvatar = (currentUid ? localStorage.getItem('ownerProfileAvatar_' + currentUid) : null) || cachedMeta.avatar_url;
+        // Immediately populate avatar strictly for THIS user, with safe fallback to un-scoped ownerProfileAvatar
+        const savedAvatar = (currentUid ? localStorage.getItem('ownerProfileAvatar_' + currentUid) : null) || localStorage.getItem('ownerProfileAvatar') || localStorage.getItem('ownerShopLogo') || cachedMeta.avatar_url;
         if (savedAvatar && !savedAvatar.includes('googleusercontent')) {
             if (img) img.src = savedAvatar;
             if (headerImg) headerImg.src = savedAvatar;
@@ -577,10 +638,9 @@
         }
         updateResetBtn();
 
-        // Check IndexedDB immediately for persisted avatar for THIS user ID
+        // Check IndexedDB immediately for persisted avatar for THIS user ID (with fallback)
         (async () => {
-            if (!currentUid) return;
-            const idbAvatar = await getIDBMedia('ownerProfileAvatar_' + currentUid);
+            const idbAvatar = (currentUid ? await getIDBMedia('ownerProfileAvatar_' + currentUid) : null) || await getIDBMedia('ownerProfileAvatar') || await getIDBMedia('ownerShopLogo');
             if (idbAvatar && idbAvatar !== DEFAULT_OWNER_AVATAR && !idbAvatar.includes('googleusercontent')) {
                 if (img) img.src = idbAvatar;
                 if (headerImg) headerImg.src = idbAvatar;
@@ -673,17 +733,25 @@
                                 return;
                             }
 
+                            const userExplicitSet = (effectiveUserId ? localStorage.getItem('ownerAvatarUserSet_' + effectiveUserId) : null) === 'true' || localStorage.getItem('ownerAvatarUserSet') === 'true';
+                            const curAv = (effectiveUserId ? localStorage.getItem('ownerProfileAvatar_' + effectiveUserId) : null) || localStorage.getItem('ownerProfileAvatar') || localStorage.getItem('ownerShopLogo');
+
                             if (profile.avatar_url && !profile.avatar_url.includes('googleusercontent')) {
-                                if (img) img.src = profile.avatar_url;
-                                if (headerImg) headerImg.src = profile.avatar_url;
-                                if (desktopAvatar) desktopAvatar.src = profile.avatar_url;
-                                localStorage.setItem('ownerProfileAvatar_' + effectiveUserId, profile.avatar_url);
-                                saveIDBMedia('ownerProfileAvatar_' + effectiveUserId, profile.avatar_url);
-                                updateResetBtn();
+                                if (!userExplicitSet || !curAv || curAv === DEFAULT_OWNER_AVATAR || curAv.startsWith('data:image/svg') || curAv === profile.avatar_url) {
+                                    if (img) img.src = profile.avatar_url;
+                                    if (headerImg) headerImg.src = profile.avatar_url;
+                                    if (desktopAvatar) desktopAvatar.src = profile.avatar_url;
+                                    if (effectiveUserId) {
+                                        localStorage.setItem('ownerProfileAvatar_' + effectiveUserId, profile.avatar_url);
+                                        saveIDBMedia('ownerProfileAvatar_' + effectiveUserId, profile.avatar_url);
+                                    }
+                                    localStorage.setItem('ownerProfileAvatar', profile.avatar_url);
+                                    updateResetBtn();
+                                }
                             } else {
-                                // If profile has no avatar, check user-specific local avatar or show default
-                                const userSpecificAvatar = (effectiveUserId ? localStorage.getItem('ownerProfileAvatar_' + effectiveUserId) : null) || (effectiveUserId ? await getIDBMedia('ownerProfileAvatar_' + effectiveUserId) : null);
-                                if (userSpecificAvatar && !userSpecificAvatar.includes('googleusercontent')) {
+                                // If profile has no avatar in cloud, check user-specific local avatar or show default
+                                const userSpecificAvatar = curAv || (effectiveUserId ? await getIDBMedia('ownerProfileAvatar_' + effectiveUserId) : null) || await getIDBMedia('ownerProfileAvatar');
+                                if (userSpecificAvatar && !userSpecificAvatar.includes('googleusercontent') && !userSpecificAvatar.startsWith('data:image/svg')) {
                                     if (img) img.src = userSpecificAvatar;
                                     if (headerImg) headerImg.src = userSpecificAvatar;
                                     if (desktopAvatar) desktopAvatar.src = userSpecificAvatar;
@@ -751,8 +819,9 @@
                     const { cleanDesc, meta: cloudMeta } = extractShopMetadata(shop?.description);
                     const logoUrl = shop?.logo_url || cloudMeta?.logo;
                     if (logoUrl && !logoUrl.includes('googleusercontent')) {
-                        const curAv = (effectiveUserId ? localStorage.getItem('ownerProfileAvatar_' + effectiveUserId) : null);
-                        if (!curAv || curAv === DEFAULT_OWNER_AVATAR || curAv.includes('googleusercontent')) {
+                        const userExplicitSet = (effectiveUserId ? localStorage.getItem('ownerAvatarUserSet_' + effectiveUserId) : null) === 'true' || localStorage.getItem('ownerAvatarUserSet') === 'true';
+                        const curAv = (effectiveUserId ? localStorage.getItem('ownerProfileAvatar_' + effectiveUserId) : null) || localStorage.getItem('ownerProfileAvatar') || localStorage.getItem('ownerShopLogo');
+                        if (!userExplicitSet && (!curAv || curAv === DEFAULT_OWNER_AVATAR || curAv.includes('googleusercontent') || curAv.startsWith('data:image/svg'))) {
                             if (img) img.src = logoUrl;
                             if (headerImg) headerImg.src = logoUrl;
                             if (desktopAvatar) desktopAvatar.src = logoUrl;
@@ -760,6 +829,7 @@
                                 saveIDBMedia('ownerProfileAvatar_' + effectiveUserId, logoUrl);
                                 localStorage.setItem('ownerProfileAvatar_' + effectiveUserId, logoUrl);
                             }
+                            localStorage.setItem('ownerProfileAvatar', logoUrl);
                             updateResetBtn();
                         }
                     }
@@ -866,8 +936,12 @@
                                 localStorage.setItem('ownerAvatarUserSet_' + activeId, 'true');
                                 saveIDBMedia('ownerProfileAvatar_' + activeId, compressed);
                             }
+                            localStorage.setItem('ownerProfileAvatar', compressed);
+                            localStorage.setItem('ownerShopLogo', compressed);
                             localStorage.setItem('ownerAvatarUserSet', 'true');
                             localStorage.setItem('ownerAvatarUpdatedAt', String(Date.now()));
+                            saveIDBMedia('ownerProfileAvatar', compressed);
+                            saveIDBMedia('ownerShopLogo', compressed);
                             updateResetBtn();
 
                             // Show visual feedback toast
@@ -881,16 +955,45 @@
                             }, 2500);
 
                             try {
+                                let cloudUrl = null;
+                                if (client?.storage) {
+                                    cloudUrl = await uploadToShopMediaStorage(compressed, 'avatar');
+                                }
+                                const finalUrl = cloudUrl || compressed;
+
+                                if (cloudUrl) {
+                                    img.src = cloudUrl;
+                                    if (headerImg) headerImg.src = cloudUrl;
+                                    if (desktopAvatar) desktopAvatar.src = cloudUrl;
+                                    if (activeId) {
+                                        localStorage.setItem('ownerProfileAvatar_' + activeId, cloudUrl);
+                                        saveIDBMedia('ownerProfileAvatar_' + activeId, cloudUrl);
+                                    }
+                                    localStorage.setItem('ownerProfileAvatar', cloudUrl);
+                                    localStorage.setItem('ownerShopLogo', cloudUrl);
+                                    saveIDBMedia('ownerProfileAvatar', cloudUrl);
+                                    saveIDBMedia('ownerShopLogo', cloudUrl);
+                                }
+
                                 if (activeId) {
                                     if (client?.from) {
                                         try {
-                                            await client.from('profiles').update({ avatar_url: compressed }).eq('id', activeId);
+                                            await client.from('profiles').update({ avatar_url: finalUrl }).eq('id', activeId);
                                         } catch (_) {}
                                     }
                                     if (window.safeSupabaseRest) {
                                         await safeSupabaseRest(`profiles?id=eq.${activeId}`, {
                                             method: 'PATCH',
-                                            body: { avatar_url: compressed }
+                                            body: { avatar_url: finalUrl }
+                                        }).catch(() => {});
+                                    }
+                                    if (client?.auth && typeof client.auth.updateUser === 'function') {
+                                        client.auth.updateUser({ data: { avatar_url: finalUrl } }).then(({ data: authData }) => {
+                                            if (authData?.user) {
+                                                try {
+                                                    localStorage.setItem('currentUser', JSON.stringify(authData.user));
+                                                } catch (_) {}
+                                            }
                                         }).catch(() => {});
                                     }
                                 }
@@ -901,11 +1004,11 @@
                                     const { data: curShop } = await safeSupabaseRest(`shops?id=eq.${sId}&limit=1`);
                                     if (curShop && curShop[0] && (!curShop[0].owner_id || curShop[0].owner_id === activeId)) {
                                         const { cleanDesc, meta: curMeta } = extractShopMetadata(curShop[0].description);
-                                        const newMeta = { ...(curMeta || {}), logo: compressed };
+                                        const newMeta = { ...(curMeta || {}), logo: finalUrl };
                                         const newDesc = (cleanDesc ? cleanDesc + '\n\n' : '') + `\x3C!--BCW_META:${JSON.stringify(newMeta)}--\x3E`;
                                         await safeSupabaseRest(`shops?id=eq.${sId}`, {
                                             method: 'PATCH',
-                                            body: { description: newDesc, logo_url: compressed }
+                                            body: { description: newDesc, logo_url: finalUrl }
                                         }).catch(() => {});
                                     }
                                 }

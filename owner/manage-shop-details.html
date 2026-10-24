@@ -1730,6 +1730,8 @@
 
                     const userId = currentUserId || localStorage.getItem('lastLoggedInUserId');
                     if (userId) {
+                        safeLocalStorageSet('ownerProfileAvatar_' + userId, compressed);
+                        safeLocalStorageSet('ownerAvatarUserSet_' + userId, 'true');
                         saveMediaToIDB('ownerProfileAvatar_' + userId, compressed).catch(() => {});
                         const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
                         if (client?.from) {
@@ -1744,6 +1746,7 @@
                             }).catch(() => {});
                         }
                     }
+                    safeLocalStorageSet('ownerAvatarUserSet', 'true');
 
                     // Visual feedback toast
                     const logoToast = document.createElement('div');
@@ -1874,25 +1877,6 @@
                 console.warn('LocalStorage text fields notice:', storageErr);
             }
 
-            // Save media to BOTH safeLocalStorageSet and saveMediaToIDB (immune to quota)
-            if (newLogoCompressed) {
-                safeLocalStorageSet('ownerProfileAvatar', newLogoCompressed);
-                safeLocalStorageSet('ownerShopLogo', newLogoCompressed);
-                await saveMediaToIDB('ownerProfileAvatar', newLogoCompressed);
-                await saveMediaToIDB('ownerShopLogo', newLogoCompressed);
-                if (currentShopId) {
-                    saveMediaToIDB('ownerShopLogo_' + currentShopId, newLogoCompressed).catch(() => {});
-                }
-            }
-            if (mainCoverPhoto) {
-                safeLocalStorageSet('ownerCoverImage', mainCoverPhoto);
-                await saveMediaToIDB('ownerCoverImage', mainCoverPhoto);
-            }
-            if (shopPhotos && shopPhotos.length > 0) {
-                safeLocalStorageSet('ownerShopGallery', JSON.stringify(shopPhotos));
-                await saveMediaToIDB('ownerShopGallery', shopPhotos);
-            }
-
             // 2. RESOLVE USER & SHOP ID ROBUSTLY
             const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
             let userId = currentUserId || localStorage.getItem('lastLoggedInUserId');
@@ -1917,6 +1901,31 @@
                         }
                     }
                 } catch (_) {}
+            }
+
+            // Save media to BOTH safeLocalStorageSet and saveMediaToIDB (immune to quota)
+            if (newLogoCompressed) {
+                safeLocalStorageSet('ownerProfileAvatar', newLogoCompressed);
+                safeLocalStorageSet('ownerShopLogo', newLogoCompressed);
+                safeLocalStorageSet('ownerAvatarUserSet', 'true');
+                await saveMediaToIDB('ownerProfileAvatar', newLogoCompressed);
+                await saveMediaToIDB('ownerShopLogo', newLogoCompressed);
+                if (userId) {
+                    safeLocalStorageSet('ownerProfileAvatar_' + userId, newLogoCompressed);
+                    safeLocalStorageSet('ownerAvatarUserSet_' + userId, 'true');
+                    saveMediaToIDB('ownerProfileAvatar_' + userId, newLogoCompressed).catch(() => {});
+                }
+                if (currentShopId) {
+                    saveMediaToIDB('ownerShopLogo_' + currentShopId, newLogoCompressed).catch(() => {});
+                }
+            }
+            if (mainCoverPhoto) {
+                safeLocalStorageSet('ownerCoverImage', mainCoverPhoto);
+                await saveMediaToIDB('ownerCoverImage', mainCoverPhoto);
+            }
+            if (shopPhotos && shopPhotos.length > 0) {
+                safeLocalStorageSet('ownerShopGallery', JSON.stringify(shopPhotos));
+                await saveMediaToIDB('ownerShopGallery', shopPhotos);
             }
 
             const urlParams = new URLSearchParams(window.location.search);
@@ -2156,17 +2165,25 @@
 
             // Sync latest map_link & shop info to Supabase Auth User Metadata (so mobile session is never outdated)
             if (client?.auth && typeof client.auth.updateUser === 'function') {
-                client.auth.updateUser({
-                    data: {
-                        shop_name: name,
-                        phone_number: phone,
-                        map_link: mapLink,
-                        full_address: fullAddr,
-                        street: street,
-                        city: cty,
-                        zip: zip,
-                        latitude: lat,
-                        longitude: lng
+                const updatePayload = {
+                    shop_name: name,
+                    phone_number: phone,
+                    map_link: mapLink,
+                    full_address: fullAddr,
+                    street: street,
+                    city: cty,
+                    zip: zip,
+                    latitude: lat,
+                    longitude: lng
+                };
+                if (newLogoCompressed) {
+                    updatePayload.avatar_url = newLogoCompressed;
+                }
+                client.auth.updateUser({ data: updatePayload }).then(({ data: authData }) => {
+                    if (authData?.user) {
+                        try {
+                            localStorage.setItem('currentUser', JSON.stringify(authData.user));
+                        } catch (_) {}
                     }
                 }).catch(authErr => console.warn('Auth user_metadata update notice:', authErr));
             }
