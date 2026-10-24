@@ -42,8 +42,13 @@ export default async function handler(req, res) {
             }
         }
 
-        if (!endpoint) {
-            return res.status(400).json({ error: 'Missing endpoint parameter' });
+        if (!endpoint || typeof endpoint !== 'string') {
+            return res.status(200).json([]);
+        }
+
+        // Return empty array for uninitialized query parameters to prevent Postgres 400 Bad Request
+        if (endpoint.includes('eq.undefined') || endpoint.includes('eq.null') || endpoint.includes('in.()')) {
+            return res.status(200).json([]);
         }
 
         const cleanEndpoint = endpoint.replace(/^\/+/, '');

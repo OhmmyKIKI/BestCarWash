@@ -802,9 +802,13 @@
         renderOwnerHistory();
     };
 
+    function isValidUuid(id) {
+        return typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id.trim());
+    }
+
     // อัปเดตกระดิ่งแจ้งเตือน
     async function syncNotificationBadge(userId) {
-        if (!userId) return;
+        if (!userId || !isValidUuid(userId)) return;
         try {
             const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
             if (fetcher) {
@@ -849,7 +853,7 @@
             }
 
             // Sync User Profile & Avatar
-            if (effectiveUserId && fetcher) {
+            if (effectiveUserId && isValidUuid(effectiveUserId) && fetcher) {
                 fetcher(`profiles?id=eq.${effectiveUserId}&select=avatar_url,full_name,role&limit=1`).then(profs => {
                     const profile = Array.isArray(profs) && profs.length > 0 ? profs[0] : null;
                     if (profile) {
@@ -877,7 +881,7 @@
             }
 
             // หา Shop ID ที่ถูกต้องของร้าน
-            if ((!savedShopId || savedShopId.length < 20) && effectiveUserId && fetcher) {
+            if ((!savedShopId || !isValidUuid(savedShopId)) && effectiveUserId && isValidUuid(effectiveUserId) && fetcher) {
                 const s = await fetcher(`shops?owner_id=eq.${effectiveUserId}&select=id,name&limit=1`).catch(() => []);
                 if (Array.isArray(s) && s.length > 0) {
                     savedShopId = s[0].id;
@@ -886,7 +890,7 @@
                     if (cachedShopName) localStorage.setItem('ownerShopName', cachedShopName);
                 }
             }
-            if ((!savedShopId || savedShopId.length < 20) && cachedShopName && fetcher) {
+            if ((!savedShopId || !isValidUuid(savedShopId)) && cachedShopName && fetcher) {
                 const s = await fetcher(`shops?name=eq.${encodeURIComponent(cachedShopName)}&select=id,name&limit=1`).catch(() => []);
                 if (Array.isArray(s) && s.length > 0) {
                     savedShopId = s[0].id;
@@ -904,7 +908,7 @@
 
             // 1. ดึงข้อมูลการจองทั้งหมดของร้าน
             let dbBookings = [];
-            if (savedShopId && fetcher) {
+            if (savedShopId && isValidUuid(savedShopId) && fetcher) {
                 dbBookings = await fetcher(`bookings?shop_id=eq.${savedShopId}&order=created_at.desc&select=*`).catch(() => []);
             }
             if ((!Array.isArray(dbBookings) || dbBookings.length === 0) && fetcher) {
@@ -913,7 +917,7 @@
             if ((!Array.isArray(dbBookings) || dbBookings.length === 0) && client?.from) {
                 try {
                     let q = client.from('bookings').select('*').order('created_at', { ascending: false });
-                    if (savedShopId) q = q.eq('shop_id', savedShopId);
+                    if (savedShopId && isValidUuid(savedShopId)) q = q.eq('shop_id', savedShopId);
                     const { data } = await q;
                     if (Array.isArray(data)) dbBookings = data;
                 } catch (_) {}
@@ -921,8 +925,8 @@
 
             if (!Array.isArray(dbBookings)) dbBookings = [];
 
-            // 2. ดึง Customer Profiles ใน Batch
-            const customerIds = [...new Set(dbBookings.map(b => b.customer_id).filter(Boolean))];
+            // 2. ดึง Customer Profiles ใน Batch (เฉพาะ Valid UUID เท่านั้น)
+            const customerIds = [...new Set(dbBookings.map(b => b.customer_id).filter(id => isValidUuid(id)))];
             let profileMap = {};
             if (customerIds.length > 0 && fetcher) {
                 const profiles = await fetcher(`profiles?id=in.(${customerIds.join(',')})&select=id,full_name,phone_number,avatar_url`).catch(() => []);
@@ -931,8 +935,8 @@
                 }
             }
 
-            // 3. ดึง Booking Services ใน Batch
-            const bookingIds = dbBookings.map(b => b.id);
+            // 3. ดึง Booking Services ใน Batch (เฉพาะ Valid UUID เท่านั้น)
+            const bookingIds = [...new Set(dbBookings.map(b => b.id).filter(id => isValidUuid(id)))];
             let serviceMap = {};
             if (bookingIds.length > 0 && fetcher) {
                 const bServices = await fetcher(`booking_services?booking_id=in.(${bookingIds.join(',')})&select=booking_id,services(name)`).catch(() => []);
@@ -1007,7 +1011,8 @@
         if (!client || !client.channel || _realtimeChannel) return;
 
         try {
-            _realtimeChannel = client.channel('owner_history_sync_' + (shopId || 'all'))
+            const channelName = (shopId && isValidUuid(shopId)) ? ('owner_history_sync_' + shopId) : 'owner_history_sync_all';
+            _realtimeChannel = client.channel(channelName)
                 .on('postgres_changes', {
                     event: '*',
                     schema: 'public',

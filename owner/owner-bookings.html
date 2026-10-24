@@ -898,7 +898,7 @@
             if (!Array.isArray(dbBookings)) dbBookings = [];
 
             // 2. Fetch customer profiles in batch
-            const customerIds = [...new Set(dbBookings.map(b => b.customer_id).filter(Boolean))];
+            const customerIds = [...new Set(dbBookings.map(b => b.customer_id).filter(id => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id.trim())))];
             let profileMap = {};
             if (customerIds.length > 0) {
                 const profiles = await fetcher(
@@ -910,7 +910,7 @@
             }
 
             // 3. Fetch booking_services in batch for service names
-            const bookingIds = dbBookings.map(b => b.id);
+            const bookingIds = [...new Set(dbBookings.map(b => b.id).filter(id => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id.trim())))];
             let serviceMap = {};
             if (bookingIds.length > 0) {
                 const bServices = await fetcher(

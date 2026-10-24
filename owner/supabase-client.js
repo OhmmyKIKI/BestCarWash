@@ -141,7 +141,8 @@ function getSupabaseClient() {
     if (window.supabaseClient) return window.supabaseClient;
     if (window.supabase && typeof window.supabase.createClient === 'function') {
         const safeStorage = getSafeAuthStorage();
-        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        // Connect directly to Supabase Cloud URL so WebSockets (Realtime) work natively without Vercel proxy issues
+        window.supabaseClient = window.supabase.createClient(SUPABASE_DIRECT_URL, SUPABASE_ANON_KEY, {
             auth: {
                 storage: safeStorage,
                 persistSession: true,
@@ -425,7 +426,13 @@ function formatRestResponse(parsed, error = null) {
 // Resilient REST fetcher to eliminate net::ERR_CONNECTION_RESET and handle RLS gracefully
 async function safeSupabaseRest(endpoint, options = {}) {
     const method = (options.method || 'GET').toUpperCase();
+    if (!endpoint || typeof endpoint !== 'string') return formatRestResponse([]);
     const cleanEndpoint = endpoint.replace(/^\/+/, '');
+
+    // Guard against uninitialized query parameters that trigger Postgres syntax error 400
+    if (cleanEndpoint.includes('eq.undefined') || cleanEndpoint.includes('eq.null') || cleanEndpoint.includes('in.()')) {
+        return formatRestResponse([]);
+    }
 
     const token = await getValidAuthToken();
     const isTokenLarge = token && token.length > 2500;
@@ -593,4 +600,3 @@ if (typeof window !== 'undefined') {
     }
 }
 window.syncNotificationBellBadges = syncNotificationBellBadges;
-

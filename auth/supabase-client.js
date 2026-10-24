@@ -141,7 +141,8 @@ function getSupabaseClient() {
     if (window.supabaseClient) return window.supabaseClient;
     if (window.supabase && typeof window.supabase.createClient === 'function') {
         const safeStorage = getSafeAuthStorage();
-        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        // Connect directly to Supabase Cloud URL so WebSockets (Realtime) work natively without Vercel proxy issues
+        window.supabaseClient = window.supabase.createClient(SUPABASE_DIRECT_URL, SUPABASE_ANON_KEY, {
             auth: {
                 storage: safeStorage,
                 persistSession: true,
@@ -425,7 +426,13 @@ function formatRestResponse(parsed, error = null) {
 // Resilient REST fetcher to eliminate net::ERR_CONNECTION_RESET and handle RLS gracefully
 async function safeSupabaseRest(endpoint, options = {}) {
     const method = (options.method || 'GET').toUpperCase();
+    if (!endpoint || typeof endpoint !== 'string') return formatRestResponse([]);
     const cleanEndpoint = endpoint.replace(/^\/+/, '');
+
+    // Guard against uninitialized query parameters that trigger Postgres syntax error 400
+    if (cleanEndpoint.includes('eq.undefined') || cleanEndpoint.includes('eq.null') || cleanEndpoint.includes('in.()')) {
+        return formatRestResponse([]);
+    }
 
     const token = await getValidAuthToken();
     const isTokenLarge = token && token.length > 2500;
@@ -557,3 +564,39 @@ async function safeSupabaseRest(endpoint, options = {}) {
 
 window.safeSupabaseRest = safeSupabaseRest;
 window.fetchSupabaseRest = safeSupabaseRest;
+
+// Automatically update bell badge across all pages
+function syncNotificationBellBadges() {
+    try {
+        if (typeof window === 'undefined' || !window.localStorage) return;
+        const uid = localStorage.getItem('lastLoggedInUserId');
+        const isOwner = (typeof window !== 'undefined' && window.location.pathname.includes('/owner/')) || !!localStorage.getItem('ownerShopName');
+        const cacheKey = uid 
+            ? (isOwner ? 'cachedOwnerNotifications_' + uid : 'cachedCustomerNotifications_' + uid)
+            : null;
+        
+        let notifs = [];
+        if (cacheKey) {
+            const cached = localStorage.getItem(cacheKey);
+            notifs = cached ? JSON.parse(cached) : [];
+        }
+        const hasUnread = Array.isArray(notifs) && notifs.some(n => !n.is_read);
+
+        const bellLinks = document.querySelectorAll('a[href*="notifications-list.html"]');
+        bellLinks.forEach(a => {
+            const dot = a.querySelector('.bg-error.rounded-full');
+            if (dot) {
+                dot.style.display = hasUnread ? 'block' : 'none';
+            }
+        });
+    } catch (_) {}
+}
+
+if (typeof window !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', syncNotificationBellBadges);
+    } else {
+        setTimeout(syncNotificationBellBadges, 100);
+    }
+}
+window.syncNotificationBellBadges = syncNotificationBellBadges;
