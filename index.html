@@ -53,39 +53,39 @@
     <div class="max-w-md w-full text-center space-y-8 relative z-10 animate-fade-in">
         <!-- Logo & Brand -->
         <div class="flex flex-col items-center gap-4">
-            <div class="w-20 h-20 rounded-3xl bg-gradient-to-tr from-primary to-blue-400 flex items-center justify-center shadow-xl shadow-primary/30 border border-white/10 ring-4 ring-primary/20 animate-pulse">
-                <span class="material-symbols-outlined text-[42px] text-white">local_car_wash</span>
+            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-gradient-to-tr from-primary to-blue-400 flex items-center justify-center shadow-xl shadow-primary/30 border border-white/10 ring-4 ring-primary/20 animate-pulse">
+                <span class="material-symbols-outlined text-[36px] sm:text-[42px] text-white">local_car_wash</span>
             </div>
             <div>
-                <h1 class="text-3xl font-extrabold tracking-tight text-white flex items-center justify-center gap-2">
+                <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center justify-center gap-2 flex-wrap">
                     BestCarWash
                     <span class="text-xs px-2.5 py-0.5 rounded-full bg-primary/20 text-blue-300 font-semibold border border-primary/30">Official</span>
                 </h1>
-                <p class="text-sm text-slate-400 mt-1">แพลตฟอร์มค้นหาและจองคิวคาร์แคร์อันดับ 1</p>
+                <p class="text-xs sm:text-sm text-slate-400 mt-1 break-words">แพลตฟอร์มค้นหาและจองคิวคาร์แคร์อันดับ 1</p>
             </div>
         </div>
 
         <!-- Redirect Status -->
-        <div id="loading-state" class="flex flex-col items-center gap-3 py-4">
-            <div class="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin"></div>
-            <p id="status-text" class="text-xs text-slate-400 font-medium">กำลังเตรียมพร้อมระบบและเข้าสู่หน้าหลัก...</p>
+        <div id="loading-state" class="flex flex-col items-center gap-3 py-3 sm:py-4">
+            <div class="w-7 h-7 sm:w-8 sm:h-8 border-3 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p id="status-text" class="text-xs text-slate-400 font-medium break-words px-2">กำลังเตรียมพร้อมระบบและเข้าสู่หน้าหลัก...</p>
         </div>
 
         <!-- Navigation shortcuts for instant access -->
-        <div class="pt-4 space-y-3">
-            <a href="customer/discovery.html" class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold text-sm shadow-lg shadow-primary/25 transition-all transform active:scale-98 flex items-center justify-center gap-2">
-                <span class="material-symbols-outlined text-[20px]">explore</span>
-                ค้นหาร้านคาร์แคร์ใกล้คุณ (สำหรับลูกค้า)
+        <div class="pt-3 sm:pt-4 space-y-3">
+            <a href="customer/discovery.html" class="w-full py-3 sm:py-3.5 px-4 sm:px-6 rounded-2xl bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold text-xs sm:text-sm shadow-lg shadow-primary/25 transition-all transform active:scale-98 flex items-center justify-center gap-2 text-center break-words">
+                <span class="material-symbols-outlined text-[18px] sm:text-[20px] shrink-0">explore</span>
+                <span>ค้นหาร้านคาร์แคร์ใกล้คุณ (สำหรับลูกค้า)</span>
             </a>
             
-            <div class="grid grid-cols-2 gap-3">
-                <a href="owner/Owner%20Dashboard.html" class="py-3 px-4 rounded-xl bg-surface-card hover:bg-[#1c2c58] text-slate-200 border border-slate-700/60 font-semibold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-98">
-                    <span class="material-symbols-outlined text-[18px] text-emerald-400">storefront</span>
-                    แดชบอร์ดร้านค้า
+            <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
+                <a href="owner/Owner%20Dashboard.html" class="py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl bg-surface-card hover:bg-[#1c2c58] text-slate-200 border border-slate-700/60 font-semibold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-98 truncate">
+                    <span class="material-symbols-outlined text-[16px] sm:text-[18px] text-emerald-400 shrink-0">storefront</span>
+                    <span class="truncate">แดชบอร์ดร้านค้า</span>
                 </a>
-                <a href="auth/login.html" class="py-3 px-4 rounded-xl bg-surface-card hover:bg-[#1c2c58] text-slate-200 border border-slate-700/60 font-semibold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-98">
-                    <span class="material-symbols-outlined text-[18px] text-blue-400">login</span>
-                    เข้าสู่ระบบ
+                <a href="auth/login.html" class="py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl bg-surface-card hover:bg-[#1c2c58] text-slate-200 border border-slate-700/60 font-semibold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-98 truncate">
+                    <span class="material-symbols-outlined text-[16px] sm:text-[18px] text-blue-400 shrink-0">login</span>
+                    <span class="truncate">เข้าสู่ระบบ</span>
                 </a>
             </div>
         </div>

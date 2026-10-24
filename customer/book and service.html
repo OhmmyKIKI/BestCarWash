@@ -91,13 +91,13 @@
 
 <!-- Mobile Header (Focus Mode - Back button only) -->
 <header class="md:hidden fixed top-0 w-full z-50 px-4 h-14 bg-surface-container-low/95 backdrop-blur-xl border-b border-outline-variant/30 flex items-center shadow-md">
-    <a id="mobile-back-btn" href="shop-details.html" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-highest hover:bg-surface-variant transition-colors text-on-surface">
+    <a id="mobile-back-btn" href="shop-details.html" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-highest hover:bg-surface-variant transition-colors text-on-surface shrink-0">
         <span class="material-symbols-outlined">arrow_back</span>
     </a>
-    <h1 class="text-lg font-bold text-on-surface ml-3" id="mobile-page-title">จองคิวรับบริการ</h1>
+    <h1 class="text-base sm:text-lg font-bold text-on-surface ml-3 truncate min-w-0 flex-1" id="mobile-page-title">จองคิวรับบริการ</h1>
 </header>
 
-<main class="w-full max-w-7xl mx-auto pt-20 pb-32 md:pb-12 md:pt-8 px-4 md:px-6">
+<main class="w-full max-w-7xl mx-auto pt-20 pb-36 sm:pb-32 md:pb-12 md:pt-8 px-4 md:px-6">
     
     <div class="flex flex-col md:flex-row gap-8 items-start">
         
@@ -106,8 +106,8 @@
             
             <!-- Step 1: Select Car -->
             <section class="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-5 shadow-sm">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                    <h2 class="text-lg sm:text-xl font-bold text-on-surface flex items-center gap-2 break-words">
                         <span class="material-symbols-outlined text-primary">directions_car</span> 1. เลือกรถของคุณ
                     </h2>
                     <button type="button" onclick="openAddCarModal()" class="text-primary text-sm font-bold flex items-center gap-1 hover:underline">
@@ -122,8 +122,8 @@
 
             <!-- Step 2: Select Date -->
             <section class="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-5 shadow-sm">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                    <h2 class="text-lg sm:text-xl font-bold text-on-surface flex items-center gap-2 break-words">
                         <span class="material-symbols-outlined text-primary">calendar_month</span> 2. เลือกวันที่
                     </h2>
                     <div class="flex gap-2">
@@ -150,7 +150,7 @@
             <!-- Step 3: Select Time -->
             <section class="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-5 shadow-sm">
                 <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-                    <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
+                    <h2 class="text-lg sm:text-xl font-bold text-on-surface flex items-center gap-2 break-words">
                         <span class="material-symbols-outlined text-primary">schedule</span> 3. เลือกเวลา
                     </h2>
                     <div class="flex items-center gap-3 text-[11px] text-on-surface-variant bg-surface-container px-3 py-1.5 rounded-full border border-outline-variant/30">
@@ -169,7 +169,7 @@
 
             <!-- Step 4: Payment Method -->
             <section class="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-5 shadow-sm">
-                <h2 class="text-xl font-bold text-on-surface flex items-center gap-2 mb-4">
+                <h2 class="text-lg sm:text-xl font-bold text-on-surface flex items-center gap-2 mb-4 break-words">
                     <span class="material-symbols-outlined text-primary">payments</span> 4. วิธีการชำระเงิน
                 </h2>
                 
@@ -282,13 +282,13 @@
 </main>
 
 <!-- Mobile Sticky Bottom Bar -->
-<div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-container-low/95 backdrop-blur-xl border-t border-outline-variant/30 pb-[env(safe-area-inset-bottom,1rem)] pt-3 px-4 shadow-[0_-10px_40px_rgba(0,0,0,0.6)]">
+<div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-container-low/95 backdrop-blur-xl border-t border-outline-variant/30 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3 px-4 shadow-[0_-10px_35px_rgba(15,23,42,0.12)]">
     <div class="flex justify-between items-center mb-3 px-1">
-        <div class="flex flex-col">
-            <span class="text-[10px] text-on-surface-variant font-bold" id="mobile-summary-service-name">บริการ (มัดจำ)</span>
-            <div class="text-sm font-medium text-on-surface"><span class="summary-date-text">-</span> • <span class="summary-time-text text-primary font-bold">-</span></div>
+        <div class="flex flex-col min-w-0 pr-2">
+            <span class="text-[10px] text-on-surface-variant font-bold truncate" id="mobile-summary-service-name">บริการ (มัดจำ)</span>
+            <div class="text-sm font-medium text-on-surface truncate"><span class="summary-date-text">-</span> • <span class="summary-time-text text-primary font-bold">-</span></div>
         </div>
-        <div class="text-2xl font-black text-white">฿50</div>
+        <div class="text-2xl font-black text-primary shrink-0">฿50</div>
     </div>
     <button onclick="confirmBooking(this)" id="mobile-confirm-btn" class="w-full bg-primary-container hover:bg-primary-container/90 disabled:bg-surface-variant disabled:text-on-surface-variant disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-[0_4px_15px_rgba(37,99,235,0.4)]" disabled>
         <span class="btnText">ยืนยันการจองคิว</span>
