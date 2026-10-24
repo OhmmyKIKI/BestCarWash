@@ -81,7 +81,7 @@
         }
     </style>
 </head>
-<body class="bg-background text-on-background min-h-screen flex flex-col font-sans overflow-x-hidden relative pt-0 md:pt-20">
+<body class="bg-background text-on-background min-h-screen flex flex-col font-sans overflow-x-hidden relative pt-0 md:pt-20 pb-32 md:pb-16">
 
     <!-- Desktop Header (App Bar) -->
     <header class="hidden md:flex justify-between items-center px-6 lg:px-10 h-20 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 shadow-md z-50 fixed top-0 w-full">
@@ -136,7 +136,7 @@
     </div>
 
     <!-- Main Content -->
-    <main class="w-full max-w-3xl mx-auto px-4 pt-5 pb-28 md:pt-8">
+    <main class="w-full max-w-3xl mx-auto px-4 pt-5 pb-36 md:pb-20">
         
         <!-- Tabs -->
         <div class="flex border-b border-outline-variant/30 mb-6">
@@ -1831,6 +1831,49 @@
         }, 1200);
     }
 
+    // Format date-time into localized Thai string (e.g. 24 ต.ค. 2569 • 09:30 น.)
+    function formatBookingDateTime(val) {
+        if (!val || typeof val !== 'string') return val || 'วันนี้';
+        const trimmed = val.trim();
+        if (!trimmed) return 'วันนี้';
+        
+        // If already contains Thai characters, return as is
+        if (/[\u0E00-\u0E7F]/.test(trimmed)) return trimmed;
+
+        const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+        // Match YYYY-MM-DD or YYYY-MM-DD HH:mm(:ss) or YYYY-MM-DDTHH:mm(:ss)
+        const match = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2}):(\d{1,2})(?::\d{1,2})?)?/);
+        if (match) {
+            const year = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10) - 1;
+            const day = parseInt(match[3], 10);
+            const thaiYear = year > 2500 ? year : year + 543;
+            const monthName = thaiMonths[month] || '';
+            
+            if (match[4] !== undefined && match[5] !== undefined) {
+                const hh = match[4].padStart(2, '0');
+                const mm = match[5].padStart(2, '0');
+                return `${day} ${monthName} ${thaiYear} • ${hh}:${mm} น.`;
+            }
+            return `${day} ${monthName} ${thaiYear}`;
+        }
+
+        // Try standard Date parsing
+        const d = new Date(trimmed);
+        if (!isNaN(d.getTime())) {
+            const day = d.getDate();
+            const month = d.getMonth();
+            const year = d.getFullYear();
+            const thaiYear = year > 2500 ? year : year + 543;
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            return `${day} ${thaiMonths[month]} ${thaiYear} • ${hh}:${mm} น.`;
+        }
+
+        return trimmed;
+    }
+
     // Real User Isolation - No Fake Demo History
     const DEFAULT_CUSTOMER_HISTORY = [];
 
@@ -1965,51 +2008,63 @@
 
             if (isCompleted) {
                 return `
-                    <div id="hist-card-${cleanId}" class="glass-panel rounded-xl p-5 shadow-lg shadow-primary/5 flex flex-col gap-3 relative overflow-hidden group border border-outline-variant/40 hover:border-outline-variant transition-all">
-                        <div class="flex justify-between items-start">
-                            <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 bg-surface-container rounded-lg flex items-center justify-center border border-outline-variant">
-                                    <span class="material-symbols-outlined text-secondary">local_car_wash</span>
+                    <div id="hist-card-${cleanId}" class="glass-panel rounded-2xl p-4 sm:p-5 shadow-lg shadow-primary/5 flex flex-col gap-3 relative overflow-hidden group border border-outline-variant/40 hover:border-outline-variant transition-all">
+                        <div class="flex justify-between items-start gap-2.5">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-11 h-11 sm:w-12 sm:h-12 bg-surface-container rounded-xl flex items-center justify-center border border-outline-variant shrink-0">
+                                    <span class="material-symbols-outlined text-secondary text-[22px] sm:text-[24px]">local_car_wash</span>
                                 </div>
-                                <div>
-                                    <h3 class="text-lg font-bold text-on-surface">${b.shopName || 'Sparkle Wash'}</h3>
-                                    <p class="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5">
-                                        <span class="material-symbols-outlined text-outline" style="font-size: 14px;">calendar_today</span> 
-                                        ${b.completedAt || b.dateTime || 'วันนี้'}
+                                <div class="min-w-0">
+                                    <h3 class="text-base sm:text-lg font-bold text-on-surface truncate">${b.shopName || 'Sparkle Wash'}</h3>
+                                    <p class="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5 truncate">
+                                        <span class="material-symbols-outlined text-outline text-[14px] shrink-0">calendar_today</span> 
+                                        <span class="truncate">${formatBookingDateTime(b.completedAt || b.dateTime || 'วันนี้')}</span>
                                     </p>
                                 </div>
                             </div>
-                            <div class="px-2.5 py-1 bg-green-500/20 text-green-400 rounded-md text-xs font-bold border border-green-500/30 flex items-center gap-1">
-                                <span class="material-symbols-outlined" style="font-size: 13px; font-variation-settings: 'FILL' 1;">check_circle</span> เสร็จสิ้น
+                            <div class="px-2.5 py-1 bg-green-500/15 text-green-500 dark:text-green-400 rounded-lg text-xs font-bold border border-green-500/30 flex items-center gap-1 shrink-0">
+                                <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">check_circle</span> เสร็จสิ้น
                             </div>
                         </div>
 
-                        <div class="mt-2 text-sm text-on-surface">
-                            <p><span class="opacity-70">บริการ:</span> ${b.serviceName || 'ล้างสี ดูดฝุ่น'}</p>
-                            <p><span class="opacity-70">รถยนต์:</span> ${b.carName || `${b.carBrand || 'รถยนต์'} (${b.carPlate || ''})`}</p>
+                        <!-- Service & Vehicle Details -->
+                        <div class="mt-1 flex flex-col gap-1.5 text-xs sm:text-sm text-on-surface">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-outline text-[16px] shrink-0">local_car_wash</span>
+                                <span class="opacity-70 shrink-0">บริการ:</span>
+                                <span class="font-medium text-on-surface truncate">${b.serviceName || 'ล้างสี ดูดฝุ่น'}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-outline text-[16px] shrink-0">directions_car</span>
+                                <span class="opacity-70 shrink-0">รถยนต์:</span>
+                                <span class="font-medium text-on-surface truncate">${b.carName || `${b.carBrand || 'รถยนต์'} (${b.carPlate || ''})`}</span>
+                            </div>
                         </div>
 
-                        <div class="mt-2 flex items-center justify-between border-t border-outline-variant/30 pt-4">
-                            <div class="text-xs text-on-surface-variant flex items-center gap-1.5">
-                                <span>ค่ามัดจำ</span>
-                                <span class="text-base font-bold text-secondary font-mono ml-1">฿ ${(parseFloat(String(b.depositAmount || 50).replace(/[^\d.]/g,'')) || 50).toFixed(2)}</span>
-                                <span class="text-[10px] font-bold text-secondary bg-secondary/10 px-1.5 py-0.5 rounded border border-secondary/20">ชำระแล้ว</span>
+                        <!-- Responsive Card Footer -->
+                        <div class="mt-2.5 pt-3.5 border-t border-outline-variant/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="flex items-center justify-between sm:justify-start gap-2 text-xs text-on-surface-variant shrink-0">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="whitespace-nowrap">ค่ามัดจำ</span>
+                                    <span class="text-base font-bold text-secondary font-mono whitespace-nowrap">฿ ${(parseFloat(String(b.depositAmount || 50).replace(/[^\d.]/g,'')) || 50).toFixed(2)}</span>
+                                </div>
+                                <span class="text-[11px] font-bold text-secondary bg-secondary/10 px-2 py-0.5 rounded border border-secondary/20 whitespace-nowrap">ชำระแล้ว</span>
                             </div>
-                            <div class="flex flex-wrap justify-end gap-2">
+                            <div class="flex items-center justify-end gap-2 w-full sm:w-auto">
                                 ${b.userReview ? `
-                                    <button onclick="openReviewModal('${(b.shopName || 'ร้านคาร์แคร์').replace(/'/g, "\\'")}', '${(b.serviceName || 'ล้างสี ดูดฝุ่น').replace(/'/g, "\\'")}', '${b.shopId || b.rawShopId || ''}', '${b.rawBookingId || b.id || ''}', ${b.userReview.rating || 5}, '${(b.userReview.comment || '').replace(/'/g, "\\'").replace(/\n/g, ' ')}')" class="px-3 py-1.5 bg-yellow-400/10 border border-yellow-400/40 text-yellow-600 dark:text-yellow-400 text-xs font-bold rounded-lg hover:bg-yellow-400/20 transition-all flex items-center gap-1.5 active:scale-95 shadow-sm" title="คลิกเพื่อดูหรือแก้ไขรีวิว">
-                                        <span class="material-symbols-outlined text-[15px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span> 
+                                    <button onclick="openReviewModal('${(b.shopName || 'ร้านคาร์แคร์').replace(/'/g, "\\'")}', '${(b.serviceName || 'ล้างสี ดูดฝุ่น').replace(/'/g, "\\'")}', '${b.shopId || b.rawShopId || ''}', '${b.rawBookingId || b.id || ''}', ${b.userReview.rating || 5}, '${(b.userReview.comment || '').replace(/'/g, "\\'").replace(/\n/g, ' ')}')" class="flex-1 sm:flex-none justify-center px-3 py-2 bg-yellow-400/10 border border-yellow-400/40 text-yellow-600 dark:text-yellow-400 text-xs font-bold rounded-xl hover:bg-yellow-400/20 transition-all flex items-center gap-1.5 active:scale-95 shadow-sm whitespace-nowrap" title="คลิกเพื่อดูหรือแก้ไขรีวิว">
+                                        <span class="material-symbols-outlined text-[16px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span> 
                                         <span>รีวิวแล้ว (${b.userReview.rating}★)</span>
-                                        ${(Array.isArray(b.userReview.images) && b.userReview.images.length > 0) ? `<span class="text-[10px] text-primary font-bold bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 flex items-center gap-0.5"><span class="material-symbols-outlined text-[11px]">photo_camera</span> ${b.userReview.images.length} รูป</span>` : ''}
-                                        ${(b.userReview.reply || (function(){ try { return JSON.parse(localStorage.getItem('ownerReviewsReplies')||'{}')[b.userReview.id]?.reply; } catch(_){ return null; } })()) ? '<span class="text-[10px] text-emerald-500 font-bold bg-emerald-500/15 px-1.5 py-0.5 rounded border border-emerald-500/30 flex items-center gap-0.5"><span class="material-symbols-outlined text-[11px]">reply</span> ร้านตอบแล้ว</span>' : ''}
+                                        ${(Array.isArray(b.userReview.images) && b.userReview.images.length > 0) ? `<span class="text-[10px] text-primary font-bold bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 flex items-center gap-0.5"><span class="material-symbols-outlined text-[11px]">photo_camera</span> ${b.userReview.images.length}</span>` : ''}
+                                        ${(b.userReview.reply || (function(){ try { return JSON.parse(localStorage.getItem('ownerReviewsReplies')||'{}')[b.userReview.id]?.reply; } catch(_){ return null; } })()) ? '<span class="text-[10px] text-emerald-500 font-bold bg-emerald-500/15 px-1.5 py-0.5 rounded border border-emerald-500/30 flex items-center gap-0.5"><span class="material-symbols-outlined text-[11px]">reply</span> ร้านตอบ</span>' : ''}
                                     </button>
                                 ` : `
-                                    <button onclick="openReviewModal('${(b.shopName || 'Sparkle Wash').replace(/'/g, "\\'")}', '${(b.serviceName || 'ล้างสี ดูดฝุ่น').replace(/'/g, "\\'")}', '${b.shopId || b.rawShopId || ''}', '${b.rawBookingId || b.id || ''}')" class="px-3 py-1.5 bg-surface-container-highest border border-outline-variant text-on-surface text-xs font-medium rounded-lg hover:bg-surface-variant transition-colors flex items-center gap-1 active:scale-95">
-                                        <span class="material-symbols-outlined text-[14px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span> รีวิว
+                                    <button onclick="openReviewModal('${(b.shopName || 'Sparkle Wash').replace(/'/g, "\\'")}', '${(b.serviceName || 'ล้างสี ดูดฝุ่น').replace(/'/g, "\\'")}', '${b.shopId || b.rawShopId || ''}', '${b.rawBookingId || b.id || ''}')" class="flex-1 sm:flex-none justify-center px-3 py-2 bg-surface-container-highest border border-outline-variant text-on-surface text-xs font-medium rounded-xl hover:bg-surface-variant transition-colors flex items-center gap-1.5 active:scale-95 whitespace-nowrap">
+                                        <span class="material-symbols-outlined text-[15px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span> รีวิว
                                     </button>
                                 `}
-                                <button onclick="window.location.href = 'shop-details.html?shopId=' + encodeURIComponent(b.shopId || 'shop1')" class="px-3 py-1.5 bg-primary-container text-white text-xs font-bold rounded-lg hover:bg-primary transition-colors shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)] active:scale-95 duration-150 flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-[14px]">replay</span> จองซ้ำ
+                                <button onclick="window.location.href = 'shop-details.html?shopId=' + encodeURIComponent(b.shopId || 'shop1')" class="shrink-0 px-4 py-2 bg-primary-container text-white text-xs font-bold rounded-xl hover:bg-primary transition-colors shadow-sm active:scale-95 duration-150 flex items-center justify-center gap-1.5 whitespace-nowrap">
+                                    <span class="material-symbols-outlined text-[15px]">replay</span> จองซ้ำ
                                 </button>
                             </div>
                         </div>
@@ -2017,161 +2072,209 @@
                 `;
             } else if (isRefunded) {
                 return `
-                    <div id="hist-card-${cleanId}" class="glass-panel rounded-xl p-5 shadow-lg flex flex-col gap-3 relative overflow-hidden group border border-emerald-500/30 transition-all">
-                        <div class="flex justify-between items-start">
-                            <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 bg-surface-container rounded-lg flex items-center justify-center border border-outline-variant">
-                                    <span class="material-symbols-outlined text-outline">local_car_wash</span>
+                    <div id="hist-card-${cleanId}" class="glass-panel rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col gap-3 relative overflow-hidden group border border-emerald-500/30 transition-all">
+                        <div class="flex justify-between items-start gap-2.5">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-11 h-11 sm:w-12 sm:h-12 bg-surface-container rounded-xl flex items-center justify-center border border-outline-variant shrink-0">
+                                    <span class="material-symbols-outlined text-outline text-[22px] sm:text-[24px]">local_car_wash</span>
                                 </div>
-                                <div>
-                                    <h3 class="text-lg font-bold text-on-surface">${b.shopName || 'Sparkle Wash'}</h3>
-                                    <p class="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5">
-                                        <span class="material-symbols-outlined text-outline" style="font-size: 14px;">calendar_today</span> 
-                                        ${b.refundedAt || b.dateTime || 'วันนี้'}
+                                <div class="min-w-0">
+                                    <h3 class="text-base sm:text-lg font-bold text-on-surface truncate">${b.shopName || 'Sparkle Wash'}</h3>
+                                    <p class="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5 truncate">
+                                        <span class="material-symbols-outlined text-outline text-[14px] shrink-0">calendar_today</span> 
+                                        <span class="truncate">${formatBookingDateTime(b.refundedAt || b.dateTime || 'วันนี้')}</span>
                                     </p>
                                 </div>
                             </div>
-                            <div class="px-2.5 py-1 bg-emerald-500/15 text-emerald-400 rounded-lg text-xs font-bold border border-emerald-500/30 flex items-center gap-1">
+                            <div class="px-2.5 py-1 bg-emerald-500/15 text-emerald-400 rounded-lg text-xs font-bold border border-emerald-500/30 flex items-center gap-1 shrink-0">
                                 <span class="material-symbols-outlined text-[14px]">currency_exchange</span> ยกเลิก (คืนเงินแล้ว)
                             </div>
                         </div>
 
-                        <div class="mt-1 text-sm text-on-surface-variant flex flex-col gap-1">
-                            <p><span class="opacity-70">บริการ:</span> ${b.serviceName || 'ล้างรถ'}</p>
-                            <p><span class="opacity-70">ค่ามัดจำ:</span> <strong class="text-emerald-400 font-bold font-mono">฿ ${(parseFloat(String(b.depositAmount || 50).replace(/[^\d.]/g,'')) || 50).toFixed(2)}</strong> <span class="text-xs text-emerald-400 font-bold ml-1">(คืนเงินแล้ว)</span></p>
+                        <div class="mt-1 flex flex-col gap-1.5 text-xs sm:text-sm text-on-surface-variant">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-outline text-[16px] shrink-0">local_car_wash</span>
+                                <span class="opacity-70 shrink-0">บริการ:</span>
+                                <span class="font-medium text-on-surface truncate">${b.serviceName || 'ล้างรถ'}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-outline text-[16px] shrink-0">payments</span>
+                                <span class="opacity-70 shrink-0">ค่ามัดจำ:</span>
+                                <strong class="text-emerald-400 font-bold font-mono">฿ ${(parseFloat(String(b.depositAmount || 50).replace(/[^\d.]/g,'')) || 50).toFixed(2)}</strong>
+                                <span class="text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 whitespace-nowrap">คืนเงินแล้ว</span>
+                            </div>
                         </div>
 
-                        <div class="mt-1 p-2.5 rounded-xl bg-[#06C755]/10 border border-[#06C755]/30 flex items-center justify-between">
-                            <div class="flex items-center gap-2">
+                        <div class="mt-1 p-2.5 sm:p-3 rounded-xl bg-[#06C755]/10 border border-[#06C755]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
                                 <div class="w-5 h-5 rounded-full bg-[#06C755] flex items-center justify-center text-white text-[9px] font-black shrink-0 shadow-sm">
                                     LINE
                                 </div>
-                                <span class="text-xs text-[#06C755] font-semibold">ร้านค้าโอนเงินคืนและแนบสลิปเรียบร้อยแล้ว</span>
+                                <span class="text-xs text-[#06C755] font-semibold truncate">ร้านค้าโอนเงินคืนและแนบสลิปเรียบร้อยแล้ว</span>
                             </div>
-                            <button onclick="openRefundSlipModal('', '${cleanId}')" class="text-[11px] font-bold text-on-surface bg-surface-container-highest hover:bg-surface-variant px-3 py-1.5 rounded-lg border border-outline-variant/30 transition-colors flex items-center gap-1 active:scale-95 shadow-sm">
-                                <span class="material-symbols-outlined text-[14px] text-emerald-400">receipt_long</span> ดูสลิป
+                            <button onclick="openRefundSlipModal('', '${cleanId}')" class="text-xs font-bold text-on-surface bg-surface-container-highest hover:bg-surface-variant px-3 py-1.5 rounded-lg border border-outline-variant/30 transition-colors flex items-center justify-center gap-1.5 active:scale-95 shadow-sm shrink-0 whitespace-nowrap">
+                                <span class="material-symbols-outlined text-[15px] text-emerald-400">receipt_long</span> ดูสลิป
                             </button>
                         </div>
                     </div>
                 `;
             } else if (isRefundReq) {
                 return `
-                    <div id="hist-card-${cleanId}" class="glass-panel rounded-xl p-5 shadow-lg flex flex-col gap-3 relative overflow-hidden group border border-amber-500/40 transition-all">
-                        <div class="flex justify-between items-start">
-                            <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 bg-surface-container rounded-lg flex items-center justify-center border border-outline-variant">
-                                    <span class="material-symbols-outlined text-outline">local_car_wash</span>
+                    <div id="hist-card-${cleanId}" class="glass-panel rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col gap-3 relative overflow-hidden group border border-amber-500/40 transition-all">
+                        <div class="flex justify-between items-start gap-2.5">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-11 h-11 sm:w-12 sm:h-12 bg-surface-container rounded-xl flex items-center justify-center border border-outline-variant shrink-0">
+                                    <span class="material-symbols-outlined text-outline text-[22px] sm:text-[24px]">local_car_wash</span>
                                 </div>
-                                <div>
-                                    <h3 class="text-lg font-bold text-on-surface">${b.shopName || 'Sparkle Wash'}</h3>
-                                    <p class="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5">
-                                        <span class="material-symbols-outlined text-outline" style="font-size: 14px;">calendar_today</span> 
-                                        ${b.dateTime || 'วันนี้'} (ยื่นขอยกเลิก)
+                                <div class="min-w-0">
+                                    <h3 class="text-base sm:text-lg font-bold text-on-surface truncate">${b.shopName || 'Sparkle Wash'}</h3>
+                                    <p class="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5 truncate">
+                                        <span class="material-symbols-outlined text-outline text-[14px] shrink-0">calendar_today</span> 
+                                        <span class="truncate">${formatBookingDateTime(b.dateTime || 'วันนี้')} (ยื่นขอยกเลิก)</span>
                                     </p>
                                 </div>
                             </div>
-                            <div class="px-2.5 py-1 bg-amber-500/15 text-amber-300 rounded-lg text-xs font-bold border border-amber-500/30 flex items-center gap-1">
+                            <div class="px-2.5 py-1 bg-amber-500/15 text-amber-300 rounded-lg text-xs font-bold border border-amber-500/30 flex items-center gap-1 shrink-0">
                                 <span class="material-symbols-outlined text-[14px]">hourglass_top</span> รอร้านโอนคืน ฿50
                             </div>
                         </div>
 
-                        <div class="mt-1 text-sm text-on-surface-variant flex flex-col gap-1">
-                            <p><span class="opacity-70">บริการ:</span> ${b.serviceName || 'ล้างรถ'}</p>
-                            <p><span class="opacity-70">ค่ามัดจำ:</span> <strong class="text-amber-400 font-bold font-mono">฿ ${(parseFloat(String(b.depositAmount || 50).replace(/[^\d.]/g,'')) || 50).toFixed(2)}</strong> <span class="text-xs text-amber-300 font-bold ml-1">(รอร้านโอนคืน)</span></p>
-                            <p><span class="opacity-70">เหตุผลที่ยกเลิก:</span> ${b.refundReason || 'ติดธุระด่วน'}</p>
+                        <div class="mt-1 flex flex-col gap-1.5 text-xs sm:text-sm text-on-surface-variant">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-outline text-[16px] shrink-0">local_car_wash</span>
+                                <span class="opacity-70 shrink-0">บริการ:</span>
+                                <span class="font-medium text-on-surface truncate">${b.serviceName || 'ล้างรถ'}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-outline text-[16px] shrink-0">payments</span>
+                                <span class="opacity-70 shrink-0">ค่ามัดจำ:</span>
+                                <strong class="text-amber-400 font-bold font-mono">฿ ${(parseFloat(String(b.depositAmount || 50).replace(/[^\d.]/g,'')) || 50).toFixed(2)}</strong>
+                                <span class="text-[11px] text-amber-300 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 whitespace-nowrap">รอร้านโอนคืน</span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="material-symbols-outlined text-outline text-[16px] shrink-0 mt-0.5">help_outline</span>
+                                <span class="opacity-70 shrink-0">เหตุผลที่ยกเลิก:</span>
+                                <span class="font-medium text-on-surface">${b.refundReason || 'ติดธุระด่วน'}</span>
+                            </div>
                         </div>
 
-                        <div class="mt-1 p-2.5 rounded-xl bg-surface-container-highest/60 border border-outline-variant/30 flex items-center justify-between text-xs">
+                        <div class="mt-1 p-2.5 sm:p-3 rounded-xl bg-surface-container-highest/60 border border-outline-variant/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                             <span class="text-on-surface-variant flex items-center gap-1.5">
-                                <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
+                                <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse shrink-0"></span>
                                 <span>แจ้งข้อมูลบัญชีรับเงินคืนให้ร้านค้าเรียบร้อยแล้ว</span>
                             </span>
-                            <span class="text-[11px] text-yellow-400 font-semibold">รอร้านโอนคืน</span>
+                            <span class="text-[11px] text-yellow-400 font-semibold shrink-0">รอร้านโอนคืน</span>
                         </div>
                     </div>
                 `;
             } else if (isDeclined) {
                 return `
-                    <div id="hist-card-${cleanId}" class="glass-panel rounded-xl p-5 shadow-lg flex flex-col gap-3 relative overflow-hidden group border border-rose-500/30 transition-all">
-                        <div class="flex justify-between items-start">
-                            <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 bg-surface-container rounded-lg flex items-center justify-center border border-outline-variant">
-                                    <span class="material-symbols-outlined text-rose-500">cancel</span>
+                    <div id="hist-card-${cleanId}" class="glass-panel rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col gap-3 relative overflow-hidden group border border-rose-500/30 transition-all">
+                        <div class="flex justify-between items-start gap-2.5">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-11 h-11 sm:w-12 sm:h-12 bg-surface-container rounded-xl flex items-center justify-center border border-outline-variant shrink-0">
+                                    <span class="material-symbols-outlined text-rose-500 text-[22px] sm:text-[24px]">cancel</span>
                                 </div>
-                                <div>
-                                    <h3 class="text-lg font-bold text-on-surface">${b.shopName || 'ร้านคาร์แคร์'}</h3>
-                                    <p class="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5">
-                                        <span class="material-symbols-outlined text-outline" style="font-size: 14px;">calendar_today</span> 
-                                        ${b.dateTime || 'วันนี้'}
+                                <div class="min-w-0">
+                                    <h3 class="text-base sm:text-lg font-bold text-on-surface truncate">${b.shopName || 'ร้านคาร์แคร์'}</h3>
+                                    <p class="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5 truncate">
+                                        <span class="material-symbols-outlined text-outline text-[14px] shrink-0">calendar_today</span> 
+                                        <span class="truncate">${formatBookingDateTime(b.dateTime || 'วันนี้')}</span>
                                     </p>
                                 </div>
                             </div>
-                            <div class="px-2.5 py-1 bg-rose-500/15 text-rose-500 dark:text-rose-400 rounded-lg text-xs font-bold border border-rose-500/30 flex items-center gap-1">
+                            <div class="px-2.5 py-1 bg-rose-500/15 text-rose-500 dark:text-rose-400 rounded-lg text-xs font-bold border border-rose-500/30 flex items-center gap-1 shrink-0">
                                 <span class="material-symbols-outlined text-[14px]">block</span> ร้านปฏิเสธคิว
                             </div>
                         </div>
 
-                        <div class="mt-1 text-sm text-on-surface-variant flex flex-col gap-1">
-                            <p><span class="opacity-70">บริการ:</span> ${b.serviceName || 'ล้างสี ดูดฝุ่น'}</p>
-                            <p><span class="opacity-70">เหตุผล:</span> <strong class="text-rose-500 dark:text-rose-400 font-medium">${b.declineReason || 'ร้านค้าติดคิวแน่นหรือไม่สะดวกรับบริการในเวลาดังกล่าว'}</strong></p>
-                            <p><span class="opacity-70">ค่ามัดจำ:</span> <strong class="text-on-surface font-bold font-mono">฿ 50.00</strong> ${b.refundSlip ? '<span class="text-emerald-500 font-bold text-xs ml-1">(โอนคืนแล้ว)</span>' : '<span class="text-amber-500 font-bold text-xs ml-1">(รอร้านโอนคืน)</span>'}</p>
+                        <div class="mt-1 flex flex-col gap-1.5 text-xs sm:text-sm text-on-surface-variant">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-outline text-[16px] shrink-0">local_car_wash</span>
+                                <span class="opacity-70 shrink-0">บริการ:</span>
+                                <span class="font-medium text-on-surface truncate">${b.serviceName || 'ล้างสี ดูดฝุ่น'}</span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="material-symbols-outlined text-rose-400 text-[16px] shrink-0 mt-0.5">info</span>
+                                <span class="opacity-70 shrink-0">เหตุผล:</span>
+                                <span class="text-rose-500 dark:text-rose-400 font-medium">${b.declineReason || 'ร้านค้าติดคิวแน่นหรือไม่สะดวกรับบริการในเวลาดังกล่าว'}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-outline text-[16px] shrink-0">payments</span>
+                                <span class="opacity-70 shrink-0">ค่ามัดจำ:</span>
+                                <strong class="text-on-surface font-bold font-mono">฿ 50.00</strong>
+                                ${b.refundSlip ? '<span class="text-emerald-500 font-bold text-xs bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 whitespace-nowrap">(โอนคืนแล้ว)</span>' : '<span class="text-amber-500 font-bold text-xs bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 whitespace-nowrap">(รอร้านโอนคืน)</span>'}
+                            </div>
                         </div>
 
-                        <div class="mt-2 flex items-center justify-between border-t border-outline-variant/30 pt-3">
-                            <div class="text-xs text-on-surface-variant">
+                        <div class="mt-2.5 pt-3.5 border-t border-outline-variant/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="text-xs text-on-surface-variant shrink-0">
                                 ${b.refundSlip ? `
-                                    <button onclick="openRefundSlipModal('', '${cleanId}')" class="text-xs text-emerald-500 hover:underline flex items-center gap-1 font-bold">
-                                        <span class="material-symbols-outlined text-[14px]">receipt_long</span> ดูสลิปคืนเงิน
+                                    <button onclick="openRefundSlipModal('', '${cleanId}')" class="text-xs text-emerald-500 hover:underline flex items-center gap-1 font-bold whitespace-nowrap">
+                                        <span class="material-symbols-outlined text-[15px]">receipt_long</span> ดูสลิปคืนเงิน
                                     </button>
                                 ` : `
-                                    <span class="text-xs text-outline">ค่ามัดจำ ฿50.00</span>
+                                    <span class="text-xs text-outline whitespace-nowrap">ค่ามัดจำ ฿50.00</span>
                                 `}
                             </div>
-                            <button onclick="window.location.href = 'discovery.html'" class="px-3 py-1.5 bg-primary-container text-white text-xs font-bold rounded-lg hover:bg-primary transition-colors flex items-center gap-1 active:scale-95 shadow-sm">
-                                <span class="material-symbols-outlined text-[14px]">search</span> เลือกร้านอื่น
+                            <button onclick="window.location.href = 'discovery.html'" class="px-4 py-2 bg-primary-container text-white text-xs font-bold rounded-xl hover:bg-primary transition-colors flex items-center justify-center gap-1.5 active:scale-95 shadow-sm whitespace-nowrap w-full sm:w-auto">
+                                <span class="material-symbols-outlined text-[15px]">search</span> เลือกร้านอื่น
                             </button>
                         </div>
                     </div>
                 `;
             } else if (isCancelled) {
                 return `
-                    <div id="hist-card-${cleanId}" class="glass-panel rounded-xl p-5 shadow-lg flex flex-col gap-3 relative overflow-hidden group border border-outline-variant/40 transition-all">
-                        <div class="flex justify-between items-start">
-                            <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 bg-surface-container rounded-lg flex items-center justify-center border border-outline-variant">
-                                    <span class="material-symbols-outlined text-outline">event_busy</span>
+                    <div id="hist-card-${cleanId}" class="glass-panel rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col gap-3 relative overflow-hidden group border border-outline-variant/40 transition-all">
+                        <div class="flex justify-between items-start gap-2.5">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-11 h-11 sm:w-12 sm:h-12 bg-surface-container rounded-xl flex items-center justify-center border border-outline-variant shrink-0">
+                                    <span class="material-symbols-outlined text-outline text-[22px] sm:text-[24px]">event_busy</span>
                                 </div>
-                                <div>
-                                    <h3 class="text-lg font-bold text-on-surface">${b.shopName || 'ร้านคาร์แคร์'}</h3>
-                                    <p class="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5">
-                                        <span class="material-symbols-outlined text-outline" style="font-size: 14px;">calendar_today</span> 
-                                        ${b.dateTime || 'วันนี้'}
+                                <div class="min-w-0">
+                                    <h3 class="text-base sm:text-lg font-bold text-on-surface truncate">${b.shopName || 'ร้านคาร์แคร์'}</h3>
+                                    <p class="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5 truncate">
+                                        <span class="material-symbols-outlined text-outline text-[14px] shrink-0">calendar_today</span> 
+                                        <span class="truncate">${formatBookingDateTime(b.dateTime || 'วันนี้')}</span>
                                     </p>
                                 </div>
                             </div>
-                            <div class="px-2.5 py-1 bg-surface-container-highest text-on-surface-variant rounded-lg text-xs font-bold border border-outline-variant flex items-center gap-1">
+                            <div class="px-2.5 py-1 bg-surface-container-highest text-on-surface-variant rounded-lg text-xs font-bold border border-outline-variant flex items-center gap-1 shrink-0">
                                 <span class="material-symbols-outlined text-[14px]">close</span> ยกเลิกแล้ว
                             </div>
                         </div>
 
-                        <div class="mt-1 text-sm text-on-surface-variant flex flex-col gap-1">
-                            <p><span class="opacity-70">บริการ:</span> ${b.serviceName || 'ล้างสี ดูดฝุ่น'}</p>
-                            <p><span class="opacity-70">เหตุผล:</span> ${b.refundReason || b.cancelReason || 'ลูกค้ายกเลิกคิว'}</p>
-                            <p><span class="opacity-70">ค่ามัดจำ:</span> <strong class="text-on-surface font-bold font-mono">฿ 50.00</strong> ${b.refundSlip ? '<span class="text-emerald-400 font-bold text-xs ml-1">(คืนเงินแล้ว)</span>' : ''}</p>
+                        <div class="mt-1 flex flex-col gap-1.5 text-xs sm:text-sm text-on-surface-variant">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-outline text-[16px] shrink-0">local_car_wash</span>
+                                <span class="opacity-70 shrink-0">บริการ:</span>
+                                <span class="font-medium text-on-surface truncate">${b.serviceName || 'ล้างสี ดูดฝุ่น'}</span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="material-symbols-outlined text-outline text-[16px] shrink-0 mt-0.5">info</span>
+                                <span class="opacity-70 shrink-0">เหตุผล:</span>
+                                <span class="text-on-surface">${b.refundReason || b.cancelReason || 'ลูกค้ายกเลิกคิว'}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-outline text-[16px] shrink-0">payments</span>
+                                <span class="opacity-70 shrink-0">ค่ามัดจำ:</span>
+                                <strong class="text-on-surface font-bold font-mono">฿ 50.00</strong>
+                                ${b.refundSlip ? '<span class="text-emerald-400 font-bold text-xs bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 whitespace-nowrap">(คืนเงินแล้ว)</span>' : ''}
+                            </div>
                         </div>
 
-                        <div class="mt-2 flex items-center justify-between border-t border-outline-variant/30 pt-3">
-                            <div>
+                        <div class="mt-2.5 pt-3.5 border-t border-outline-variant/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="text-xs text-on-surface-variant shrink-0">
                                 ${b.refundSlip ? `
-                                    <button onclick="openRefundSlipModal('', '${cleanId}')" class="text-xs text-emerald-500 hover:underline flex items-center gap-1 font-bold">
-                                        <span class="material-symbols-outlined text-[14px]">receipt_long</span> ดูสลิปคืนเงิน
+                                    <button onclick="openRefundSlipModal('', '${cleanId}')" class="text-xs text-emerald-500 hover:underline flex items-center gap-1 font-bold whitespace-nowrap">
+                                        <span class="material-symbols-outlined text-[15px]">receipt_long</span> ดูสลิปคืนเงิน
                                     </button>
                                 ` : `
-                                    <span class="text-xs text-outline">ค่ามัดจำ ฿50.00</span>
+                                    <span class="text-xs text-outline whitespace-nowrap">ค่ามัดจำ ฿50.00</span>
                                 `}
                             </div>
-                            <button onclick="window.location.href = 'shop-details.html?shopId=' + encodeURIComponent(b.shopId || '')" class="px-3 py-1.5 bg-surface-container-highest border border-outline-variant text-on-surface text-xs font-medium rounded-lg hover:bg-surface-variant transition-colors flex items-center gap-1 active:scale-95">
-                                <span class="material-symbols-outlined text-[14px]">replay</span> จองใหม่
+                            <button onclick="window.location.href = 'shop-details.html?shopId=' + encodeURIComponent(b.shopId || '')" class="px-4 py-2 bg-surface-container-highest border border-outline-variant text-on-surface text-xs font-medium rounded-xl hover:bg-surface-variant transition-colors flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap w-full sm:w-auto">
+                                <span class="material-symbols-outlined text-[15px]">replay</span> จองใหม่
                             </button>
                         </div>
                     </div>
@@ -2554,7 +2657,7 @@
         const depositEl = document.getElementById('upcomingDepositText');
 
         if (idEl && b.bookingId) idEl.innerText = b.bookingId;
-        if (dtEl && b.dateTime) dtEl.innerText = b.dateTime;
+        if (dtEl && b.dateTime) dtEl.innerText = formatBookingDateTime(b.dateTime);
         if (servEl && b.serviceName) servEl.innerText = b.serviceName;
         if (carEl) carEl.innerText = b.carName || `${b.carBrand || 'รถของคุณ'} (${b.carPlate || ''})`;
         if (shopEl && b.shopName) shopEl.innerText = b.shopName;
