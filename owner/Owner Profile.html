@@ -139,10 +139,11 @@
             ลบรูปและใช้รูปเริ่มต้น
         </button>
         <h2 id="owner-shop-name-display" class="text-xl sm:text-2xl md:text-3xl font-extrabold text-on-surface mb-1 text-center break-words">ร้านค้าของฉัน</h2>
-        <p id="owner-person-name-display" class="text-xs md:text-sm text-outline font-medium flex items-center justify-center gap-1.5 mb-2.5">
+        <a href="edit-owner-profile.html" id="owner-person-name-display" class="text-xs md:text-sm text-outline font-medium flex items-center justify-center gap-1.5 mb-2.5 hover:text-secondary group transition-colors cursor-pointer" title="แตะเพื่อแก้ไขข้อมูลส่วนตัว">
             <span class="material-symbols-outlined text-[16px] text-secondary">badge</span>
-            <span>เจ้าของร้าน: <span id="owner-person-name" class="text-on-surface font-semibold">เจ้าของร้าน</span></span>
-        </p>
+            <span>เจ้าของร้าน: <span id="owner-person-name" class="text-on-surface group-hover:text-secondary font-semibold">เจ้าของร้าน</span></span>
+            <span class="material-symbols-outlined text-[14px] text-outline group-hover:text-secondary transition-colors">edit</span>
+        </a>
         <div class="flex items-center space-x-1 bg-secondary-container/20 text-secondary px-3.5 py-1 rounded-full border border-secondary/30 shadow-sm">
             <span class="material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;">verified</span>
             <span class="text-xs font-semibold">พาร์ทเนอร์ยืนยันตัวตนแล้ว</span>
@@ -224,8 +225,21 @@
 
     <!-- Account & Financial Settings Section -->
     <section>
-        <h3 class="text-lg font-semibold text-on-surface mb-2 px-1">การเงินและการตั้งค่า</h3>
+        <h3 class="text-lg font-semibold text-on-surface mb-2 px-1">บัญชีและการตั้งค่า</h3>
         <div class="glass-panel rounded-2xl overflow-hidden divide-y divide-outline-variant/30">
+            <a href="edit-owner-profile.html" class="w-full flex items-center justify-between p-4 hover:bg-surface-variant/50 transition-colors">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-surface-container w-10 h-10 rounded-xl flex items-center justify-center text-secondary">
+                        <span class="material-symbols-outlined">person</span>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-base font-semibold text-on-surface">แก้ไขข้อมูลส่วนตัวเจ้าของร้าน</p>
+                        <p class="text-xs text-on-surface-variant">ชื่อ-นามสกุล, เบอร์โทรศัพท์ และรูปโปรไฟล์</p>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-outline">chevron_right</span>
+            </a>
+
             <a href="payouts.html" class="w-full flex items-center justify-between p-4 hover:bg-surface-variant/50 transition-colors">
                 <div class="flex items-center space-x-3">
                     <div class="bg-surface-container w-10 h-10 rounded-xl flex items-center justify-center text-secondary">
@@ -769,6 +783,9 @@
                                 const personNameEl = document.getElementById('owner-person-name');
                                 if (personNameEl) personNameEl.textContent = pName;
                                 localStorage.setItem('ownerProfileName', pName);
+                            }
+                            if (profile.phone_number) {
+                                localStorage.setItem('ownerProfilePhone', profile.phone_number);
                             }
                         }
                     } catch (_) {}
