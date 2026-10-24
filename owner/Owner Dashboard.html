@@ -122,7 +122,7 @@
             </a>
             <a href="Owner%20Profile.html" class="flex items-center gap-3 pl-3 pr-4 py-1.5 rounded-full bg-surface-container hover:bg-surface-variant transition-all border border-outline-variant/30 group">
                 <div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden border-2 border-outline-variant group-hover:border-secondary transition-colors flex-shrink-0">
-                    <img id="owner-desktop-avatar" alt="Owner profile" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
+                    <img id="owner-desktop-avatar" alt="Owner profile" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23cbd5e1'/%3E%3Ccircle cx='50' cy='38' r='18' fill='%23ffffff'/%3E%3Cpath d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/%3E%3C/svg%3E"/>
                 </div>
                 <span class="hidden md:inline-block text-base font-semibold text-on-surface" id="owner-desktop-name">เจ้าของร้าน</span>
             </a>
@@ -143,7 +143,7 @@
                 <span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-error animate-pulse"></span>
             </a>
             <a href="Owner%20Profile.html" class="w-9 h-9 rounded-full overflow-hidden border border-outline-variant hover:border-secondary transition-colors active:scale-95 block">
-                <img id="owner-header-avatar" alt="User profile avatar" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
+                <img id="owner-header-avatar" alt="User profile avatar" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23cbd5e1'/%3E%3Ccircle cx='50' cy='38' r='18' fill='%23ffffff'/%3E%3Cpath d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/%3E%3C/svg%3E"/>
             </a>
         </div>
     </div>
@@ -1188,9 +1188,6 @@
                 if (shop.cover_image_url && effectiveUserId) {
                     localStorage.setItem('ownerCoverImage_' + effectiveUserId, shop.cover_image_url);
                 }
-            } else {
-                localStorage.removeItem('currentShopId');
-            }
 
                 // Retrieve bookings (from fast-track or query now)
                 let dbBookings = Array.isArray(bookingsRes) ? bookingsRes : null;
@@ -1419,6 +1416,7 @@
                 }
                 setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
             } else {
+                localStorage.removeItem('currentShopId');
                 const fallbackName = cachedShopName || user?.user_metadata?.shop_name || 'ร้านคาร์แคร์';
                 const subName = document.getElementById('owner-dashboard-shop-name');
                 const subContainer = document.getElementById('owner-dashboard-shop-subtitle');
