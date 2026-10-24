@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-client.js?v=1.1"></script>
+    <script src="supabase-client.js?v=1.3"></script>
     <script id="tailwind-config">
         tailwind.config = {
           darkMode: "class",
@@ -995,37 +995,21 @@
             // เรนเดอร์หน้าประวัติทันที
             renderOwnerHistory();
 
-            // Setup Realtime Subscription
-            setupRealtimeSubscriptions(savedShopId);
-
         } catch (e) {
             console.warn('[owner-booking-history] Fetch exception:', e);
             renderOwnerHistory();
         }
     }
 
-    // สมัครรับการเปลี่ยนแปลงแบบ Real-time จาก Supabase
-    let _realtimeChannel = null;
-    function setupRealtimeSubscriptions(shopId) {
-        const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
-        if (!client || !client.channel || _realtimeChannel) return;
-
-        try {
-            const channelName = (shopId && isValidUuid(shopId)) ? ('owner_history_sync_' + shopId) : 'owner_history_sync_all';
-            _realtimeChannel = client.channel(channelName)
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'bookings'
-                }, (payload) => {
-                    console.log('[Supabase Realtime] Booking change in history:', payload);
-                    loadHistoryBookingsFromSupabase(true);
-                })
-                .subscribe();
-        } catch (err) {
-            console.warn('[owner-booking-history] Realtime error:', err);
+    // ซิงค์ข้อมูลอัตโนมัติเมื่อผู้ใช้สลับกลับมาที่แท็บนี้ (ประหยัดแบตเตอรี่ และไม่ทำให้เกิด WebSocket issues)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            loadHistoryBookingsFromSupabase(true);
         }
-    }
+    });
+    window.addEventListener('focus', () => {
+        loadHistoryBookingsFromSupabase(true);
+    });
 
     // เมื่อโหลดหน้าเว็บเสร็จ
     document.addEventListener('DOMContentLoaded', () => {
