@@ -149,7 +149,7 @@
     </div>
 </header>
 <!-- Main Content Canvas -->
-<main class="pt-20 md:pt-28 pb-28 md:pb-12 p-margin-mobile md:p-gutter max-w-7xl mx-auto flex flex-col gap-stack-lg">
+<main class="pt-24 md:pt-28 pb-36 md:pb-12 p-margin-mobile md:p-gutter max-w-7xl mx-auto flex flex-col gap-stack-lg">
     <!-- Header -->
     <section class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div class="flex flex-col gap-1">
@@ -221,12 +221,12 @@
 
     <!-- 2. Current Service Status -->
     <section class="flex flex-col gap-stack-sm">
-        <div class="flex justify-between items-end">
-            <div class="flex items-center gap-2">
-                <h3 class="text-xl font-semibold text-on-surface">สถานะการให้บริการปัจจุบัน</h3>
-                <span id="active-services-badge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-yellow-400/15 text-yellow-600 dark:text-yellow-400 border border-yellow-400/30">0 คิว</span>
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                <h3 class="text-lg sm:text-xl font-semibold text-on-surface">สถานะการให้บริการปัจจุบัน</h3>
+                <span id="active-services-badge" class="shrink-0 text-xs font-bold px-2.5 py-0.5 rounded-full bg-yellow-400/15 text-yellow-600 dark:text-yellow-400 border border-yellow-400/30">0 คิว</span>
             </div>
-            <a href="owner-bookings.html" class="text-sm text-secondary hover:underline flex items-center gap-1 font-medium">
+            <a href="owner-bookings.html" class="shrink-0 text-sm text-secondary hover:underline flex items-center gap-1 font-medium ml-auto sm:ml-0">
                 <span>ดูทั้งหมด</span>
                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
             </a>
@@ -244,12 +244,12 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-stack-md">
         <!-- 3. Today's Bookings List (Span 2 cols) -->
         <section class="lg:col-span-2 flex flex-col gap-stack-sm">
-            <div class="flex justify-between items-end">
-                <div class="flex items-center gap-2">
-                    <h3 class="text-xl font-semibold text-on-surface">รายการจองวันนี้</h3>
-                    <span id="today-bookings-badge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">0 คิว</span>
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                    <h3 class="text-lg sm:text-xl font-semibold text-on-surface">รายการจองวันนี้</h3>
+                    <span id="today-bookings-badge" class="shrink-0 text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">0 คิว</span>
                 </div>
-                <a href="owner-bookings.html" class="text-sm text-secondary hover:underline flex items-center gap-1 font-medium">
+                <a href="owner-bookings.html" class="shrink-0 text-sm text-secondary hover:underline flex items-center gap-1 font-medium ml-auto sm:ml-0">
                     <span>จัดการการจอง</span>
                     <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                 </a>
@@ -310,12 +310,12 @@
 
     <!-- 5. Recent Reviews Section -->
     <section class="flex flex-col gap-stack-sm mt-4">
-        <div class="flex justify-between items-end">
-            <div class="flex items-center gap-2">
-                <h3 class="text-xl font-semibold text-on-surface">รีวิวล่าสุด</h3>
-                <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-secondary/15 text-secondary border border-secondary/30">2 รายการล่าสุด</span>
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                <h3 class="text-lg sm:text-xl font-semibold text-on-surface">รีวิวล่าสุด</h3>
+                <span class="shrink-0 text-xs font-bold px-2.5 py-0.5 rounded-full bg-secondary/15 text-secondary border border-secondary/30">2 รายการล่าสุด</span>
             </div>
-            <a href="owner-reviews.html" class="text-sm text-secondary hover:underline flex items-center gap-1 font-medium">
+            <a href="owner-reviews.html" class="shrink-0 text-sm text-secondary hover:underline flex items-center gap-1 font-medium ml-auto sm:ml-0">
                 <span>จัดการรีวิวทั้งหมด</span>
                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
             </a>

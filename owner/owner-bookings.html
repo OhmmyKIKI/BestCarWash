@@ -116,7 +116,7 @@
     </div>
 </header>
 
-<main class="pt-20 md:pt-28 pb-28 md:pb-12 p-margin-mobile md:p-gutter max-w-7xl mx-auto flex flex-col gap-stack-lg">
+<main class="pt-24 md:pt-28 pb-36 md:pb-12 p-margin-mobile md:p-gutter max-w-7xl mx-auto flex flex-col gap-stack-lg">
 
     <!-- 1. Incoming Bookings Section -->
     <section class="flex flex-col gap-stack-md">
@@ -135,11 +135,11 @@
 
     <!-- 2. Cancellation & Refund Requests Section -->
     <section class="flex flex-col gap-stack-md border-t border-outline-variant/30 pt-6">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-amber-400 text-[24px]">currency_exchange</span>
-                <h2 class="text-xl font-semibold text-on-surface">คำขอยกเลิก &amp; คืนเงินมัดจำ</h2>
-                <span id="refundCountBadge" class="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">0 คำขอ</span>
+        <div class="flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="material-symbols-outlined text-amber-400 text-[24px] shrink-0">currency_exchange</span>
+                <h2 class="text-lg sm:text-xl font-semibold text-on-surface">คำขอยกเลิก &amp; คืนเงินมัดจำ</h2>
+                <span id="refundCountBadge" class="shrink-0 text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-bold">0 คำขอ</span>
             </div>
             <span class="text-xs text-outline hidden sm:inline">ลูกค้ายกเลิกล่วงหน้าเกิน 1 ชม. ตามเงื่อนไขระบบ หรือร้านค้าปฏิเสธรับคิว</span>
         </div>
@@ -153,8 +153,8 @@
     <section class="flex flex-col gap-stack-md border-t border-outline-variant/30 pt-6">
         <div class="flex items-center justify-between flex-wrap gap-2">
             <div>
-                <h2 class="text-xl font-semibold text-on-surface flex items-center gap-2">
-                    <span class="material-symbols-outlined text-secondary text-[24px]">local_car_wash</span>
+                <h2 class="text-lg sm:text-xl font-semibold text-on-surface flex items-center gap-2 flex-wrap">
+                    <span class="material-symbols-outlined text-secondary text-[24px] shrink-0">local_car_wash</span>
                     <span>รายการที่กำลังดำเนินการ (Service Pipeline)</span>
                 </h2>
                 <p class="text-xs text-outline mt-0.5">กดอัปเดตสถานะทีละขั้นตอน ระบบจะแจ้งเตือนความคืบหน้าให้ลูกค้าทราบทันที</p>
@@ -200,8 +200,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex items-center gap-stack-sm self-end md:self-center shrink-0 action-buttons-container">
-                    <button onclick="startWashing(this)" class="h-11 px-5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors flex items-center gap-1.5 text-sm font-bold shadow-md shadow-amber-500/10 active:scale-95 duration-150">
+                <div class="flex items-center gap-stack-sm w-full md:w-auto shrink-0 pt-2 sm:pt-0 border-t border-outline-variant/20 sm:border-t-0 action-buttons-container">
+                    <button onclick="startWashing(this)" class="h-11 px-5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors flex items-center justify-center gap-1.5 text-sm font-bold shadow-md shadow-amber-500/10 active:scale-95 duration-150 w-full sm:w-auto">
                         <span class="material-symbols-outlined text-[18px]">local_car_wash</span> เริ่มบริการ / กำลังล้าง
                     </button>
                 </div>
@@ -1258,11 +1258,11 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="flex items-center gap-stack-sm self-end md:self-center shrink-0">
-                            <button onclick="openConfirmModal('confirmDeclineModal', '${b.bookingId}')" class="h-11 px-4 rounded-xl bg-surface-bright border border-outline-variant text-on-surface hover:text-error hover:border-error/50 transition-colors flex items-center gap-1.5 text-sm font-bold">
+                        <div class="grid grid-cols-2 sm:flex items-center gap-2 sm:gap-stack-sm w-full md:w-auto shrink-0 pt-3 sm:pt-0 border-t border-outline-variant/20 sm:border-t-0">
+                            <button onclick="openConfirmModal('confirmDeclineModal', '${b.bookingId}')" class="h-11 px-4 rounded-xl bg-surface-bright border border-outline-variant text-on-surface hover:text-error hover:border-error/50 transition-colors flex items-center justify-center gap-1.5 text-sm font-bold w-full sm:w-auto">
                                 <span class="material-symbols-outlined text-[18px]">close</span> ปฏิเสธ
                             </button>
-                            <button onclick="acceptBooking('${b.bookingId}')" class="h-11 px-6 rounded-xl bg-secondary-container text-on-secondary-container hover:bg-secondary transition-colors flex items-center gap-1.5 text-sm font-bold shadow-md shadow-secondary/20 active:scale-95 duration-150">
+                            <button onclick="acceptBooking('${b.bookingId}')" class="h-11 px-6 rounded-xl bg-secondary-container text-on-secondary-container hover:bg-secondary transition-colors flex items-center justify-center gap-1.5 text-sm font-bold shadow-md shadow-secondary/20 active:scale-95 duration-150 w-full sm:w-auto">
                                 <span class="material-symbols-outlined text-[20px]">check</span> ยืนยันรับคิว
                             </button>
                         </div>
@@ -1341,13 +1341,13 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-stack-sm self-end md:self-center shrink-0">
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-stack-sm w-full md:w-auto shrink-0 pt-3 sm:pt-0 border-t border-outline-variant/20 sm:border-t-0">
                                 ${b.slipImage ? `
-                                    <button onclick="openSlipModal('${(b.customerName || 'ลูกค้า').replace(/'/g, "\\'")}', '${b.depositAmount || '฿50.00'}', '${b.dateTime || 'วันนี้'}', 'สลิปมัดจำเดิม', '${b.slipImage}')" class="h-11 px-3.5 rounded-xl bg-surface-bright border border-outline-variant text-on-surface hover:border-secondary/50 transition-colors flex items-center gap-1.5 text-xs font-bold" title="ตรวจสอบสลิปที่ลูกค้าโอนมัดจำมา">
+                                    <button onclick="openSlipModal('${(b.customerName || 'ลูกค้า').replace(/'/g, "\\'")}', '${b.depositAmount || '฿50.00'}', '${b.dateTime || 'วันนี้'}', 'สลิปมัดจำเดิม', '${b.slipImage}')" class="h-11 px-3.5 rounded-xl bg-surface-bright border border-outline-variant text-on-surface hover:border-secondary/50 transition-colors flex items-center justify-center gap-1.5 text-xs font-bold w-full sm:w-auto" title="ตรวจสอบสลิปที่ลูกค้าโอนมัดจำมา">
                                         <span class="material-symbols-outlined text-[16px] text-secondary">receipt</span> สลิปมัดจำ
                                     </button>
                                 ` : ''}
-                                <button onclick="openRefundModal('${b.bookingId}', '${(b.customerName || 'ลูกค้า').replace(/'/g, "\\'")}', '${b.refundPromptPay || b.customerPhone || '089-123-4567'}', 'พร้อมเพย์', '${(b.depositAmount || '50.00').replace(/[^\d.]/g,'') || '50.00'}')" class="h-11 px-5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors flex items-center gap-1.5 text-sm font-bold shadow-md shadow-amber-500/10 active:scale-95 duration-150">
+                                <button onclick="openRefundModal('${b.bookingId}', '${(b.customerName || 'ลูกค้า').replace(/'/g, "\\'")}', '${b.refundPromptPay || b.customerPhone || '089-123-4567'}', 'พร้อมเพย์', '${(b.depositAmount || '50.00').replace(/[^\d.]/g,'') || '50.00'}')" class="h-11 px-5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors flex items-center justify-center gap-1.5 text-sm font-bold shadow-md shadow-amber-500/10 active:scale-95 duration-150 w-full sm:w-auto">
                                     <span class="material-symbols-outlined text-[18px]">upload_file</span> โอนเงินคืน &amp; แนบสลิป
                                 </button>
                             </div>
@@ -1395,7 +1395,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="flex items-center gap-stack-sm self-end md:self-center shrink-0 action-buttons-container">
+                        <div class="flex items-center gap-stack-sm w-full md:w-auto shrink-0 pt-3 sm:pt-0 border-t border-outline-variant/20 sm:border-t-0 action-buttons-container">
                             ${renderStageActions(b)}
                         </div>
                     </div>
@@ -1436,30 +1436,30 @@
     function renderStageActions(b) {
         if (b.status === 'confirmed') {
             return `
-                <div class="flex items-center gap-2">
-                    <button onclick="openConfirmModal('confirmNoShowModal', '${b.bookingId}')" class="h-10 px-3 rounded-lg bg-surface-bright text-outline hover:text-error border border-outline-variant/30 text-xs font-bold transition-colors">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <button onclick="openConfirmModal('confirmNoShowModal', '${b.bookingId}')" class="h-11 px-3.5 rounded-xl bg-surface-bright text-outline hover:text-error border border-outline-variant/30 text-xs font-bold transition-colors shrink-0">
                         ไม่มาตามนัด
                     </button>
-                    <button onclick="markCarArrived('${b.bookingId}')" class="h-11 px-5 rounded-xl bg-blue-500/20 text-blue-300 border border-blue-500/40 hover:bg-blue-500/30 transition-colors flex items-center gap-1.5 text-sm font-bold shadow-md shadow-blue-500/10 active:scale-95 duration-150">
+                    <button onclick="markCarArrived('${b.bookingId}')" class="h-11 px-4 sm:px-5 rounded-xl bg-blue-500/20 text-blue-300 border border-blue-500/40 hover:bg-blue-500/30 transition-colors flex items-center justify-center gap-1.5 text-sm font-bold shadow-md shadow-blue-500/10 active:scale-95 duration-150 flex-1 sm:flex-initial">
                         <span class="material-symbols-outlined text-[18px]">directions_car</span> รถมาถึงร้านแล้ว
                     </button>
                 </div>
             `;
         } else if (b.status === 'arrived') {
             return `
-                <button onclick="startWashing('${b.bookingId}')" class="h-11 px-5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors flex items-center gap-1.5 text-sm font-bold shadow-md shadow-amber-500/10 active:scale-95 duration-150">
+                <button onclick="startWashing('${b.bookingId}')" class="h-11 px-5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors flex items-center justify-center gap-1.5 text-sm font-bold shadow-md shadow-amber-500/10 active:scale-95 duration-150 w-full sm:w-auto">
                     <span class="material-symbols-outlined text-[18px]">local_car_wash</span> เริ่มบริการ / กำลังล้าง
                 </button>
             `;
         } else if (b.status === 'washing') {
             return `
-                <button onclick="markReadyForPickup('${b.bookingId}')" class="h-11 px-5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 transition-colors flex items-center gap-1.5 text-sm font-bold shadow-md shadow-emerald-500/10 active:scale-95 duration-150">
+                <button onclick="markReadyForPickup('${b.bookingId}')" class="h-11 px-5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 transition-colors flex items-center justify-center gap-1.5 text-sm font-bold shadow-md shadow-emerald-500/10 active:scale-95 duration-150 w-full sm:w-auto">
                     <span class="material-symbols-outlined text-[18px]">task_alt</span> ล้างเสร็จแล้ว (พร้อมรับรถ)
                 </button>
             `;
         } else if (b.status === 'ready') {
             return `
-                <button onclick="openConfirmModal('confirmFinishModal', '${b.bookingId}')" class="h-11 px-6 rounded-xl bg-secondary-container text-on-secondary-container hover:bg-secondary transition-colors flex items-center gap-1.5 text-sm font-bold shadow-md shadow-secondary/20 active:scale-95 duration-150">
+                <button onclick="openConfirmModal('confirmFinishModal', '${b.bookingId}')" class="h-11 px-6 rounded-xl bg-secondary-container text-on-secondary-container hover:bg-secondary transition-colors flex items-center justify-center gap-1.5 text-sm font-bold shadow-md shadow-secondary/20 active:scale-95 duration-150 w-full sm:w-auto">
                     <span class="material-symbols-outlined text-[20px]">how_to_reg</span> ส่งมอบรถแล้ว (ปิดงาน)
                 </button>
             `;
