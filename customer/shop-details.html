@@ -428,6 +428,48 @@
     }
 </script>
 
+<!-- Review Photo Lightbox Modal -->
+<div id="reviewPhotoLightbox" class="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md hidden items-center justify-center p-4 transition-opacity duration-300 opacity-0" onclick="closeReviewPhotoLightbox()">
+    <button type="button" onclick="closeReviewPhotoLightbox()" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center cursor-pointer transition-colors z-10" title="ปิด">
+        <span class="material-symbols-outlined text-2xl">close</span>
+    </button>
+    <div class="relative max-w-4xl max-h-[85vh] flex items-center justify-center" onclick="event.stopPropagation()">
+        <img id="reviewPhotoLightboxImg" src="" class="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl transition-transform duration-300 scale-95" alt="รูปภาพรีวิวขนาดเต็ม">
+    </div>
+</div>
+<script>
+    function openReviewPhotoLightbox(imgUrl) {
+        const modal = document.getElementById('reviewPhotoLightbox');
+        const img = document.getElementById('reviewPhotoLightboxImg');
+        if (!modal || !img || !imgUrl) return;
+        img.src = imgUrl;
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            img.classList.remove('scale-95');
+            img.classList.add('scale-100');
+        }, 10);
+    }
+    function closeReviewPhotoLightbox() {
+        const modal = document.getElementById('reviewPhotoLightbox');
+        const img = document.getElementById('reviewPhotoLightboxImg');
+        if (!modal) return;
+        modal.classList.add('opacity-0');
+        if (img) {
+            img.classList.remove('scale-100');
+            img.classList.add('scale-95');
+        }
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+            if (img) img.src = '';
+        }, 250);
+    }
+    window.openReviewPhotoLightbox = openReviewPhotoLightbox;
+    window.closeReviewPhotoLightbox = closeReviewPhotoLightbox;
+</script>
+
 <script>
     // --- Master Shops Data (Dynamic from Supabase) ---
     const SHOPS_DATA = {};
@@ -1579,6 +1621,18 @@
                 } catch(_) { return null; }
             })();
 
+            const reviewImages = Array.isArray(r.images) ? r.images.filter(Boolean) : [];
+            const imagesHtml = reviewImages.length > 0 ? `
+                <div class="flex flex-wrap gap-2 mt-2.5">
+                    ${reviewImages.map(img => `
+                        <div onclick="openReviewPhotoLightbox('${img.replace(/'/g, "\\'")}')" class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-outline-variant/40 bg-surface-container cursor-pointer hover:opacity-90 active:scale-95 transition-all shadow-sm group relative">
+                            <img src="${img}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" alt="รูปภาพรีวิว">
+                            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : '';
+
             return `
                 <div class="bg-surface-container-highest/30 rounded-2xl p-4 border border-outline-variant/20">
                     <div class="flex justify-between items-start mb-2">
@@ -1602,6 +1656,7 @@
                         </div>
                     </div>
                     <p class="text-sm text-on-surface-variant leading-relaxed">${r.comment || 'บริการดี ประทับใจมากครับ'}</p>
+                    ${imagesHtml}
                     ${replyText ? `
                         <div class="bg-surface-container-low rounded-xl p-3 border-l-4 border-secondary border border-outline-variant/30 mt-3 text-xs">
                             <div class="font-bold text-secondary mb-1 flex items-center gap-1">

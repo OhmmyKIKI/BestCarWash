@@ -408,13 +408,151 @@
         }, 800);
     }
 
-    // --- Review Modal Logic ---
+    // --- Review Modal & Photo Logic ---
     let currentRating = 0;
     let currentReviewShopId = null;
     let currentReviewBookingId = null;
     let currentExistingReviewId = null;
+    let currentReviewPhotos = []; // [{ url: string, isNew: boolean }]
 
-    function openReviewModal(shopName = 'ร้านคาร์แคร์', serviceName = 'ล้างด่วน', shopId = null, bookingId = null, existingRating = 0, existingComment = '') {
+    function compressReviewImage(file, maxWidth = 900, maxHeight = 900, quality = 0.75) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width = Math.round((width * maxHeight) / height);
+                            height = maxHeight;
+                        }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                    resolve(compressedDataUrl);
+                };
+                img.onerror = () => reject(new Error('Failed to load image'));
+                img.src = e.target.result;
+            };
+            reader.onerror = (err) => reject(err);
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function dataURLtoBlob(dataurl) {
+        try {
+            const arr = dataurl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], { type: mime });
+        } catch (_) {
+            return null;
+        }
+    }
+
+    async function uploadSingleReviewPhoto(photoItem) {
+        if (!photoItem) return null;
+        const src = typeof photoItem === 'string' ? photoItem : photoItem.url;
+        if (!src) return null;
+        if (src.startsWith('http')) return src;
+
+        try {
+            const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            if (client && client.storage) {
+                const blob = dataURLtoBlob(src);
+                if (blob) {
+                    const timestamp = Date.now();
+                    const rand = Math.random().toString(36).substring(2, 8);
+                    const fileName = `reviews/rev_${timestamp}_${rand}.jpg`;
+                    const { error } = await client.storage
+                        .from('shop-media')
+                        .upload(fileName, blob, {
+                            cacheControl: '3600',
+                            upsert: true,
+                            contentType: 'image/jpeg'
+                        });
+                    if (!error) {
+                        const { data: pubData } = client.storage.from('shop-media').getPublicUrl(fileName);
+                        if (pubData?.publicUrl) {
+                            return pubData.publicUrl;
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[Review Storage notice]:', e);
+        }
+        return src;
+    }
+
+    function renderReviewPhotoThumbs() {
+        const container = document.getElementById('reviewPhotosContainer');
+        if (!container) return;
+        const existingThumbs = container.querySelectorAll('.review-thumb-item');
+        existingThumbs.forEach(t => t.remove());
+
+        currentReviewPhotos.forEach((photo, idx) => {
+            const thumbDiv = document.createElement('div');
+            thumbDiv.className = 'review-thumb-item w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden relative border border-outline-variant/50 bg-surface-container-highest shadow-sm';
+            thumbDiv.innerHTML = `
+                <img src="${photo.url}" class="w-full h-full object-cover cursor-pointer" onclick="openReviewPhotoLightbox('${photo.url.replace(/'/g, "\\'")}')" title="คลิกเพื่อดูรูปใหญ่">
+                <button type="button" onclick="event.stopPropagation(); removeReviewPhoto(${idx});" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500/90 hover:bg-red-600 text-white flex items-center justify-center shadow-md active:scale-90 transition-all cursor-pointer" title="ลบรูปภาพ">
+                    <span class="material-symbols-outlined text-[13px] leading-none pointer-events-none">close</span>
+                </button>
+            `;
+            container.appendChild(thumbDiv);
+        });
+    }
+
+    function removeReviewPhoto(index) {
+        if (index >= 0 && index < currentReviewPhotos.length) {
+            currentReviewPhotos.splice(index, 1);
+            renderReviewPhotoThumbs();
+        }
+    }
+
+    async function handleReviewPhotos(event) {
+        const files = Array.from(event.target.files || []);
+        if (files.length === 0) return;
+
+        const maxPhotos = 6;
+        const remaining = maxPhotos - currentReviewPhotos.length;
+        if (remaining <= 0) {
+            showCustomerToast('สามารถแนบรูปรีวิวได้สูงสุด 6 รูปครับ', 'info');
+            event.target.value = '';
+            return;
+        }
+
+        const filesToProcess = files.slice(0, remaining);
+        for (const file of filesToProcess) {
+            try {
+                const compressedUrl = await compressReviewImage(file, 900, 900, 0.75);
+                currentReviewPhotos.push({ url: compressedUrl, isNew: true });
+            } catch (err) {
+                console.warn('Compress review photo notice:', err);
+            }
+        }
+        renderReviewPhotoThumbs();
+        event.target.value = '';
+    }
+
+    function openReviewModal(shopName = 'ร้านคาร์แคร์', serviceName = 'ล้างด่วน', shopId = null, bookingId = null, existingRating = 0, existingComment = '', existingImages = null) {
         currentReviewShopId = shopId || null;
         currentReviewBookingId = bookingId || null;
         currentExistingReviewId = null;
@@ -488,12 +626,24 @@
             }
         }
 
-        // Reset photos
-        const container = document.getElementById('reviewPhotosContainer');
-        if (container) {
-            const thumbs = container.querySelectorAll('div.w-16');
-            thumbs.forEach(thumb => thumb.remove());
+        // Restore or initialize review photos
+        let revImages = [];
+        if (Array.isArray(existingImages) && existingImages.length > 0) {
+            revImages = existingImages;
+        } else if (Array.isArray(savedRev?.images) && savedRev.images.length > 0) {
+            revImages = savedRev.images;
+        } else {
+            try {
+                const hist = JSON.parse(localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
+                const found = hist.find(h => h.rawBookingId === currentReviewBookingId || h.bookingId === currentReviewBookingId || h.id === currentReviewBookingId);
+                if (Array.isArray(found?.userReview?.images) && found.userReview.images.length > 0) {
+                    revImages = found.userReview.images;
+                }
+            } catch (_) {}
         }
+
+        currentReviewPhotos = revImages.map(img => ({ url: img, isNew: false }));
+        renderReviewPhotoThumbs();
     }
 
     function closeReviewModal() {
@@ -544,6 +694,13 @@
         }
 
         try {
+            // Upload / Process photos
+            const finalImages = [];
+            for (const photoItem of currentReviewPhotos) {
+                const uploadedUrl = await uploadSingleReviewPhoto(photoItem);
+                if (uploadedUrl) finalImages.push(uploadedUrl);
+            }
+
             let customerId = null;
             if (client?.auth) {
                 const s = await client.auth.getSession().catch(() => null);
@@ -576,6 +733,7 @@
             const payload = {
                 rating: currentRating,
                 comment: comment || 'บริการดีมากครับ รวดเร็ว สะอาด ประทับใจมาก',
+                images: finalImages,
                 created_at: new Date().toISOString()
             };
             if (isValidUuid(targetShop)) payload.shop_id = targetShop;
@@ -657,6 +815,23 @@
                             }
                         }
                     }
+
+                    // Resilient fallback: if column 'images' not in schema yet, retry without 'images' for Supabase
+                    if (!syncSuccess && lastSyncError && (String(lastSyncError.message || lastSyncError).includes('images') || String(lastSyncError.details || '').includes('images'))) {
+                        const fallbackPayload = { ...payload };
+                        delete fallbackPayload.images;
+                        if (savedReviewId) {
+                            const resRetry = await fetcher(`reviews?id=eq.${savedReviewId}`, { method: 'PATCH', headers: reqHeaders, body: JSON.stringify(fallbackPayload) }).catch(() => null);
+                            if (resRetry && !resRetry.error) syncSuccess = true;
+                        } else {
+                            const resRetry = await fetcher('reviews', { method: 'POST', headers: reqHeaders, body: JSON.stringify(fallbackPayload) }).catch(() => null);
+                            if (resRetry && !resRetry.error) {
+                                syncSuccess = true;
+                                if (Array.isArray(resRetry) && resRetry[0]?.id) savedReviewId = resRetry[0].id;
+                                else if (resRetry?.data?.[0]?.id) savedReviewId = resRetry.data[0].id;
+                            }
+                        }
+                    }
                 } catch(restErr) {
                     lastSyncError = restErr;
                     console.warn('[Review REST notice]:', restErr);
@@ -686,18 +861,19 @@
             }
 
             if (!syncSuccess) {
-                console.error('❌ Supabase review save failed:', lastSyncError);
+                console.error('❌ Supabase review save notice:', lastSyncError);
             } else {
                 console.log('✅ Supabase review saved successfully:', savedReviewId);
             }
 
-            // 3. Persist review in local storage map (STRICTLY BY BOOKING ID ONLY)
+            // 3. Persist review in local storage map (STRICTLY BY BOOKING ID ONLY, WITH IMAGES)
             const revObj = {
                 id: savedReviewId,
                 shopId: targetShop,
                 bookingId: currentReviewBookingId,
                 rating: currentRating,
                 comment: comment || 'บริการดีมากครับ',
+                images: finalImages,
                 createdAt: payload.created_at
             };
 
@@ -711,7 +887,6 @@
                     localRevMap[cleanBk.substring(0, 8).toLowerCase()] = revObj;
                 }
             }
-            // DO NOT save under targetShop! Clean up contaminated targetShop keys
             if (targetShop && localRevMap[targetShop]) {
                 delete localRevMap[targetShop];
             }
@@ -761,7 +936,7 @@
                 }
             } catch(e) {}
 
-            // 5. Invalidate cached reviews for this shop so other pages refresh
+            // 5. Invalidate cached reviews for this shop so shop-details page re-fetches latest reviews & photos
             if (targetShop) {
                 localStorage.removeItem('cachedShopReviews_' + targetShop);
             }
@@ -777,32 +952,6 @@
             }
             closeReviewModal();
         }
-    }
-
-    function handleReviewPhotos(event) {
-        const files = event.target.files;
-        const container = document.getElementById('reviewPhotosContainer');
-        
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const thumbDiv = document.createElement('div');
-                    thumbDiv.className = 'w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden relative group border border-outline-variant/50';
-                    thumbDiv.innerHTML = `
-                        <img src="${e.target.result}" class="w-full h-full object-cover">
-                        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer backdrop-blur-sm" onclick="this.parentElement.remove()">
-                            <span class="material-symbols-outlined text-white text-[20px]">delete</span>
-                        </div>
-                    `;
-                    container.appendChild(thumbDiv);
-                }
-                reader.readAsDataURL(file);
-            }
-        }
-        // Reset input so same file can be selected again if removed
-        event.target.value = '';
     }
 </script>
 
@@ -834,13 +983,19 @@
             
             <!-- Photo Upload for Review -->
             <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-xs font-bold text-on-surface flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[15px] text-primary">photo_library</span> แนบรูปภาพรีวิว
+                    </span>
+                    <span class="text-[10px] text-outline">สูงสุด 6 รูป</span>
+                </div>
                 <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-2" id="reviewPhotosContainer">
-                    <label class="w-16 h-16 flex-shrink-0 bg-surface-container-highest border border-dashed border-outline-variant rounded-xl flex flex-col items-center justify-center text-outline cursor-pointer hover:border-primary hover:text-primary transition-colors">
+                    <label id="addReviewPhotoBtn" class="w-16 h-16 flex-shrink-0 bg-surface-container-highest border border-dashed border-outline-variant rounded-xl flex flex-col items-center justify-center text-outline cursor-pointer hover:border-primary hover:text-primary transition-colors">
                         <span class="material-symbols-outlined text-[20px]">add_photo_alternate</span>
                         <span class="text-[9px] mt-0.5">เพิ่มรูป</span>
                         <input type="file" class="hidden" accept="image/*" multiple onchange="handleReviewPhotos(event)" id="reviewPhotoInput">
                     </label>
-                    <!-- Thumbnails will be injected here by JS -->
+                    <!-- Thumbnails injected by renderReviewPhotoThumbs() -->
                 </div>
             </div>
             
@@ -855,6 +1010,48 @@
         </div>
     </div>
 </div>
+
+<!-- Review Photo Lightbox Modal -->
+<div id="reviewPhotoLightbox" class="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md hidden items-center justify-center p-4 transition-opacity duration-300 opacity-0" onclick="closeReviewPhotoLightbox()">
+    <button type="button" onclick="closeReviewPhotoLightbox()" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center cursor-pointer transition-colors z-10" title="ปิด">
+        <span class="material-symbols-outlined text-2xl">close</span>
+    </button>
+    <div class="relative max-w-4xl max-h-[85vh] flex items-center justify-center" onclick="event.stopPropagation()">
+        <img id="reviewPhotoLightboxImg" src="" class="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl transition-transform duration-300 scale-95" alt="รูปภาพรีวิวขนาดเต็ม">
+    </div>
+</div>
+<script>
+    function openReviewPhotoLightbox(imgUrl) {
+        const modal = document.getElementById('reviewPhotoLightbox');
+        const img = document.getElementById('reviewPhotoLightboxImg');
+        if (!modal || !img || !imgUrl) return;
+        img.src = imgUrl;
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            img.classList.remove('scale-95');
+            img.classList.add('scale-100');
+        }, 10);
+    }
+    function closeReviewPhotoLightbox() {
+        const modal = document.getElementById('reviewPhotoLightbox');
+        const img = document.getElementById('reviewPhotoLightboxImg');
+        if (!modal) return;
+        modal.classList.add('opacity-0');
+        if (img) {
+            img.classList.remove('scale-100');
+            img.classList.add('scale-95');
+        }
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+            if (img) img.src = '';
+        }, 250);
+    }
+    window.openReviewPhotoLightbox = openReviewPhotoLightbox;
+    window.closeReviewPhotoLightbox = closeReviewPhotoLightbox;
+</script>
 
 <!-- Upload Slip Modal -->
 <div id="slipModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -1803,6 +2000,7 @@
                                     <button onclick="openReviewModal('${(b.shopName || 'ร้านคาร์แคร์').replace(/'/g, "\\'")}', '${(b.serviceName || 'ล้างสี ดูดฝุ่น').replace(/'/g, "\\'")}', '${b.shopId || b.rawShopId || ''}', '${b.rawBookingId || b.id || ''}', ${b.userReview.rating || 5}, '${(b.userReview.comment || '').replace(/'/g, "\\'").replace(/\n/g, ' ')}')" class="px-3 py-1.5 bg-yellow-400/10 border border-yellow-400/40 text-yellow-600 dark:text-yellow-400 text-xs font-bold rounded-lg hover:bg-yellow-400/20 transition-all flex items-center gap-1.5 active:scale-95 shadow-sm" title="คลิกเพื่อดูหรือแก้ไขรีวิว">
                                         <span class="material-symbols-outlined text-[15px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span> 
                                         <span>รีวิวแล้ว (${b.userReview.rating}★)</span>
+                                        ${(Array.isArray(b.userReview.images) && b.userReview.images.length > 0) ? `<span class="text-[10px] text-primary font-bold bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 flex items-center gap-0.5"><span class="material-symbols-outlined text-[11px]">photo_camera</span> ${b.userReview.images.length} รูป</span>` : ''}
                                         ${(b.userReview.reply || (function(){ try { return JSON.parse(localStorage.getItem('ownerReviewsReplies')||'{}')[b.userReview.id]?.reply; } catch(_){ return null; } })()) ? '<span class="text-[10px] text-emerald-500 font-bold bg-emerald-500/15 px-1.5 py-0.5 rounded border border-emerald-500/30 flex items-center gap-0.5"><span class="material-symbols-outlined text-[11px]">reply</span> ร้านตอบแล้ว</span>' : ''}
                                     </button>
                                 ` : `

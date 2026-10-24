@@ -3,10 +3,11 @@
 -- รันสคริปต์นี้ใน Supabase SQL Editor เพื่อเปิดใช้งานการบันทึกการตอบกลับของร้านค้าลงฐานข้อมูล
 -- =========================================================================
 
--- 1. เพิ่มคอลัมน์สำหรับการตอบกลับของร้านค้า (reply และ replied_at) ในตาราง reviews
+-- 1. เพิ่มคอลัมน์สำหรับการตอบกลับของร้านค้า (reply และ replied_at) และคอลัมน์รูปภาพรีวิว (images) ในตาราง reviews
 alter table public.reviews 
   add column if not exists reply text,
-  add column if not exists replied_at timestamp with time zone;
+  add column if not exists replied_at timestamp with time zone,
+  add column if not exists images text[] default array[]::text[];
 
 -- 2. เพิ่มคอลัมน์ review_count ในตาราง shops (ป้องกัน Error กรณีมี Trigger คำนวณจำนวนรีวิว)
 alter table public.shops 

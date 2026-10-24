@@ -80,7 +80,7 @@ export default async function handler(req, res) {
 
             if (retryBody && typeof retryBody === 'object') {
                 let hasRemoved = false;
-                ['cover_image_url', 'logo_url', 'city', 'slogan', 'facilities', 'review_count'].forEach(col => {
+                ['cover_image_url', 'logo_url', 'city', 'slogan', 'facilities', 'review_count', 'images'].forEach(col => {
                     if (col in retryBody) {
                         delete retryBody[col];
                         hasRemoved = true;
