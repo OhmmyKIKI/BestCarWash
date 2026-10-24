@@ -153,20 +153,20 @@
             
             <!-- Upcoming Booking Card (Hidden by default until active booking is detected) -->
             <div id="upcomingCard" class="hidden glass-panel rounded-xl p-5 shadow-lg shadow-primary/5 flex flex-col gap-3 relative overflow-hidden group cursor-pointer hover:border-outline-variant transition-all">
-                <div class="flex justify-between items-start">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 bg-primary-container/20 rounded-lg flex items-center justify-center border border-primary/30">
+                <div class="flex justify-between items-start gap-3">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <div class="w-12 h-12 bg-primary-container/20 rounded-lg flex items-center justify-center border border-primary/30 shrink-0">
                             <span class="material-symbols-outlined text-primary">local_car_wash</span>
                         </div>
-                        <div>
-                            <h3 class="text-lg font-bold text-on-surface" id="upcomingShopTitle">-</h3>
-                            <p class="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5">
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-base sm:text-lg font-bold text-on-surface break-words" id="upcomingShopTitle">-</h3>
+                            <p class="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5 truncate">
                                 <span class="material-symbols-outlined text-outline" style="font-size: 14px;">calendar_today</span> 
                                 <span id="upcomingDateTimeText">-</span>
                             </p>
                         </div>
                     </div>
-                    <div id="upcomingBadge" class="px-2.5 py-1 bg-primary-container/20 text-primary rounded-lg text-xs font-bold border border-primary/30 flex items-center gap-1.5 shadow-sm">
+                    <div id="upcomingBadge" class="px-2.5 py-1 bg-primary-container/20 text-primary rounded-lg text-xs font-bold border border-primary/30 flex items-center gap-1.5 shadow-sm shrink-0">
                         <span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>
                         <span id="upcomingBadgeText">รอรับบริการ</span>
                     </div>
