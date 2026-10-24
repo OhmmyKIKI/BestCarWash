@@ -179,16 +179,24 @@
 
                 <!-- Logo & Shop Name Header -->
                 <div class="flex items-end gap-4 -mt-10 px-2 relative z-10 mb-2">
-                    <div class="relative w-20 h-20 rounded-2xl border-4 border-background bg-surface-container overflow-hidden shadow-2xl shrink-0 group">
+                    <div class="relative w-20 h-20 rounded-2xl border-4 border-background bg-surface-container overflow-hidden shadow-2xl shrink-0 group cursor-pointer" onclick="document.getElementById('shopLogoInput').click()">
                         <img id="shopLogoImg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuANdn5cVuwxeYTvhiVs71yG8fJEVm_r8NDwrvOLJlVzh0AFhlAPqP6_2V3gOrWGNpq_JytKJkmh6rn_pwLlNvfA078hUTjQWkhCyEtjHr811H5LfwM4Q7ZxkL1YC0T-sVcWYHMAjZhYyd1bg7TMakGBbXSnuH1uUT0cqtfrXkCQF7bUKORbc58gWLU_Ai7tfdGNQmXcMXhKglIf8qCXe-rwUXFeo3vlruf_dHtKu21t6-95_kYhCtcm" alt="Shop Logo" class="w-full h-full object-cover">
-                        <label for="shopLogoInput" class="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                            <span class="material-symbols-outlined text-white text-[18px]">edit</span>
-                        </label>
+                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span class="material-symbols-outlined text-white text-[20px]">photo_camera</span>
+                        </div>
+                        <div class="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-secondary text-background flex items-center justify-center shadow-md border border-white/40">
+                            <span class="material-symbols-outlined text-[13px] font-bold">edit</span>
+                        </div>
                         <input type="file" id="shopLogoInput" accept="image/*" class="hidden">
                     </div>
-                    <div class="pb-1">
-                        <div class="text-xs text-secondary font-semibold">โลโก้ร้านค้า</div>
-                        <div class="text-[11px] text-outline">แนะนำภาพจัตุรัส 1:1 (PNG/JPG)</div>
+                    <div class="pb-1 flex flex-col justify-end">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-secondary font-semibold">โลโก้ร้านค้า</span>
+                            <button type="button" onclick="document.getElementById('shopLogoInput').click()" class="text-[11px] text-secondary hover:underline flex items-center gap-0.5 font-medium py-0.5 px-2 rounded-md bg-secondary/10 border border-secondary/20">
+                                <span class="material-symbols-outlined text-[13px]">photo_camera</span> เปลี่ยนโลโก้
+                            </button>
+                        </div>
+                        <div class="text-[11px] text-outline mt-0.5">แนะนำภาพจัตุรัส 1:1 (PNG/JPG)</div>
                     </div>
                 </div>
                 <!-- Navigation Quick-links to other settings -->
@@ -1359,28 +1367,42 @@
                 // Mark sync status as ONLINE!
                 setCloudSyncStatus('synced', 'ข้อมูลเป็นปัจจุบันแล้ว');
 
-                // 4. LOAD LOGO (Supabase profiles -> IndexedDB -> localStorage)
+                // 4. LOAD LOGO (Smart priority: User-set logo > Cloud metadata bridge / Shop logo_url > Profiles avatar_url)
                 try {
-                    let finalLogo = (effectiveUserId ? await getMediaFromIDB('ownerProfileAvatar_' + effectiveUserId) : null) ||
-                                    (effectiveUserId ? localStorage.getItem('ownerProfileAvatar_' + effectiveUserId) : null) ||
-                                    localStorage.getItem('ownerProfileAvatar') || 
-                                    (await getMediaFromIDB('ownerProfileAvatar'));
+                    let finalLogo = null;
+                    const userExplicitSet = localStorage.getItem('ownerAvatarUserSet') === 'true';
+                    const idbLogo = (effectiveUserId ? await getMediaFromIDB('ownerProfileAvatar_' + effectiveUserId) : null) ||
+                                    (await getMediaFromIDB('ownerProfileAvatar')) ||
+                                    (await getMediaFromIDB('ownerShopLogo'));
+                    const localStoreLogo = (effectiveUserId ? localStorage.getItem('ownerProfileAvatar_' + effectiveUserId) : null) ||
+                                           localStorage.getItem('ownerProfileAvatar') ||
+                                           localStorage.getItem('ownerShopLogo');
 
-                    const targetOwnerId = shop?.owner_id || effectiveUserId;
-                    if (targetOwnerId && fetcher) {
-                        try {
-                            const profData = await fetcher(`profiles?id=eq.${targetOwnerId}&limit=1`);
-                            if (Array.isArray(profData) && profData.length > 0 && profData[0].avatar_url) {
-                                finalLogo = profData[0].avatar_url;
-                            }
-                        } catch (_) {}
+                    if (userExplicitSet && (idbLogo || localStoreLogo)) {
+                        finalLogo = idbLogo || localStoreLogo;
                     }
+
                     if (!finalLogo && cloudMeta?.logo) {
                         finalLogo = cloudMeta.logo;
                     }
-                    if (!finalLogo && shop?.logo_url) {
+                    if (!finalLogo && shop?.logo_url && !shop.logo_url.includes('googleusercontent')) {
                         finalLogo = shop.logo_url;
                     }
+                    if (!finalLogo) {
+                        const targetOwnerId = shop?.owner_id || effectiveUserId;
+                        if (targetOwnerId && fetcher) {
+                            try {
+                                const profData = await fetcher(`profiles?id=eq.${targetOwnerId}&limit=1`);
+                                if (Array.isArray(profData) && profData.length > 0 && profData[0].avatar_url && !profData[0].avatar_url.includes('googleusercontent')) {
+                                    finalLogo = profData[0].avatar_url;
+                                }
+                            } catch (_) {}
+                        }
+                    }
+                    if (!finalLogo) {
+                        finalLogo = idbLogo || localStoreLogo;
+                    }
+
                     if (finalLogo && logoImg) {
                         logoImg.src = finalLogo;
                         safeLocalStorageSet('ownerProfileAvatar', finalLogo);
@@ -1699,17 +1721,40 @@
                     logoImg.src = compressed;
                     safeLocalStorageSet('ownerProfileAvatar', compressed);
                     safeLocalStorageSet('ownerShopLogo', compressed);
+                    localStorage.setItem('ownerAvatarUserSet', 'true');
+                    localStorage.setItem('ownerAvatarUpdatedAt', String(Date.now()));
                     await saveMediaToIDB('ownerProfileAvatar', compressed);
                     await saveMediaToIDB('ownerShopLogo', compressed);
 
-                    const sId = currentShopId || localStorage.getItem('currentShopId');
+                    const sId = currentShopId || localStorage.getItem('currentShopId') || 'bccb746a-18ba-4802-ac29-eb30b7af7dd1';
                     if (sId) {
                         saveMediaToIDB('ownerShopLogo_' + sId, compressed).catch(() => {});
+                        // Immediately persist to shops table logo_url & description metadata bridge
+                        if (window.safeSupabaseRest) {
+                            try {
+                                const { data: sData } = await window.safeSupabaseRest(`shops?id=eq.${sId}&limit=1`);
+                                if (sData && sData[0]) {
+                                    const { cleanDesc, meta: cMeta } = extractShopMetadata(sData[0].description);
+                                    const newMeta = { ...(cMeta || {}), logo: compressed };
+                                    const newDesc = (cleanDesc ? cleanDesc + '\n\n' : '') + `\x3C!--BCW_META:${JSON.stringify(newMeta)}--\x3E`;
+                                    await window.safeSupabaseRest(`shops?id=eq.${sId}`, {
+                                        method: 'PATCH',
+                                        body: { description: newDesc, logo_url: compressed }
+                                    }).catch(() => {});
+                                }
+                            } catch (_) {}
+                        }
                     }
 
                     const userId = currentUserId || localStorage.getItem('lastLoggedInUserId');
                     if (userId) {
                         saveMediaToIDB('ownerProfileAvatar_' + userId, compressed).catch(() => {});
+                        const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                        if (client?.from) {
+                            try {
+                                await client.from('profiles').update({ avatar_url: compressed }).eq('id', userId);
+                            } catch (_) {}
+                        }
                         if (window.safeSupabaseRest) {
                             window.safeSupabaseRest(`profiles?id=eq.${userId}`, {
                                 method: 'PATCH',
@@ -1717,6 +1762,16 @@
                             }).catch(() => {});
                         }
                     }
+
+                    // Visual feedback toast
+                    const logoToast = document.createElement('div');
+                    logoToast.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1.5 transition-all duration-300';
+                    logoToast.innerHTML = '<span class="material-symbols-outlined text-[16px]">check_circle</span> เปลี่ยนรูปโลโก้เรียบร้อยแล้ว (อย่าลืมกดบันทึกข้อมูล)';
+                    document.body.appendChild(logoToast);
+                    setTimeout(() => {
+                        logoToast.classList.add('opacity-0', 'translate-y-2');
+                        setTimeout(() => logoToast.remove(), 400);
+                    }, 3000);
                 }
             }
         });
