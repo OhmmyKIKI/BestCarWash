@@ -547,7 +547,7 @@
             </div>
         </div>
 
-        <!-- LINE Notification Feature Card (THE HIGHLIGHT) -->
+        <!-- LINE AI Support Card -->
         <div class="w-full bg-gradient-to-br from-[#06C755]/15 via-surface-container to-[#06C755]/5 border-2 border-[#06C755]/40 rounded-2xl p-4 text-left mb-6 relative overflow-hidden shadow-lg group">
             <div class="flex items-start gap-3">
                 <div class="w-10 h-10 rounded-xl bg-[#06C755] flex items-center justify-center text-white font-black text-sm shrink-0 shadow-md shadow-[#06C755]/30">
@@ -555,21 +555,20 @@
                 </div>
                 <div class="flex-1">
                     <div class="flex items-center gap-1.5 mb-1">
-                        <span class="text-xs font-bold text-[#06C755] tracking-wide uppercase">แนะนำเพื่อไม่พลาดการแจ้งเตือน</span>
-                        <span class="w-1.5 h-1.5 rounded-full bg-[#06C755] animate-ping"></span>
+                        <span class="text-xs font-bold text-[#06C755] tracking-wide uppercase">ศูนย์ช่วยเหลือ AI 24 ชม.</span>
                     </div>
-                    <h3 class="text-sm font-bold text-on-surface leading-tight">รับแจ้งเตือนสถานะ & สลิปคืนเงินผ่าน LINE</h3>
+                    <h3 class="text-sm font-bold text-on-surface leading-tight">มีข้อสงสัยหรือต้องการความช่วยเหลือ?</h3>
                     <p class="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
-                        แอดเพื่อนกับ LINE Official เพื่อรับแจ้งเตือนเรียลไทม์:
+                        แอด LINE Official เพื่อสอบถามคู่มือการใช้งาน วิธีการรับรถ หรือปรึกษาข้อมูลกับ AI ผู้ช่วยได้ตลอดเวลา
                     </p>
                     <ul class="text-[11px] text-on-surface-variant/90 space-y-1 mt-1.5 pl-1">
                         <li class="flex items-center gap-1.5">
                             <span class="material-symbols-outlined text-[13px] text-[#06C755]">check_circle</span>
-                            <span>แจ้งเตือนเมื่อช่างเริ่มล้าง & เมื่อรถล้างเสร็จพร้อมรับ</span>
+                            <span>AI ตอบคำถาม แนะนำวิธีใช้งาน และคู่มือช่วยเหลือทันที</span>
                         </li>
                         <li class="flex items-center gap-1.5">
                             <span class="material-symbols-outlined text-[13px] text-[#06C755]">check_circle</span>
-                            <span>แจ้งเตือนและแนบหลักฐานสลิปคืนเงินมัดจำทันที</span>
+                            <span>ติดตามสถานะคิวล้างรถได้โดยตรงผ่านหน้ารายการจองในเว็บ</span>
                         </li>
                     </ul>
                 </div>
@@ -577,8 +576,8 @@
 
             <!-- Action to Connect LINE -->
             <button type="button" onclick="openLineConnectModal()" class="w-full mt-3.5 py-3 px-4 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md shadow-[#06C755]/25 flex items-center justify-center gap-2 active:scale-95 group-hover:brightness-105">
-                <span class="material-symbols-outlined text-[18px]">chat</span>
-                <span>แอด LINE เพื่อรับแจ้งเตือนคิวนี้</span>
+                <span class="material-symbols-outlined text-[18px]">support_agent</span>
+                <span>ปรึกษา AI ศูนย์ช่วยเหลือผ่าน LINE</span>
                 <span class="material-symbols-outlined text-[16px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
             </button>
         </div>
@@ -605,8 +604,8 @@
             LINE
         </div>
 
-        <h3 class="text-lg font-bold text-on-surface">เชื่อมต่อกับ LINE Official</h3>
-        <p class="text-xs text-on-surface-variant mt-1 mb-4">สแกน QR Code หรือเพิ่มเพื่อนกับ BestCarWash เพื่อรับการแจ้งเตือน</p>
+        <h3 class="text-lg font-bold text-on-surface">ศูนย์ช่วยเหลือ AI (LINE Official)</h3>
+        <p class="text-xs text-on-surface-variant mt-1 mb-4">สแกน QR Code หรือเพิ่มเพื่อนกับ BestCarWash เพื่อสอบถามคู่มือและพูดคุยกับ AI ผู้ช่วย</p>
 
         <!-- QR Code Frame -->
         <div class="p-3 bg-white rounded-2xl shadow-inner border-2 border-[#06C755]/40 mb-3 flex flex-col items-center">
@@ -644,9 +643,13 @@
         </div>
 
         <div class="w-full flex flex-col gap-2 mt-2">
-            <button onclick="goToHistory()" class="w-full py-2.5 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-xs rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5">
-                <span class="material-symbols-outlined text-[16px]">check_circle</span>
-                <span>ไปที่การจอง</span>
+            <a href="https://line.me/R/ti/p/@bestcarwash" target="_blank" class="w-full py-2.5 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-xs rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">chat</span>
+                <span>เปิดแชต LINE เพื่อคุยกับ AI</span>
+            </a>
+            <button onclick="goToHistory()" class="w-full py-2 bg-surface-variant text-on-surface-variant font-semibold text-xs rounded-xl hover:bg-surface-container-highest transition-colors flex items-center justify-center gap-1">
+                <span>ไปที่หน้าการจอง</span>
+                <span class="material-symbols-outlined text-[14px]">chevron_right</span>
             </button>
         </div>
 
@@ -2450,13 +2453,7 @@
     };
 
     window.simulateLineConnected = function() {
-        // Save connection state in localStorage
-        const settings = JSON.parse(localStorage.getItem('customerNotificationSettings') || '{}');
-        settings.lineConnected = true;
-        settings.channelLine = true;
-        localStorage.setItem('customerNotificationSettings', JSON.stringify(settings));
-
-        alert("🎉 เพิ่มเพื่อน BestCarWash และเชื่อมต่อระบบแจ้งเตือนสำเร็จ!\nระบบจะส่งแจ้งเตือนสถานะคิวและสลิปคืนเงินผ่าน LINE ให้คุณโดยอัตโนมัติ");
+        alert("🎉 เพิ่มเพื่อน LINE Official ศูนย์ช่วยเหลือสำเร็จ!\nคุณสามารถพิมพ์สอบถาม AI หรือดูคู่มือการใช้งานได้ตลอด 24 ชั่วโมง");
         closeLineConnectModal();
         goToHistory();
     };

@@ -244,15 +244,6 @@
                     </div>
                 </div>
 
-                <!-- LINE Tracking Pill -->
-                <div class="mt-2.5 py-1.5 px-3 rounded-xl bg-[#06C755]/10 border border-[#06C755]/30 flex items-center justify-between text-xs">
-                    <span class="text-[#06C755] font-medium flex items-center gap-1.5">
-                        <span class="w-1.5 h-1.5 rounded-full bg-[#06C755] animate-pulse"></span>
-                        <span>รับการแจ้งเตือนสถานะคิวนี้ผ่าน LINE Official</span>
-                    </span>
-                    <a href="notification-settings-Customer.html" class="text-on-surface-variant hover:text-primary transition-colors text-[11px] font-semibold">ตั้งค่า</a>
-                </div>
-
                 <!-- Ready for Pickup Notification Banner (Option 1: Shows when in Step 4 'พร้อมรับรถ') -->
                 <div id="readyForPickupBanner" class="hidden mt-2.5 p-3.5 rounded-2xl bg-secondary/15 border border-secondary/40 flex-col gap-2.5 shadow-md shadow-secondary/5 transition-all">
                     <div class="flex items-start sm:items-center gap-3">
@@ -1362,7 +1353,7 @@
 
             <!-- Notes -->
             <p class="text-[11px] text-on-surface-variant leading-relaxed">
-                ℹ️ ร้านค้าจะได้รับข้อมูลบัญชีของคุณ และดำเนินการโอนเงินคืนมัดจำพร้อมส่งสลิปผ่าน LINE ให้ภายใน 24 ชม.
+                ℹ️ ร้านค้าจะได้รับข้อมูลบัญชีของคุณ และดำเนินการโอนเงินคืนมัดจำพร้อมแนบหลักฐานสลิปในระบบให้ภายใน 24 ชม.
             </p>
 
             <!-- Submit Buttons -->
@@ -2194,12 +2185,12 @@
                             </div>
                         </div>
 
-                        <div class="mt-1 p-2.5 sm:p-3 rounded-xl bg-[#06C755]/10 border border-[#06C755]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div class="mt-1 p-2.5 sm:p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div class="flex items-center gap-2 min-w-0">
-                                <div class="w-5 h-5 rounded-full bg-[#06C755] flex items-center justify-center text-white text-[9px] font-black shrink-0 shadow-sm">
-                                    LINE
+                                <div class="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white text-[11px] font-bold shrink-0 shadow-sm">
+                                    <span class="material-symbols-outlined text-[13px]">verified</span>
                                 </div>
-                                <span class="text-xs text-[#06C755] font-semibold truncate">ร้านค้าโอนเงินคืนและแนบสลิปเรียบร้อยแล้ว</span>
+                                <span class="text-xs text-emerald-400 font-semibold truncate">ร้านค้าโอนเงินคืนและแนบสลิปเรียบร้อยแล้ว</span>
                             </div>
                             <button onclick="openRefundSlipModal('', '${cleanId}')" class="text-xs font-bold text-on-surface bg-surface-container-highest hover:bg-surface-variant px-3 py-1.5 rounded-lg border border-outline-variant/30 transition-colors flex items-center justify-center gap-1.5 active:scale-95 shadow-sm shrink-0 whitespace-nowrap">
                                 <span class="material-symbols-outlined text-[15px] text-emerald-400">receipt_long</span> ดูสลิป

@@ -267,98 +267,31 @@
             </div>
         </div>
 
-        <!-- Card 2: Channels (Interactive LINE Official Focus) -->
-        <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-[#06C755]/40 transition-all flex flex-col justify-between">
+        <!-- Card 2: Channels & AI Help Center -->
+        <div class="bg-surface-container/80 backdrop-blur-xl border border-outline-variant/30 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-primary/40 transition-all flex flex-col justify-between">
             <div>
                 <div class="flex items-center justify-between pb-3 mb-4 border-b border-outline-variant/30">
                     <div class="flex items-center gap-2.5">
-                        <div class="w-9 h-9 rounded-xl bg-[#06C755]/15 flex items-center justify-center text-[#06C755] border border-[#06C755]/25">
-                            <span class="material-symbols-outlined text-[20px]">cell_tower</span>
+                        <div class="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center text-primary border border-primary/25">
+                            <span class="material-symbols-outlined text-[20px]">notifications_active</span>
                         </div>
                         <div>
-                            <h2 class="text-sm font-bold text-on-surface">ช่องทางการรับแจ้งเตือน</h2>
-                            <p class="text-xs text-on-surface-variant">เลือกช่องทางที่คุณสะดวกรับข้อความ</p>
+                            <h2 class="text-sm font-bold text-on-surface">ช่องทางการแจ้งเตือนในระบบ</h2>
+                            <p class="text-xs text-on-surface-variant">การรับข้อความแจ้งเตือนสถานะคิวและเงินคืน</p>
                         </div>
                     </div>
                 </div>
 
                 <div class="divide-y divide-outline-variant/20">
-                    <!-- LINE Notification Module -->
-                    <div class="py-3.5 first:pt-0">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-start gap-3 flex-1 pr-3">
-                                <!-- LINE Icon Badge -->
-                                <div class="w-8 h-8 rounded-full bg-[#06C755] flex items-center justify-center text-white font-black text-xs shrink-0 mt-0.5 shadow-md shadow-[#06C755]/30">
-                                    LINE
-                                </div>
-                                <div class="flex flex-col">
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="text-sm font-bold text-on-surface">LINE Official Notification</span>
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#06C755]/15 text-[#06C755] border border-[#06C755]/30">แนะนำสูงสุด</span>
-                                    </div>
-                                    <span class="text-xs text-on-surface-variant">แจ้งเตือนสถานะคิว & สลิปเงินคืนผ่านแชต LINE ทันที</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Master Switch for LINE -->
-                            <div class="relative inline-block w-12 h-7 align-middle select-none shrink-0">
-                                <input type="checkbox" id="channel-line" class="setting-toggle peer absolute opacity-0 w-0 h-0" onchange="autoSave()"/>
-                                <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/40 transition-colors duration-200 ease-in-out peer-checked:bg-[#06C755] peer-checked:border-[#06C755]"></span>
-                                <span class="absolute left-1 top-1 bg-outline w-5 h-5 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-white shadow-sm"></span>
-                            </div>
-                        </div>
-
-                        <!-- STATE A: Connected State -->
-                        <div id="line-connected-view" class="mt-3 ml-11 p-3.5 rounded-2xl bg-[#06C755]/10 border border-[#06C755]/30 flex flex-col gap-2.5">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-6 h-6 rounded-full bg-[#06C755] text-white flex items-center justify-center text-[10px] font-bold shadow-sm">
-                                        <span class="material-symbols-outlined text-[14px]">check</span>
-                                    </div>
-                                    <div class="text-xs">
-                                        <span class="text-on-surface-variant">ผูกกับ: </span>
-                                        <strong class="text-on-surface font-semibold" id="line-account-display">Somchai (LINE)</strong>
-                                    </div>
-                                </div>
-                                <span class="text-[11px] font-bold text-[#06C755] bg-[#06C755]/15 px-2 py-0.5 rounded-full border border-[#06C755]/30">เชื่อมต่อแล้ว</span>
-                            </div>
-
-                            <!-- Buttons inside Connected View -->
-                            <div class="flex items-center gap-2 pt-1 border-t border-[#06C755]/20">
-                                <button type="button" onclick="openLinePreviewModal()" class="flex-1 py-1.5 px-2.5 rounded-lg bg-[#06C755] hover:bg-[#05b34c] text-white text-[11px] font-bold transition-all shadow-sm flex items-center justify-center gap-1 active:scale-95">
-                                    <span class="material-symbols-outlined text-[14px]">visibility</span>
-                                    <span>ดูตัวอย่างการแจ้งเตือนใน LINE</span>
-                                </button>
-                                <button type="button" onclick="disconnectLine()" class="py-1.5 px-2.5 rounded-lg bg-surface-container-highest hover:bg-error/20 text-on-surface-variant hover:text-error text-[11px] font-medium transition-colors border border-outline-variant/30 active:scale-95">
-                                    ยกเลิกผูกบัญชี
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- STATE B: Disconnected State -->
-                        <div id="line-disconnected-view" class="hidden mt-3 ml-11 p-3.5 rounded-2xl bg-surface-container-highest/60 border border-outline-variant/30 flex flex-col gap-2.5">
-                            <div class="flex items-start gap-2">
-                                <span class="material-symbols-outlined text-outline text-[18px] shrink-0 mt-0.5">link_off</span>
-                                <div class="text-xs text-on-surface-variant leading-relaxed">
-                                    ยังไม่ได้เชื่อมต่อกับ LINE Official Account กรุณากดเชื่อมต่อเพื่อรับการแจ้งเตือนสลิปเงินคืนและคิวล้างรถ
-                                </div>
-                            </div>
-                            <button type="button" onclick="openConnectModal()" class="w-full py-2 px-3 bg-[#06C755] hover:bg-[#05b34c] text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-95">
-                                <span class="material-symbols-outlined text-[16px]">qr_code_scanner</span>
-                                <span>เชื่อมต่อบัญชี LINE Official</span>
-                            </button>
-                        </div>
-                    </div>
-
                     <!-- Push Notification (App) -->
-                    <label class="flex items-center justify-between cursor-pointer group/toggle py-3.5 last:pb-0">
+                    <label class="flex items-center justify-between cursor-pointer group/toggle py-3.5 first:pt-0">
                         <div class="flex items-start gap-3 flex-1 pr-3">
                             <div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center text-primary shrink-0 mt-0.5">
                                 <span class="material-symbols-outlined text-[18px]">notifications</span>
                             </div>
                             <div class="flex flex-col">
-                                <span class="text-sm font-semibold text-on-surface group-hover/toggle:text-primary transition-colors">การแจ้งเตือน Push (แอป)</span>
-                                <span class="text-xs text-on-surface-variant">แจ้งเตือนเด้งบนหน้าจอหลักของสมาร์ตโฟน</span>
+                                <span class="text-sm font-semibold text-on-surface group-hover/toggle:text-primary transition-colors">การแจ้งเตือน Push & ในเว็บ</span>
+                                <span class="text-xs text-on-surface-variant">แจ้งเตือนสถานะคิว สลิปเงินคืน และขั้นตอนการล้างรถแบบเรียลไทม์บนหน้าจอ</span>
                             </div>
                         </div>
                         <div class="relative inline-block w-12 h-7 align-middle select-none shrink-0">
@@ -367,14 +300,60 @@
                             <span class="absolute left-1 top-1 bg-outline w-5 h-5 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-white shadow-sm"></span>
                         </div>
                     </label>
+
+                    <!-- In-App Toast Toggle -->
+                    <label class="flex items-center justify-between cursor-pointer group/toggle py-3.5 last:pb-0">
+                        <div class="flex items-start gap-3 flex-1 pr-3">
+                            <div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center text-secondary shrink-0 mt-0.5">
+                                <span class="material-symbols-outlined text-[18px]">campaign</span>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-sm font-semibold text-on-surface group-hover/toggle:text-primary transition-colors">ป๊อปอัปแจ้งเตือนสด (In-App Toast)</span>
+                                <span class="text-xs text-on-surface-variant">แสดงแถบข้อความแจ้งเตือนเมื่อเปิดดูหน้าประวัติและการจอง</span>
+                            </div>
+                        </div>
+                        <div class="relative inline-block w-12 h-7 align-middle select-none shrink-0">
+                            <input type="checkbox" id="channel-toast" class="setting-toggle peer absolute opacity-0 w-0 h-0" onchange="autoSave()"/>
+                            <span class="absolute inset-0 bg-surface-variant rounded-full border border-outline-variant/40 transition-colors duration-200 ease-in-out peer-checked:bg-secondary-container peer-checked:border-secondary"></span>
+                            <span class="absolute left-1 top-1 bg-outline w-5 h-5 rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5 peer-checked:bg-white shadow-sm"></span>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- LINE Official AI Help Center Module -->
+                <div class="mt-4 p-4 rounded-2xl bg-gradient-to-br from-[#06C755]/15 via-surface-container to-[#06C755]/5 border border-[#06C755]/30 flex flex-col gap-3">
+                    <div class="flex items-start gap-3">
+                        <div class="w-9 h-9 rounded-full bg-[#06C755] flex items-center justify-center text-white font-black text-xs shrink-0 shadow-md shadow-[#06C755]/30 mt-0.5">
+                            LINE
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-1.5">
+                                <h3 class="text-xs sm:text-sm font-bold text-on-surface">ศูนย์ช่วยเหลือ AI (LINE Official)</h3>
+                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#06C755]/15 text-[#06C755] border border-[#06C755]/30">AI 24 ชม.</span>
+                            </div>
+                            <p class="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
+                                สอบถามคู่มือการใช้งาน วิธีการจองคิว หรือปรึกษาข้อมูลการใช้งานกับ AI ผู้ช่วยได้ตลอด 24 ชั่วโมง
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 pt-1 border-t border-[#06C755]/20">
+                        <button type="button" onclick="openConnectModal()" class="flex-1 py-2 px-3 bg-[#06C755] hover:bg-[#05b34c] text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-95">
+                            <span class="material-symbols-outlined text-[16px]">qr_code_scanner</span>
+                            <span>เปิด QR Code แอดเพื่อน</span>
+                        </button>
+                        <a href="https://line.me/R/ti/p/@bestcarwash" target="_blank" class="py-2 px-3 bg-surface-container-highest hover:bg-surface-variant text-on-surface text-xs font-semibold rounded-xl transition-colors border border-outline-variant/30 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[15px] text-[#06C755]">open_in_new</span>
+                            <span>เปิดแชต LINE</span>
+                        </a>
+                    </div>
                 </div>
             </div>
 
             <!-- Helpful note banner in Card 2 -->
-            <div class="mt-6 p-3 rounded-xl bg-surface-container/60 border border-outline-variant/20 flex items-start gap-2.5">
-                <span class="material-symbols-outlined text-[18px] text-[#06C755] shrink-0 mt-0.5">verified_user</span>
+            <div class="mt-4 p-3 rounded-xl bg-surface-container/60 border border-outline-variant/20 flex items-start gap-2.5">
+                <span class="material-symbols-outlined text-[18px] text-primary shrink-0 mt-0.5">info</span>
                 <p class="text-[11px] text-on-surface-variant leading-relaxed">
-                    ระบบจะส่งข้อความแจ้งเตือนผ่านช่องทางที่คุณเลือกไว้แบบเรียลไทม์ พร้อมติดตามสถานะการล้างรถและหลักฐานสลิปเงินคืนได้ทุกขั้นตอน
+                    ระบบจะส่งข้อความแจ้งเตือนสถานะคิวล้างรถและการคืนเงินผ่านระบบของเว็บไซต์แบบเรียลไทม์ และคุณสามารถสอบถามคู่มือได้ตลอดที่ LINE Official
                 </p>
             </div>
         </div>
@@ -400,127 +379,7 @@
     <span class="text-sm font-medium flex-1 truncate" id="toast-msg">บันทึกการตั้งค่าเรียบร้อยแล้ว</span>
 </div>
 
-<!-- LINE Flex Message Interactive Preview Modal -->
-<div id="line-preview-modal" class="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4 py-6">
-    <div class="bg-[#1e232f] border border-outline-variant/40 rounded-3xl max-w-md w-full flex flex-col shadow-2xl scale-95 transition-transform duration-300 relative overflow-hidden max-h-[90vh]" id="line-preview-modal-content">
-        
-        <!-- LINE App Simulated Header -->
-        <div class="bg-[#212b36] px-4 py-3 border-b border-outline-variant/30 flex items-center justify-between shrink-0">
-            <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-full bg-[#06C755] flex items-center justify-center text-white font-black text-xs shadow-sm">
-                    LINE
-                </div>
-                <div>
-                    <div class="flex items-center gap-1">
-                        <span class="text-sm font-bold text-white">BestCarWash Official</span>
-                        <span class="material-symbols-outlined text-[#06C755] text-[16px]" style="font-variation-settings: 'FILL' 1;">verified</span>
-                    </div>
-                    <span class="text-[10px] text-gray-400">ตัวอย่างข้อความที่ลูกค้าจะได้รับใน LINE</span>
-                </div>
-            </div>
-            <button onclick="closeLinePreviewModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors">
-                <span class="material-symbols-outlined text-[18px]">close</span>
-            </button>
-        </div>
 
-        <!-- LINE Chat Body (Scrollable) -->
-        <div class="p-4 overflow-y-auto space-y-4 bg-[#111622] flex-1">
-            
-            <!-- FLEX CARD 1: REFUND NOTIFICATION (คืนเงินมัดจำ) -->
-            <div class="bg-surface-container rounded-2xl overflow-hidden border border-emerald-500/40 shadow-xl max-w-xs mx-auto">
-                <!-- Card Header -->
-                <div class="bg-gradient-to-r from-emerald-600 to-teal-700 p-3.5 text-white flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">currency_exchange</span>
-                        <span class="text-xs font-bold uppercase tracking-wider">คืนเงินมัดจำสำเร็จ</span>
-                    </div>
-                    <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">โอนแล้ว</span>
-                </div>
-                <!-- Card Content -->
-                <div class="p-4 space-y-3 text-xs">
-                    <div class="text-center py-1 bg-surface-container-highest/60 rounded-xl border border-outline-variant/20">
-                        <span class="text-[10px] text-on-surface-variant block">ยอดเงินที่โอนคืน</span>
-                        <span class="text-2xl font-black text-emerald-400 font-mono">฿150.00</span>
-                    </div>
-
-                    <div class="space-y-1.5 text-[11px] border-y border-outline-variant/20 py-2">
-                        <div class="flex justify-between">
-                            <span class="text-on-surface-variant">รหัสการจอง:</span>
-                            <span class="font-mono font-bold text-on-surface">#BK-9821</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-on-surface-variant">ร้านคาร์แคร์:</span>
-                            <span class="font-medium text-on-surface">Gleam Auto Care</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-on-surface-variant">โอนเข้าบัญชี:</span>
-                            <span class="text-on-surface">กสิกรไทย (xxx-x-xx123-x)</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-on-surface-variant">เวลาโอน:</span>
-                            <span class="text-on-surface">11 ต.ค. 2026, 17:30 น.</span>
-                        </div>
-                    </div>
-
-                    <!-- Mini Slip Graphic Mock -->
-                    <div class="p-2 rounded-lg bg-surface-container-highest/40 border border-outline-variant/20 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-emerald-400 text-[18px]">receipt_long</span>
-                        <div class="flex-1 truncate text-[10px] text-on-surface-variant">
-                            <span>หลักฐานสลิป: </span><strong class="text-on-surface">slip_trans_9821.jpg</strong>
-                        </div>
-                        <span class="text-[10px] text-[#06C755] font-bold">แนบแล้ว</span>
-                    </div>
-
-                    <button class="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-center transition-colors shadow-sm text-xs">
-                        ดูรายละเอียดและรูปสลิป
-                    </button>
-                </div>
-            </div>
-
-            <!-- FLEX CARD 2: CAR READY FOR PICKUP (รถล้างเสร็จแล้ว) -->
-            <div class="bg-surface-container rounded-2xl overflow-hidden border border-[#06C755]/40 shadow-xl max-w-xs mx-auto">
-                <div class="bg-gradient-to-r from-[#06C755] to-emerald-700 p-3.5 text-white flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">local_car_wash</span>
-                        <span class="text-xs font-bold uppercase tracking-wider">ล้างเสร็จสิ้นพร้อมรับรถ ✨</span>
-                    </div>
-                    <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">พร้อมรับ</span>
-                </div>
-                <div class="p-4 space-y-3 text-xs">
-                    <p class="text-on-surface font-semibold text-[13px] leading-tight">
-                        รถยนต์ของคุณได้รับการดูแลเรียบร้อยแล้ว เงาวับพร้อมส่งมอบ!
-                    </p>
-                    <div class="space-y-1.5 text-[11px] bg-surface-container-highest/40 p-2.5 rounded-xl border border-outline-variant/20">
-                        <div class="flex justify-between">
-                            <span class="text-on-surface-variant">รถยนต์:</span>
-                            <span class="font-bold text-on-surface">Honda Civic (กข 1234)</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-on-surface-variant">ช่องรับรถ:</span>
-                            <span class="text-primary font-bold">Bay 02 (ช่องส่งมอบ)</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-on-surface-variant">ร้าน:</span>
-                            <span class="text-on-surface">Gleam Auto Care</span>
-                        </div>
-                    </div>
-
-                    <button class="w-full py-2 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold rounded-xl text-center transition-colors shadow-sm text-xs flex items-center justify-center gap-1">
-                        <span class="material-symbols-outlined text-[16px]">navigation</span>
-                        <span>เปิดแผนที่นำทางไปรับรถ</span>
-                    </button>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Footer -->
-        <div class="p-3 bg-[#1e232f] border-t border-outline-variant/30 text-center">
-            <span class="text-[11px] text-gray-400">ระบบจะสร้างการ์ด Flex Message และส่งตรงเข้า LINE อัตโนมัติ</span>
-        </div>
-
-    </div>
-</div>
 
 <!-- LINE Connect Modal -->
 <div id="connect-modal" class="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4">
@@ -533,8 +392,8 @@
             LINE
         </div>
 
-        <h3 class="text-lg font-bold text-on-surface">เชื่อมต่อ LINE Official</h3>
-        <p class="text-xs text-on-surface-variant mt-1 mb-4">สแกน QR Code เพื่อเชื่อมต่อการแจ้งเตือนกับ BestCarWash</p>
+        <h3 class="text-lg font-bold text-on-surface">ศูนย์ช่วยเหลือ AI (LINE Official)</h3>
+        <p class="text-xs text-on-surface-variant mt-1 mb-4">สแกน QR Code เพื่อเพิ่มเพื่อนและพูดคุยกับ AI ผู้ช่วยหรือสอบถามคู่มือการใช้งาน</p>
 
         <!-- QR Code Frame -->
         <div class="p-3 bg-white rounded-2xl shadow-inner border-2 border-[#06C755]/40 mb-3 flex flex-col items-center">
@@ -567,12 +426,12 @@
         </div>
 
         <div class="w-full flex flex-col gap-2 mt-2">
-            <button onclick="confirmConnectLine()" class="w-full py-2.5 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-xs rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5">
-                <span class="material-symbols-outlined text-[16px]">how_to_reg</span>
-                <span>จำลอง: เพิ่มเพื่อน & เชื่อมต่อสำเร็จ</span>
-            </button>
-            <button onclick="closeConnectModal()" class="w-full py-2 bg-surface-variant text-on-surface-variant text-xs font-semibold rounded-xl">
-                ยกเลิก
+            <a href="https://line.me/R/ti/p/@bestcarwash" target="_blank" class="w-full py-2.5 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-xs rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">chat</span>
+                <span>เปิดแชต LINE เพื่อคุยกับ AI</span>
+            </a>
+            <button onclick="closeConnectModal()" class="w-full py-2 bg-surface-variant text-on-surface-variant text-xs font-semibold rounded-xl hover:bg-surface-container-highest transition-colors">
+                ปิดหน้าต่าง
             </button>
         </div>
     </div>
@@ -585,9 +444,8 @@
         serviceProgress: true,
         carReady: true,
         refundAlert: true,
-        channelLine: true,
         channelPush: true,
-        lineConnected: true
+        channelToast: true
     };
 
     const SETTING_MAP = {
@@ -596,8 +454,8 @@
         'setting-serviceProgress': 'serviceProgress',
         'setting-carReady': 'carReady',
         'setting-refundAlert': 'refundAlert',
-        'channel-line': 'channelLine',
-        'channel-push': 'channelPush'
+        'channel-push': 'channelPush',
+        'channel-toast': 'channelToast'
     };
 
     function showToast(message, icon = 'check_circle') {
@@ -632,28 +490,6 @@
         return { ...DEFAULT_SETTINGS };
     }
 
-    function syncLineUI(settings) {
-        const connectedView = document.getElementById('line-connected-view');
-        const disconnectedView = document.getElementById('line-disconnected-view');
-        const lineSwitch = document.getElementById('channel-line');
-
-        const isConnected = settings.lineConnected !== false;
-
-        if (connectedView && disconnectedView) {
-            if (isConnected) {
-                connectedView.classList.remove('hidden');
-                disconnectedView.classList.add('hidden');
-                if (lineSwitch) lineSwitch.disabled = false;
-            } else {
-                connectedView.classList.add('hidden');
-                disconnectedView.classList.remove('hidden');
-                if (lineSwitch) {
-                    lineSwitch.checked = false;
-                }
-            }
-        }
-    }
-
     function applySettingsToUI(settings) {
         for (const [elementId, key] of Object.entries(SETTING_MAP)) {
             const el = document.getElementById(elementId);
@@ -661,7 +497,6 @@
                 el.checked = settings[key] !== undefined ? settings[key] : DEFAULT_SETTINGS[key];
             }
         }
-        syncLineUI(settings);
     }
 
     function readSettingsFromUI() {
@@ -724,34 +559,6 @@
     }
 
     // Modal Handlers
-    function openLinePreviewModal() {
-        const modal = document.getElementById('line-preview-modal');
-        const content = document.getElementById('line-preview-modal-content');
-        if (modal && content) {
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                content.classList.remove('scale-95');
-                content.classList.add('scale-100');
-            }, 10);
-        }
-    }
-
-    function closeLinePreviewModal() {
-        const modal = document.getElementById('line-preview-modal');
-        const content = document.getElementById('line-preview-modal-content');
-        if (modal && content) {
-            modal.classList.add('opacity-0');
-            content.classList.remove('scale-100');
-            content.classList.add('scale-95');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                modal.style.display = 'none';
-            }, 300);
-        }
-    }
-
     function openConnectModal() {
         const modal = document.getElementById('connect-modal');
         const content = document.getElementById('connect-modal-content');
@@ -780,27 +587,6 @@
         }
     }
 
-    function confirmConnectLine() {
-        const settings = getSettings();
-        settings.lineConnected = true;
-        settings.channelLine = true;
-        localStorage.setItem('customerNotificationSettings', JSON.stringify(settings));
-        applySettingsToUI(settings);
-        closeConnectModal();
-        showToast('เชื่อมต่อ LINE Official สำเร็จแล้ว!', 'how_to_reg');
-    }
-
-    function disconnectLine() {
-        if (confirm("คุณต้องการยกเลิกการเชื่อมต่อกับ LINE Official ใช่หรือไม่?\n(ระบบจะไม่สามารถส่งแจ้งเตือนสลิปเงินคืนและสถานะคิวล้างรถผ่าน LINE ได้)")) {
-            const settings = getSettings();
-            settings.lineConnected = false;
-            settings.channelLine = false;
-            localStorage.setItem('customerNotificationSettings', JSON.stringify(settings));
-            applySettingsToUI(settings);
-            showToast('ยกเลิกการเชื่อมต่อ LINE แล้ว', 'link_off');
-        }
-    }
-
     // Initialize Page & Synchronize Profile
     document.addEventListener('DOMContentLoaded', () => {
         // Load notification settings
@@ -820,8 +606,6 @@
                 if (displayName) {
                     const nameEl = document.getElementById('desktop-header-name');
                     if (nameEl) nameEl.innerText = displayName;
-                    const lineDisplay = document.getElementById('line-account-display');
-                    if (lineDisplay) lineDisplay.innerText = `${displayName} (LINE)`;
                 }
             } catch (e) {
                 console.error(e);
