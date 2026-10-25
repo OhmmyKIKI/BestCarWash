@@ -132,7 +132,11 @@
     <div id="toast" class="fixed top-4 sm:top-6 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 opacity-0 -translate-y-10 pointer-events-none max-w-sm w-full px-4">
         <div id="toastContent" class="glass-panel bg-secondary-container/20 border-secondary-container text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm">
             <span id="toastIcon" class="material-symbols-outlined text-green-400 text-[20px]">check_circle</span>
-            <span class="font-medium" id="toastMessage">สร้างบัญ    <!-- Main Content Canvas (Extra Large Card Web & App Container) -->
+            <span class="font-medium" id="toastMessage">สร้างบัญชีสำเร็จ! กำลังเปลี่ยนหน้า...</span>
+        </div>
+    </div>
+
+    <!-- Main Content Canvas (Extra Large Card Web & App Container) -->
     <main class="w-full max-w-xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl z-10 glass-panel rounded-2xl sm:rounded-3xl p-5 sm:p-9 md:p-14 flex flex-col shadow-2xl relative glow-effect border border-outline-variant/30 my-auto">
         
         <!-- Header -->
@@ -541,46 +545,53 @@
                 if (error) throw error;
                 if (!data?.user) throw new Error('ไม่สามารถสร้างบัญชีผู้ใช้ได้ กรุณาลองใหม่อีกครั้ง');
 
-                // 1.5 Update profile avatar & insert initial vehicle in parallel via safeSupabaseRest
+                // 1.5 Update profile avatar & insert initial vehicle in parallel via safeSupabaseRest or client.from
+                const restFetcher = window.safeSupabaseRest || (typeof safeSupabaseRest === 'function' ? safeSupabaseRest : null);
                 const postTasks = [];
                 if (uploadedCustomerAvatarBase64) {
-                    postTasks.push(safeSupabaseRest(`profiles?id=eq.${data.user.id}`, {
-                        method: 'PATCH',
-                        body: JSON.stringify({ avatar_url: uploadedCustomerAvatarBase64 })
-                    }).catch(e => console.warn('Avatar update error:', e)));
+                    if (restFetcher) {
+                        postTasks.push(restFetcher(`profiles?id=eq.${data.user.id}`, {
+                            method: 'PATCH',
+                            body: { avatar_url: uploadedCustomerAvatarBase64 }
+                        }).catch(e => console.warn('Avatar update error:', e)));
+                    } else if (client.from) {
+                        postTasks.push(client.from('profiles').update({ avatar_url: uploadedCustomerAvatarBase64 }).eq('id', data.user.id).catch(e => console.warn('Avatar update error:', e)));
+                    }
                 }
                 if (carModel) {
-                    postTasks.push(safeSupabaseRest('vehicles', {
-                        method: 'POST',
-                        body: JSON.stringify({
+                    if (restFetcher) {
+                        postTasks.push(restFetcher('vehicles', {
+                            method: 'POST',
+                            body: {
+                                customer_id: data.user.id,
+                                brand_model: carModel,
+                                plate_number: licensePlate || '-',
+                                is_default: true
+                            }
+                        }).catch(e => console.warn('Vehicle insert error:', e)));
+                    } else if (client.from) {
+                        postTasks.push(client.from('vehicles').insert({
                             customer_id: data.user.id,
                             brand_model: carModel,
                             plate_number: licensePlate || '-',
                             is_default: true
-                        })
-                    }).catch(e => console.warn('Vehicle insert error:', e)));
+                        }).catch(e => console.warn('Vehicle insert error:', e)));
+                    }
                 }
                 if (postTasks.length > 0) {
                     await Promise.all(postTasks);
                 }
 
-                // Store in customerProfile cache & remember email for 0ms login prefill
-                localStorage.setItem('customerProfile', JSON.stringify({
-                    fullName,
-                    phone,
-                    email,
-                    avatar: uploadedCustomerAvatarBase64 || null
-                }));
-                localStorage.setItem('rememberedEmail', email);
-
-                // Sign out and clear any old session cache
+                // Sign out any active session to force fresh login with new credentials
                 try {
                     await client.auth.signOut();
                 } catch (soErr) {
                     console.warn('Signout after signup notice:', soErr);
                 }
+
+                // Clear old session keys from previous user
                 [
-                    'customerProfile', 'customerCars', 'ownerProfileAvatar', 'ownerShopLogo', 'ownerShopName',
+                    'customerCars', 'ownerProfileAvatar', 'ownerShopLogo', 'ownerShopName',
                     'ownerProfileName', 'appBookingsList', 'activeCustomerBooking', 'favoriteShopIds',
                     'cachedCustomerNotifications', 'cachedOwnerNotifications', 'customerNotifications',
                     'lastLoggedInUserId', 'currentShopId', 'ownerCoverImage', 'ownerShopGallery',
@@ -588,6 +599,15 @@
                     'ownerShopPhone', 'ownerShopLat', 'ownerShopLng', 'ownerShopMapLink', 'ownerAvatarUserSet',
                     'ownerAvatarUpdatedAt', 'ownerOperatingHours', 'ownerServices', 'ownerSpecialHolidays'
                 ].forEach(k => localStorage.removeItem(k));
+
+                // Store fresh customerProfile cache & remember email for 0ms login prefill
+                localStorage.setItem('customerProfile', JSON.stringify({
+                    fullName,
+                    phone,
+                    email,
+                    avatar: uploadedCustomerAvatarBase64 || null
+                }));
+                localStorage.setItem('rememberedEmail', email);
 
                 // Clear un-scoped IndexedDB media from any old session
                 if (typeof indexedDB !== 'undefined') {
