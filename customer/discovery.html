@@ -1676,6 +1676,14 @@ tailwind.config = {
                         }
                         const distKm = calculateDistanceKm(userLocation[0], userLocation[1], lat, lng);
 
+                        // Real-time operating hours & status calculation
+                        const shopHours = (allOperatingHours || []).filter(h => h.shop_id === db.id);
+                        let shopHolidays = [];
+                        try { if (Array.isArray(db.special_holidays)) shopHolidays = db.special_holidays; } catch(_) {}
+                        const realStatus = (typeof computeShopStatusBadge === 'function') 
+                            ? computeShopStatusBadge(db, shopHours, shopHolidays)
+                            : { badge: db.is_open ? 'เปิดอยู่' : 'ปิดชั่วคราว', badgeColor: db.is_open ? 'bg-emerald-600 text-white' : 'bg-slate-500 text-white', isOpen: !!db.is_open, statusDetail: db.is_open ? 'เปิดให้บริการ' : 'ปิดให้บริการ' };
+
                         return {
                             id: db.id,
                             name: db.name || 'ร้านคาร์แคร์',
