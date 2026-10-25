@@ -480,11 +480,13 @@
                         }
                         if (imgs.length === 0) return '';
                         return `
-                            <div class="flex flex-wrap gap-2 mb-4">
+                            <div class="flex flex-wrap gap-2.5 mb-4">
                                 ${imgs.map(img => `
-                                    <div onclick="openReviewPhotoLightbox('${img.replace(/'/g, "\\'")}')" class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-outline-variant/40 bg-surface-container cursor-pointer hover:opacity-90 active:scale-95 transition-all shadow-sm group relative">
-                                        <img src="${img}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" alt="รูปภาพรีวิว">
-                                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
+                                    <div onclick="openReviewPhotoLightbox('${img.replace(/'/g, "\\'")}')" class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border border-outline-variant/40 bg-surface-container cursor-pointer hover:opacity-90 active:scale-95 transition-all shadow-sm group relative">
+                                        <img src="${img}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" alt="รูปภาพรีวิว">
+                                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-end justify-end p-1.5">
+                                            <span class="material-symbols-outlined text-white text-[16px] drop-shadow opacity-0 group-hover:opacity-100 transition-opacity">zoom_in</span>
+                                        </div>
                                     </div>
                                 `).join('')}
                             </div>
@@ -511,20 +513,26 @@
                                 </p>
                             </div>
                         ` : `
-                            <div class="flex flex-col gap-2 animate-fade-in">
-                                <div class="flex flex-wrap gap-2 text-xs">
-                                    <span class="text-outline text-[11px] self-center">ตอบด่วน:</span>
-                                    <button type="button" onclick="fillReply('${r.id}', 'ขอบพระคุณมากครับ ทางร้านยินดีให้บริการและจะรักษามาตรฐานที่ดีเยี่ยมครับ 🙏✨')" class="px-2.5 py-1 rounded-lg bg-surface-container-highest hover:bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors">
-                                        ขอบพระคุณมากครับ...
-                                    </button>
-                                    <button type="button" onclick="fillReply('${r.id}', 'ยินดีให้บริการเสมอครับ ขอบคุณสำหรับคำติชมเพื่อการพัฒนาให้ดียิ่งขึ้นครับ 🙏')" class="px-2.5 py-1 rounded-lg bg-surface-container-highest hover:bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors">
-                                        ยินดีให้บริการเสมอครับ...
-                                    </button>
+                            <div class="flex flex-col gap-2.5 animate-fade-in pt-1">
+                                <div class="space-y-1.5">
+                                    <div class="flex items-center gap-1.5 text-[11px] font-semibold text-outline">
+                                        <span class="material-symbols-outlined text-[15px] text-secondary">bolt</span>
+                                        <span>ตอบด่วน:</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
+                                        <button type="button" onclick="fillReply('${r.id}', 'ขอบพระคุณมากครับ ทางร้านยินดีให้บริการและจะรักษามาตรฐานที่ดีเยี่ยมครับ 🙏✨')" class="px-3 py-1.5 rounded-xl bg-surface-container-highest hover:bg-secondary/10 border border-outline-variant/40 hover:border-secondary/40 text-on-surface-variant hover:text-secondary text-xs transition-all shrink-0 active:scale-95 flex items-center gap-1">
+                                            <span>🙏 ขอบพระคุณมากครับ...</span>
+                                        </button>
+                                        <button type="button" onclick="fillReply('${r.id}', 'ยินดีให้บริการเสมอครับ ขอบคุณสำหรับคำติชมเพื่อการพัฒนาให้ดียิ่งขึ้นครับ 🙏')" class="px-3 py-1.5 rounded-xl bg-surface-container-highest hover:bg-secondary/10 border border-outline-variant/40 hover:border-secondary/40 text-on-surface-variant hover:text-secondary text-xs transition-all shrink-0 active:scale-95 flex items-center gap-1">
+                                            <span>✨ ยินดีให้บริการเสมอครับ...</span>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="flex gap-2">
-                                    <input type="text" id="reply-input-${r.id}" placeholder="พิมพ์ข้อความตอบกลับลูกค้า..." class="flex-1 h-11 px-4 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-xs sm:text-sm focus:border-secondary focus:outline-none">
-                                    <button id="reply-btn-${r.id}" onclick="submitReply('${r.id}')" class="h-11 px-5 rounded-xl bg-secondary text-on-secondary-container font-bold text-xs sm:text-sm hover:bg-secondary-fixed transition-colors shadow-md shadow-secondary/20 flex items-center gap-1.5 shrink-0 active:scale-95">
-                                        <span class="material-symbols-outlined text-[18px]">send</span> ตอบกลับ
+                                <div class="flex items-center gap-2">
+                                    <input type="text" id="reply-input-${r.id}" placeholder="พิมพ์ข้อความตอบกลับลูกค้า..." class="flex-1 h-11 px-4 bg-surface-container-highest/80 hover:bg-surface-container-highest border border-outline-variant/60 focus:border-secondary focus:ring-1 focus:ring-secondary/30 rounded-xl text-on-surface text-xs sm:text-sm placeholder:text-outline outline-none transition-all">
+                                    <button id="reply-btn-${r.id}" onclick="submitReply('${r.id}')" class="h-11 px-4 sm:px-5 rounded-xl bg-secondary text-white font-bold text-xs sm:text-sm hover:brightness-105 transition-all shadow-md shadow-secondary/20 flex items-center justify-center gap-1.5 shrink-0 active:scale-95" title="ส่งข้อความตอบกลับ">
+                                        <span class="material-symbols-outlined text-[18px]">send</span>
+                                        <span>ตอบกลับ</span>
                                     </button>
                                 </div>
                             </div>
@@ -844,20 +852,26 @@
             const container = document.getElementById(`reply-container-${reviewId}`);
             if (!container) return;
             container.innerHTML = `
-                <div class="flex flex-col gap-2 animate-fade-in">
-                    <div class="flex flex-wrap gap-2 text-xs">
-                        <span class="text-outline text-[11px] self-center">ตอบด่วน:</span>
-                        <button type="button" onclick="fillReply('${reviewId}', 'ขอบพระคุณมากครับ ทางร้านยินดีให้บริการและจะรักษามาตรฐานที่ดีเยี่ยมครับ 🙏✨')" class="px-2.5 py-1 rounded-lg bg-surface-container-highest hover:bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors">
-                            ขอบพระคุณมากครับ...
-                        </button>
-                        <button type="button" onclick="fillReply('${reviewId}', 'ยินดีให้บริการเสมอครับ ขอบคุณสำหรับคำติชมเพื่อการพัฒนาให้ดียิ่งขึ้นครับ 🙏')" class="px-2.5 py-1 rounded-lg bg-surface-container-highest hover:bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors">
-                            ยินดีให้บริการเสมอครับ...
-                        </button>
+                <div class="flex flex-col gap-2.5 animate-fade-in pt-1">
+                    <div class="space-y-1.5">
+                        <div class="flex items-center gap-1.5 text-[11px] font-semibold text-outline">
+                            <span class="material-symbols-outlined text-[15px] text-secondary">bolt</span>
+                            <span>ตอบด่วน:</span>
+                        </div>
+                        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
+                            <button type="button" onclick="fillReply('${reviewId}', 'ขอบพระคุณมากครับ ทางร้านยินดีให้บริการและจะรักษามาตรฐานที่ดีเยี่ยมครับ 🙏✨')" class="px-3 py-1.5 rounded-xl bg-surface-container-highest hover:bg-secondary/10 border border-outline-variant/40 hover:border-secondary/40 text-on-surface-variant hover:text-secondary text-xs transition-all shrink-0 active:scale-95 flex items-center gap-1">
+                                <span>🙏 ขอบพระคุณมากครับ...</span>
+                            </button>
+                            <button type="button" onclick="fillReply('${reviewId}', 'ยินดีให้บริการเสมอครับ ขอบคุณสำหรับคำติชมเพื่อการพัฒนาให้ดียิ่งขึ้นครับ 🙏')" class="px-3 py-1.5 rounded-xl bg-surface-container-highest hover:bg-secondary/10 border border-outline-variant/40 hover:border-secondary/40 text-on-surface-variant hover:text-secondary text-xs transition-all shrink-0 active:scale-95 flex items-center gap-1">
+                                <span>✨ ยินดีให้บริการเสมอครับ...</span>
+                            </button>
+                        </div>
                     </div>
-                    <div class="flex gap-2">
-                        <input type="text" id="reply-input-${reviewId}" placeholder="พิมพ์ข้อความตอบกลับลูกค้า..." class="flex-1 h-11 px-4 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-xs sm:text-sm focus:border-secondary focus:outline-none">
-                        <button id="reply-btn-${reviewId}" onclick="submitReply('${reviewId}')" class="h-11 px-5 rounded-xl bg-secondary text-on-secondary-container font-bold text-xs sm:text-sm hover:bg-secondary-fixed transition-colors shadow-md shadow-secondary/20 flex items-center gap-1.5 shrink-0 active:scale-95">
-                            <span class="material-symbols-outlined text-[18px]">send</span> ตอบกลับ
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="reply-input-${reviewId}" placeholder="พิมพ์ข้อความตอบกลับลูกค้า..." class="flex-1 h-11 px-4 bg-surface-container-highest/80 hover:bg-surface-container-highest border border-outline-variant/60 focus:border-secondary focus:ring-1 focus:ring-secondary/30 rounded-xl text-on-surface text-xs sm:text-sm placeholder:text-outline outline-none transition-all">
+                        <button id="reply-btn-${reviewId}" onclick="submitReply('${reviewId}')" class="h-11 px-4 sm:px-5 rounded-xl bg-secondary text-white font-bold text-xs sm:text-sm hover:brightness-105 transition-all shadow-md shadow-secondary/20 flex items-center justify-center gap-1.5 shrink-0 active:scale-95" title="ส่งข้อความตอบกลับ">
+                            <span class="material-symbols-outlined text-[18px]">send</span>
+                            <span>ตอบกลับ</span>
                         </button>
                     </div>
                 </div>
@@ -872,24 +886,30 @@
             const currentText = targetRev?.reply || storedReplies[reviewId]?.reply || '';
 
             container.innerHTML = `
-                <div class="flex flex-col gap-2 animate-fade-in">
+                <div class="flex flex-col gap-2.5 animate-fade-in pt-1">
                     <div class="flex items-center justify-between text-xs text-secondary font-bold">
                         <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">edit</span> แก้ไขการตอบกลับ</span>
                         <button type="button" onclick="cancelEditReply('${reviewId}')" class="text-outline hover:text-on-surface text-[11px] font-normal underline">ยกเลิก</button>
                     </div>
-                    <div class="flex flex-wrap gap-2 text-xs">
-                        <span class="text-outline text-[11px] self-center">ตอบด่วน:</span>
-                        <button type="button" onclick="fillReply('${reviewId}', 'ขอบพระคุณมากครับ ทางร้านยินดีให้บริการและจะรักษามาตรฐานที่ดีเยี่ยมครับ 🙏✨')" class="px-2.5 py-1 rounded-lg bg-surface-container-highest hover:bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors">
-                            ขอบพระคุณมากครับ...
-                        </button>
-                        <button type="button" onclick="fillReply('${reviewId}', 'ยินดีให้บริการเสมอครับ ขอบคุณสำหรับคำติชมเพื่อการพัฒนาให้ดียิ่งขึ้นครับ 🙏')" class="px-2.5 py-1 rounded-lg bg-surface-container-highest hover:bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors">
-                            ยินดีให้บริการเสมอครับ...
-                        </button>
+                    <div class="space-y-1.5">
+                        <div class="flex items-center gap-1.5 text-[11px] font-semibold text-outline">
+                            <span class="material-symbols-outlined text-[15px] text-secondary">bolt</span>
+                            <span>ตอบด่วน:</span>
+                        </div>
+                        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
+                            <button type="button" onclick="fillReply('${reviewId}', 'ขอบพระคุณมากครับ ทางร้านยินดีให้บริการและจะรักษามาตรฐานที่ดีเยี่ยมครับ 🙏✨')" class="px-3 py-1.5 rounded-xl bg-surface-container-highest hover:bg-secondary/10 border border-outline-variant/40 hover:border-secondary/40 text-on-surface-variant hover:text-secondary text-xs transition-all shrink-0 active:scale-95 flex items-center gap-1">
+                                <span>🙏 ขอบพระคุณมากครับ...</span>
+                            </button>
+                            <button type="button" onclick="fillReply('${reviewId}', 'ยินดีให้บริการเสมอครับ ขอบคุณสำหรับคำติชมเพื่อการพัฒนาให้ดียิ่งขึ้นครับ 🙏')" class="px-3 py-1.5 rounded-xl bg-surface-container-highest hover:bg-secondary/10 border border-outline-variant/40 hover:border-secondary/40 text-on-surface-variant hover:text-secondary text-xs transition-all shrink-0 active:scale-95 flex items-center gap-1">
+                                <span>✨ ยินดีให้บริการเสมอครับ...</span>
+                            </button>
+                        </div>
                     </div>
-                    <div class="flex gap-2">
-                        <input type="text" id="reply-input-${reviewId}" value="${escapeHtml(currentText)}" placeholder="พิมพ์ข้อความตอบกลับลูกค้า..." class="flex-1 h-11 px-4 bg-surface-container-highest border border-outline-variant rounded-xl text-on-surface text-xs sm:text-sm focus:border-secondary focus:outline-none">
-                        <button id="reply-btn-${reviewId}" onclick="submitReply('${reviewId}')" class="h-11 px-5 rounded-xl bg-secondary text-on-secondary-container font-bold text-xs sm:text-sm hover:bg-secondary-fixed transition-colors shadow-md shadow-secondary/20 flex items-center gap-1.5 shrink-0 active:scale-95">
-                            <span class="material-symbols-outlined text-[18px]">send</span> บันทึก
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="reply-input-${reviewId}" value="${escapeHtml(currentText)}" placeholder="พิมพ์ข้อความตอบกลับลูกค้า..." class="flex-1 h-11 px-4 bg-surface-container-highest/80 hover:bg-surface-container-highest border border-outline-variant/60 focus:border-secondary focus:ring-1 focus:ring-secondary/30 rounded-xl text-on-surface text-xs sm:text-sm placeholder:text-outline outline-none transition-all">
+                        <button id="reply-btn-${reviewId}" onclick="submitReply('${reviewId}')" class="h-11 px-4 sm:px-5 rounded-xl bg-secondary text-white font-bold text-xs sm:text-sm hover:brightness-105 transition-all shadow-md shadow-secondary/20 flex items-center justify-center gap-1.5 shrink-0 active:scale-95" title="บันทึกการแก้ไข">
+                            <span class="material-symbols-outlined text-[18px]">send</span>
+                            <span>บันทึก</span>
                         </button>
                     </div>
                 </div>

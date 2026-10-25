@@ -6,6 +6,8 @@
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../supabase-client.js"></script>
 <script id="tailwind-config">
         tailwind.config = {
           darkMode: "class",
@@ -202,22 +204,50 @@
 <script>
     // Avatar & Name Synchronization
     document.addEventListener('DOMContentLoaded', () => {
+        function updateHeaderProfile(name, avatar) {
+            if (name && typeof name === 'string' && name.trim()) {
+                const nameEl = document.getElementById('desktop-header-name');
+                if (nameEl) nameEl.textContent = name.trim();
+            }
+            if (avatar && typeof avatar === 'string' && !avatar.includes('googleusercontent') && !avatar.startsWith('data:image/svg') && avatar !== 'null' && avatar !== 'undefined') {
+                const avatarEl = document.getElementById('desktop-header-avatar');
+                if (avatarEl) avatarEl.src = avatar;
+            }
+        }
+
+        // 1. Instant sync from customerProfile in localStorage
         const saved = localStorage.getItem('customerProfile');
         if (saved) {
             try {
                 const data = JSON.parse(saved);
-                if (data.avatar && !data.avatar.includes('googleusercontent')) {
-                    const avatar = document.getElementById('desktop-header-avatar');
-                    if (avatar) avatar.src = data.avatar;
-                }
-                if (data.name) {
-                    const nameEl = document.getElementById('desktop-header-name');
-                    if (nameEl) nameEl.textContent = data.name;
-                }
+                const fullName = data.fullName || data.full_name || data.name || data.displayName;
+                updateHeaderProfile(fullName, data.avatar);
             } catch (e) {
                 console.error(e);
             }
         }
+
+        // 2. Fetch live data from Supabase if available
+        (async () => {
+            try {
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                let user = null;
+                if (client?.auth) {
+                    const sessRes = await client.auth.getSession().catch(() => null);
+                    user = sessRes?.data?.session?.user;
+                }
+                const uid = user?.id || localStorage.getItem('lastLoggedInUserId');
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+
+                if (uid && fetcher) {
+                    const profiles = await fetcher(`profiles?id=eq.${uid}&limit=1`).catch(() => []);
+                    const profile = Array.isArray(profiles) && profiles.length > 0 ? profiles[0] : null;
+                    const resolvedName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0];
+                    const resolvedAvatar = profile?.avatar_url;
+                    if (resolvedName) updateHeaderProfile(resolvedName, resolvedAvatar);
+                }
+            } catch (_) {}
+        })();
     });
 </script>
 </body>
