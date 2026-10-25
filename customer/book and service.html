@@ -519,12 +519,12 @@
     </div>
 </div>
 
-<!-- Success Modal with LINE Notification Feature -->
+<!-- Success Modal -->
 <div id="success-modal" class="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4">
     <div class="bg-surface-container-low border border-outline-variant/40 rounded-3xl p-6 sm:p-8 max-w-md w-full flex flex-col items-center text-center shadow-2xl scale-95 transition-transform duration-300 relative overflow-hidden" id="success-modal-content">
         
         <!-- Subtle Glow Background -->
-        <div class="absolute -top-20 -left-20 w-48 h-48 bg-[#06C755]/15 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -top-20 -left-20 w-48 h-48 bg-secondary/15 rounded-full blur-3xl pointer-events-none"></div>
         <div class="absolute -bottom-20 -right-20 w-48 h-48 bg-primary/15 rounded-full blur-3xl pointer-events-none"></div>
 
         <!-- Success Icon -->
@@ -547,46 +547,17 @@
             </div>
         </div>
 
-        <!-- LINE AI Support Card -->
-        <div class="w-full bg-gradient-to-br from-[#06C755]/15 via-surface-container to-[#06C755]/5 border-2 border-[#06C755]/40 rounded-2xl p-4 text-left mb-6 relative overflow-hidden shadow-lg group">
-            <div class="flex items-start gap-3">
-                <div class="w-10 h-10 rounded-xl bg-[#06C755] flex items-center justify-center text-white font-black text-sm shrink-0 shadow-md shadow-[#06C755]/30">
-                    LINE
-                </div>
-                <div class="flex-1">
-                    <div class="flex items-center gap-1.5 mb-1">
-                        <span class="text-xs font-bold text-[#06C755] tracking-wide uppercase">ศูนย์ช่วยเหลือ AI 24 ชม.</span>
-                    </div>
-                    <h3 class="text-sm font-bold text-on-surface leading-tight">มีข้อสงสัยหรือต้องการความช่วยเหลือ?</h3>
-                    <p class="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
-                        แอด LINE Official เพื่อสอบถามคู่มือการใช้งาน วิธีการรับรถ หรือปรึกษาข้อมูลกับ AI ผู้ช่วยได้ตลอดเวลา
-                    </p>
-                    <ul class="text-[11px] text-on-surface-variant/90 space-y-1 mt-1.5 pl-1">
-                        <li class="flex items-center gap-1.5">
-                            <span class="material-symbols-outlined text-[13px] text-[#06C755]">check_circle</span>
-                            <span>AI ตอบคำถาม แนะนำวิธีใช้งาน และคู่มือช่วยเหลือทันที</span>
-                        </li>
-                        <li class="flex items-center gap-1.5">
-                            <span class="material-symbols-outlined text-[13px] text-[#06C755]">check_circle</span>
-                            <span>ติดตามสถานะคิวล้างรถได้โดยตรงผ่านหน้ารายการจองในเว็บ</span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Action to Connect LINE -->
-            <button type="button" onclick="openLineConnectModal()" class="w-full mt-3.5 py-3 px-4 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md shadow-[#06C755]/25 flex items-center justify-center gap-2 active:scale-95 group-hover:brightness-105">
-                <span class="material-symbols-outlined text-[18px]">support_agent</span>
-                <span>ปรึกษา AI ศูนย์ช่วยเหลือผ่าน LINE</span>
-                <span class="material-symbols-outlined text-[16px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+        <!-- Action Buttons -->
+        <div class="w-full space-y-2.5 mt-2">
+            <button type="button" onclick="goToHistory()" class="w-full py-3.5 px-4 bg-primary hover:bg-primary/90 text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-primary/30 flex items-center justify-center gap-2 active:scale-95">
+                <span class="material-symbols-outlined text-[20px]">receipt_long</span>
+                <span>ดูรายการการจองของฉัน</span>
             </button>
+            <a href="discovery.html" class="w-full py-3 px-4 bg-surface-container-highest hover:bg-surface-variant text-on-surface font-medium text-xs sm:text-sm rounded-xl transition-all border border-outline-variant/30 flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">explore</span>
+                <span>กลับหน้าค้นหาร้าน</span>
+            </a>
         </div>
-
-        <!-- Skip / Secondary Action -->
-        <button type="button" onclick="goToHistory()" class="text-xs text-on-surface-variant hover:text-on-surface font-medium transition-colors py-1 flex items-center gap-1">
-            <span>ข้ามไปก่อน ไปที่การจอง</span>
-            <span class="material-symbols-outlined text-[14px]">chevron_right</span>
-        </button>
 
     </div>
 </div>
