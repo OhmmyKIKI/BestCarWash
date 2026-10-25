@@ -747,6 +747,69 @@
         grid.innerHTML = html;
     }
 
+    // Helper to compute real-time shop open/closed status badge based on live hours & holidays
+    function computeShopStatusBadge(dbShop, shopHoursList = [], shopHolidaysList = []) {
+        if (!dbShop) {
+            return { badge: 'เปิดอยู่', isOpen: true, statusText: 'เปิดให้บริการ' };
+        }
+        if (dbShop.is_open === false) {
+            return { badge: 'ปิดชั่วคราว', isOpen: false, statusText: 'ปิดชั่วคราว' };
+        }
+
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+        const todayDayOfWeek = now.getDay();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+        // Check special holidays
+        let holidays = shopHolidaysList;
+        if (!holidays || !Array.isArray(holidays) || !holidays.length) {
+            try {
+                if (Array.isArray(dbShop.special_holidays)) holidays = dbShop.special_holidays;
+            } catch (_) {}
+        }
+        const holidayToday = (Array.isArray(holidays) && holidays.length > 0) ? holidays.find(h => h.date === todayStr) : null;
+        if (holidayToday) {
+            return { badge: 'วันหยุดพิเศษ', isOpen: false, statusText: 'วันหยุดพิเศษ' };
+        }
+
+        // Check operating hours
+        let hours = shopHoursList;
+        if (!hours || !Array.isArray(hours) || !hours.length) {
+            try {
+                if (Array.isArray(dbShop.operating_hours)) hours = dbShop.operating_hours;
+            } catch (_) {}
+        }
+        if (!hours || !Array.isArray(hours) || hours.length === 0) {
+            return { badge: dbShop.is_open ? 'เปิดอยู่' : 'ปิดชั่วคราว', isOpen: !!dbShop.is_open, statusText: dbShop.is_open ? 'เปิดให้บริการ' : 'ปิดชั่วคราว' };
+        }
+
+        const todaySchedule = hours.find(h => Number(h.day_of_week) === todayDayOfWeek);
+        if (!todaySchedule || todaySchedule.is_closed) {
+            return { badge: 'ปิดวันนี้', isOpen: false, statusText: 'ปิดวันนี้' };
+        }
+
+        const parseTime = (tStr) => {
+            if (!tStr) return 0;
+            const [h, m] = tStr.split(':').map(Number);
+            return (h || 0) * 60 + (m || 0);
+        };
+        const openMin = parseTime(todaySchedule.open_time || '08:00');
+        const closeMin = parseTime(todaySchedule.close_time || '18:00');
+        const closeFmt = (todaySchedule.close_time || '18:00').slice(0, 5);
+
+        if (currentMinutes >= openMin && currentMinutes < closeMin) {
+            return { badge: 'เปิดอยู่', isOpen: true, statusText: `เปิดอยู่ (ปิด ${closeFmt})` };
+        } else if (currentMinutes < openMin) {
+            return { badge: 'ยังไม่เปิด', isOpen: false, statusText: 'ยังไม่เปิด' };
+        } else {
+            return { badge: 'ปิดแล้ว', isOpen: false, statusText: 'ปิดแล้ว' };
+        }
+    }
+
     // Avatar, Profile and Favorites Live Synchronization
     document.addEventListener('DOMContentLoaded', () => {
         // ==========================================
@@ -780,6 +843,11 @@
                     Object.values(parsed).forEach((s, idx) => {
                         const cover = resolveShopCoverSync(s, idx);
                         if (cover) s.image = cover;
+                        if (typeof computeShopStatusBadge === 'function') {
+                            const fresh = computeShopStatusBadge(s, s.operating_hours, s.special_holidays);
+                            s.isOpen = fresh.isOpen;
+                            s.status = fresh.isOpen ? `เปิดให้บริการ • ${fresh.badge}` : fresh.badge;
+                        }
                     });
                     SHOPS_DATA = parsed;
                     hasCachedData = true;
@@ -889,12 +957,14 @@
                     const idFilter = favIds.join(',');
                     const shops = await fetcher(`shops?id=in.(${idFilter})`);
                     if (Array.isArray(shops) && shops.length > 0) {
-                        const [servicesRes, profilesRes] = await Promise.all([
+                        const [servicesRes, profilesRes, hoursRes] = await Promise.all([
                             fetcher(`services?shop_id=in.(${idFilter})`),
-                            fetcher('profiles?select=id,avatar_url')
+                            fetcher('profiles?select=id,avatar_url'),
+                            fetcher(`shop_operating_hours?shop_id=in.(${idFilter})`)
                         ]);
                         let services = Array.isArray(servicesRes) ? servicesRes : [];
                         const profiles = Array.isArray(profilesRes) ? profilesRes : [];
+                        const hours = Array.isArray(hoursRes) ? hoursRes : [];
 
                         const newShopsData = {};
                         await Promise.all(shops.map(async (s, idx) => {
@@ -903,6 +973,9 @@
                             
                             // RESOLVE ACTUAL SHOP COVER PHOTO SET BY OWNER
                             const cover = await resolveShopCover(s, idx);
+
+                            const sHours = hours.filter(h => h.shop_id === s.id);
+                            const realStatus = computeShopStatusBadge(s, sHours);
 
                             newShopsData[s.id] = {
                                 id: s.id,
@@ -913,10 +986,11 @@
                                 tags: (s.facilities && s.facilities.length > 0) ? s.facilities : ['คาร์แคร์', 'ล้างสีดูดฝุ่น'],
                                 price: '฿' + minPrice,
                                 image: cover,
-                                status: s.is_open ? 'เปิดให้บริการ • เปิดอยู่' : 'ปิดชั่วคราว',
-                                isOpen: !!s.is_open,
+                                status: realStatus.isOpen ? `เปิดให้บริการ • ${realStatus.badge}` : realStatus.badge,
+                                isOpen: realStatus.isOpen,
                                 nextQueue: 'วันนี้ 14:00',
-                                phone: s.phone_number || '080-000-0000'
+                                phone: s.phone_number || '080-000-0000',
+                                operating_hours: sHours
                             };
                         }));
                         SHOPS_DATA = newShopsData;

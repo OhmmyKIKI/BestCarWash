@@ -163,7 +163,7 @@
             <!-- Header Info -->
             <div>
                 <div class="flex flex-wrap items-center gap-2 mb-3">
-                    <span class="bg-primary/20 text-primary px-3 py-1 rounded-full text-xs font-bold border border-primary/30">เปิดให้บริการ</span>
+                    <span id="shop-open-status-badge" class="bg-primary/20 text-primary px-3 py-1 rounded-full text-xs font-bold border border-primary/30">เปิดให้บริการ</span>
                     <span class="bg-surface-container-highest text-on-surface-variant px-3 py-1 rounded-full text-xs font-medium border border-outline-variant flex items-center gap-1">
                         <span class="material-symbols-outlined text-[14px] text-secondary">location_on</span> <span id="shop-distance">ห่าง 1.2 กม.</span>
                     </span>
@@ -929,6 +929,81 @@
         }
 
         container.innerHTML = html;
+        updateShopOpenStatus(hours, holidays);
+    }
+
+    function updateShopOpenStatus(hoursList, holidaysList, shopObj = null) {
+        const badge = document.getElementById('shop-open-status-badge');
+        if (!badge) return;
+
+        const targetShop = shopObj || currentShop;
+        if (targetShop && targetShop.is_open === false) {
+            badge.className = "bg-rose-500/15 text-rose-400 px-3 py-1 rounded-full text-xs font-bold border border-rose-500/30 flex items-center gap-1.5";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span><span>ปิดให้บริการชั่วคราว</span>`;
+            return;
+        }
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
+
+        // 1. Check Special Holidays
+        let holidays = holidaysList;
+        if (!holidays) {
+            try { holidays = JSON.parse(localStorage.getItem('ownerSpecialHolidays') || '[]'); } catch (_) { holidays = []; }
+        }
+        const holidayToday = Array.isArray(holidays) ? holidays.find(h => h.date === todayStr) : null;
+        if (holidayToday) {
+            badge.className = "bg-amber-500/15 text-amber-400 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/30 flex items-center gap-1.5";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span><span>วันหยุดพิเศษ (${holidayToday.reason || 'ปิดทำการ'})</span>`;
+            return;
+        }
+
+        // 2. Check Operating Hours
+        let hours = hoursList;
+        if (!hours) {
+            try { hours = JSON.parse(localStorage.getItem('ownerOperatingHours') || 'null'); } catch (_) { hours = null; }
+        }
+
+        if (!hours || !Array.isArray(hours) || hours.length === 0) {
+            badge.className = "bg-emerald-500/15 text-emerald-400 px-3 py-1 rounded-full text-xs font-bold border border-emerald-500/30 flex items-center gap-1.5";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>เปิดให้บริการ</span>`;
+            return;
+        }
+
+        const dayOfWeek = now.getDay(); // 0 = Sun, 1 = Mon, ...
+        const todaySchedule = hours.find(h => Number(h.day_of_week) === dayOfWeek);
+
+        if (!todaySchedule || todaySchedule.is_closed) {
+            badge.className = "bg-rose-500/15 text-rose-400 px-3 py-1 rounded-full text-xs font-bold border border-rose-500/30 flex items-center gap-1.5";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span><span>ปิดทำการวันนี้</span>`;
+            return;
+        }
+
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const parseTime = (tStr) => {
+            if (!tStr) return 0;
+            const [h, m] = tStr.split(':').map(Number);
+            return (h || 0) * 60 + (m || 0);
+        };
+
+        const openMinutes = parseTime(todaySchedule.open_time || '08:00');
+        const closeMinutes = parseTime(todaySchedule.close_time || '18:00');
+        const closeFormatted = (todaySchedule.close_time || '18:00').slice(0, 5);
+        const openFormatted = (todaySchedule.open_time || '08:00').slice(0, 5);
+
+        if (currentMinutes >= openMinutes && currentMinutes < closeMinutes) {
+            badge.className = "bg-emerald-500/15 text-emerald-400 px-3 py-1 rounded-full text-xs font-bold border border-emerald-500/30 flex items-center gap-1.5";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>เปิดให้บริการ (ปิด ${closeFormatted})</span>`;
+        } else if (currentMinutes < openMinutes) {
+            badge.className = "bg-amber-500/15 text-amber-400 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/30 flex items-center gap-1.5";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span><span>ยังไม่เปิด (เปิด ${openFormatted})</span>`;
+        } else {
+            badge.className = "bg-rose-500/15 text-rose-400 px-3 py-1 rounded-full text-xs font-bold border border-rose-500/30 flex items-center gap-1.5";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span><span>ปิดให้บริการแล้ว</span>`;
+        }
     }
 
     let miniMapInstance = null;

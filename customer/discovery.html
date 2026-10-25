@@ -1117,6 +1117,127 @@ tailwind.config = {
         }
     }
 
+    // --- Helper to Compute Real-Time Shop Open/Closed Status Badge ---
+    function computeShopStatusBadge(dbShop, shopHoursList = [], shopHolidaysList = []) {
+        if (!dbShop) {
+            return { badge: 'เปิดอยู่', badgeColor: 'bg-emerald-600 text-white', isOpen: true, statusDetail: 'เปิดให้บริการ' };
+        }
+
+        // 1. If shop is explicitly marked closed/disabled by owner in DB
+        if (dbShop.is_open === false) {
+            return {
+                badge: 'ปิดชั่วคราว',
+                badgeColor: 'bg-slate-500 text-white',
+                isOpen: false,
+                statusDetail: 'ปิดให้บริการชั่วคราว'
+            };
+        }
+
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+        const todayDayOfWeek = now.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+        // 2. Check special holidays
+        let holidays = shopHolidaysList;
+        if (!holidays || !Array.isArray(holidays) || !holidays.length) {
+            try {
+                if (Array.isArray(dbShop.special_holidays)) {
+                    holidays = dbShop.special_holidays;
+                } else if (localStorage.getItem('ownerSpecialHolidays')) {
+                    const currentShopId = localStorage.getItem('currentShopId');
+                    if (currentShopId && (dbShop.id === currentShopId || dbShop.owner_id === currentShopId)) {
+                        holidays = JSON.parse(localStorage.getItem('ownerSpecialHolidays') || '[]');
+                    }
+                }
+            } catch (_) {}
+        }
+
+        const holidayToday = (Array.isArray(holidays) && holidays.length > 0) ? holidays.find(h => h.date === todayStr) : null;
+        if (holidayToday) {
+            return {
+                badge: 'วันหยุดพิเศษ',
+                badgeColor: 'bg-amber-600 text-white',
+                isOpen: false,
+                statusDetail: `วันหยุดพิเศษ (${holidayToday.reason || 'ปิดทำการ'})`
+            };
+        }
+
+        // 3. Check operating hours
+        let hours = shopHoursList;
+        if (!hours || !Array.isArray(hours) || !hours.length) {
+            try {
+                if (Array.isArray(dbShop.operating_hours)) {
+                    hours = dbShop.operating_hours;
+                } else if (localStorage.getItem('ownerOperatingHours')) {
+                    const currentShopId = localStorage.getItem('currentShopId');
+                    if (currentShopId && (dbShop.id === currentShopId || dbShop.owner_id === currentShopId)) {
+                        const localH = JSON.parse(localStorage.getItem('ownerOperatingHours') || 'null');
+                        if (Array.isArray(localH) && localH.length > 0) hours = localH;
+                    }
+                }
+            } catch (_) {}
+        }
+
+        // If no operating hours configured at all, fallback to default standard hours
+        if (!hours || !Array.isArray(hours) || hours.length === 0) {
+            return {
+                badge: dbShop.is_open ? 'เปิดอยู่' : 'ปิดชั่วคราว',
+                badgeColor: dbShop.is_open ? 'bg-emerald-600 text-white' : 'bg-slate-500 text-white',
+                isOpen: !!dbShop.is_open,
+                statusDetail: dbShop.is_open ? 'เปิดให้บริการ' : 'ปิดให้บริการ'
+            };
+        }
+
+        // Find today's schedule (day_of_week 0-6)
+        const todaySchedule = hours.find(h => Number(h.day_of_week) === todayDayOfWeek);
+        if (!todaySchedule || todaySchedule.is_closed) {
+            return {
+                badge: 'ปิดวันนี้',
+                badgeColor: 'bg-rose-600 text-white',
+                isOpen: false,
+                statusDetail: 'ปิดทำการวันนี้'
+            };
+        }
+
+        const parseTime = (tStr) => {
+            if (!tStr) return 0;
+            const [h, m] = tStr.split(':').map(Number);
+            return (h || 0) * 60 + (m || 0);
+        };
+
+        const openMin = parseTime(todaySchedule.open_time || '08:00');
+        const closeMin = parseTime(todaySchedule.close_time || '18:00');
+        const openFmt = (todaySchedule.open_time || '08:00').slice(0, 5);
+        const closeFmt = (todaySchedule.close_time || '18:00').slice(0, 5);
+
+        if (currentMinutes >= openMin && currentMinutes < closeMin) {
+            return {
+                badge: 'เปิดอยู่',
+                badgeColor: 'bg-emerald-600 text-white',
+                isOpen: true,
+                statusDetail: `เปิดอยู่ (ปิด ${closeFmt})`
+            };
+        } else if (currentMinutes < openMin) {
+            return {
+                badge: 'ยังไม่เปิด',
+                badgeColor: 'bg-amber-600 text-white',
+                isOpen: false,
+                statusDetail: `ยังไม่เปิด (เปิด ${openFmt})`
+            };
+        } else {
+            return {
+                badge: 'ปิดแล้ว',
+                badgeColor: 'bg-slate-700 text-white',
+                isOpen: false,
+                statusDetail: `ปิดแล้ว (เปิดใหม่พรุ่งนี้)`
+            };
+        }
+    }
+
     // --- Boot (Dual-Layer: 0ms Instant Cache Display + Silent Background Sync) ---
     window.addEventListener('DOMContentLoaded', () => {
         // 0ms Instant User Profile Sync from LocalStorage
@@ -1238,6 +1359,15 @@ tailwind.config = {
                         s.rating = 'ใหม่';
                         s.reviews = 'ยังไม่มีรีวิว';
                     }
+
+                    // --- 3. SYNC REAL-TIME SHOP OPEN/CLOSED STATUS FROM CACHED HOURS ---
+                    if (typeof computeShopStatusBadge === 'function') {
+                        const freshStatus = computeShopStatusBadge(s, s.operating_hours, s.special_holidays);
+                        s.badge = freshStatus.badge;
+                        s.badgeColor = freshStatus.badgeColor;
+                        s.isOpen = freshStatus.isOpen;
+                        s.statusDetail = freshStatus.statusDetail;
+                    }
                 });
 
                 shops = [...cached];
@@ -1306,12 +1436,14 @@ tailwind.config = {
                     let allServices = null;
                     let allProfiles = null;
                     let allReviews = null;
+                    let allOperatingHours = null;
 
                     try {
-                        const [srvRes, profRes, revRes] = await Promise.all([
+                        const [srvRes, profRes, revRes, hoursRes] = await Promise.all([
                             safeSupabaseRest('services?select=*'),
                             safeSupabaseRest('profiles?select=*'),
-                            safeSupabaseRest('reviews?select=shop_id,rating')
+                            safeSupabaseRest('reviews?select=shop_id,rating'),
+                            safeSupabaseRest('shop_operating_hours?select=*')
                         ]);
                         const srvData = Array.isArray(srvRes) ? srvRes : (srvRes?.data || null);
                         if (Array.isArray(srvData)) allServices = srvData;
@@ -1321,6 +1453,9 @@ tailwind.config = {
 
                         const revData = Array.isArray(revRes) ? revRes : (revRes?.data || null);
                         if (Array.isArray(revData)) allReviews = revData;
+
+                        const hoursData = Array.isArray(hoursRes) ? hoursRes : (hoursRes?.data || null);
+                        if (Array.isArray(hoursData)) allOperatingHours = hoursData;
                     } catch (auxErr) {
                         console.warn('Auxiliary data fetch notice in discovery:', auxErr);
                     }
@@ -1558,8 +1693,12 @@ tailwind.config = {
                             logo: logo,             // Logo/avatar retained separately
                             lat: Number(lat.toFixed(6)),
                             lng: Number(lng.toFixed(6)),
-                            badge: db.is_open ? 'เปิดอยู่' : 'ปิดชั่วคราว',
-                            badgeColor: db.is_open ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
+                            badge: realStatus.badge,
+                            badgeColor: realStatus.badgeColor,
+                            isOpen: realStatus.isOpen,
+                            statusDetail: realStatus.statusDetail,
+                            operating_hours: shopHours,
+                            special_holidays: shopHolidays
                         };
                     }));
 
