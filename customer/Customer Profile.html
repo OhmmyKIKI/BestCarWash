@@ -826,17 +826,35 @@
             const uid = localStorage.getItem('lastLoggedInUserId');
             if (uid) {
                 localStorage.removeItem(`cachedCustomerNotifications_${uid}`);
+                localStorage.removeItem(`cachedCustomerCompletedHistory_${uid}`);
+                localStorage.removeItem(`activeCustomerBooking_${uid}`);
             }
             sessionStorage.clear();
             localStorage.removeItem('customerProfile');
             localStorage.removeItem('customerCars');
             localStorage.removeItem('activeCustomerBooking');
             localStorage.removeItem('lastCustomerBooking');
+            localStorage.removeItem('cachedCustomerCompletedHistory');
+            localStorage.removeItem('customer_reviews_map');
             localStorage.removeItem('favoriteShopIds');
             localStorage.removeItem('customerNotifications');
             localStorage.removeItem('cachedCustomerNotifications');
             localStorage.removeItem('lastLoggedInUserId');
             localStorage.removeItem('appBookingsList');
+
+            // Clear any user-scoped booking keys in localStorage
+            try {
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const k = localStorage.key(i);
+                    if (k && (
+                        k.startsWith('cachedCustomerCompletedHistory_') ||
+                        k.startsWith('activeCustomerBooking_') ||
+                        k.startsWith('cachedCustomerNotifications_')
+                    )) {
+                        localStorage.removeItem(k);
+                    }
+                }
+            } catch (_) {}
         } catch (e) {}
 
         setTimeout(() => {

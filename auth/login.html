@@ -249,8 +249,23 @@
                     'ownerProfileName', 'appBookingsList', 'ownerCoverImage', 'ownerShopGallery',
                     'ownerShopDesc', 'shopDescription', 'ownerShopStreet', 'ownerShopSubDistrict',
                     'ownerShopCity', 'ownerShopZip', 'ownerShopPhone', 'ownerShopLat', 'ownerShopLng',
-                    'ownerShopMapLink', 'ownerAvatarUserSet', 'ownerAvatarUpdatedAt', 'ownerReviewsReplies'
+                    'ownerShopMapLink', 'ownerAvatarUserSet', 'ownerAvatarUpdatedAt', 'ownerReviewsReplies',
+                    'cachedCustomerCompletedHistory', 'customer_reviews_map', 'lastCustomerBooking'
                 ].forEach(k => localStorage.removeItem(k));
+
+                // Clear any user-scoped booking and notification caches
+                try {
+                    for (let i = localStorage.length - 1; i >= 0; i--) {
+                        const k = localStorage.key(i);
+                        if (k && (
+                            k.startsWith('cachedCustomerCompletedHistory_') ||
+                            k.startsWith('activeCustomerBooking_') ||
+                            k.startsWith('cachedCustomerNotifications_')
+                        )) {
+                            localStorage.removeItem(k);
+                        }
+                    }
+                } catch (_) {}
 
                 // Clear un-scoped IndexedDB media from old user
                 if (typeof indexedDB !== 'undefined') {

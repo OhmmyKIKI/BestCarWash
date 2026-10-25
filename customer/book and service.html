@@ -2148,6 +2148,18 @@
             currentCustUserId = await getCurrentUserId();
         } catch (_) {}
 
+        if (!currentCustUserId) {
+            alert('กรุณาเข้าสู่ระบบก่อนทำการจองคิว เพื่อให้ข้อมูลบันทึกเข้าบัญชีของคุณและเปิดดูได้จากทุกอุปกรณ์');
+            if (btn) btn.disabled = false;
+            if (btnText) btnText.innerText = 'ยืนยันการจองคิว';
+            if (icon) {
+                icon.classList.remove('animate-spin');
+                icon.innerText = 'check_circle';
+            }
+            window.location.href = '../auth/login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
+            return;
+        }
+
         // Save active booking to localStorage for live tracking
         const activeBooking = {
             bookingId: currentBookingId || ('#BK-' + Math.floor(1000 + Math.random() * 9000)),
@@ -2179,6 +2191,9 @@
             createdAt: new Date().toISOString(),
             isNew: true
         };
+        if (currentCustUserId) {
+            localStorage.setItem(`activeCustomerBooking_${currentCustUserId}`, JSON.stringify(activeBooking));
+        }
         localStorage.setItem('activeCustomerBooking', JSON.stringify(activeBooking));
 
         // Also append/prepend into shared appBookingsList for owner synchronization
@@ -2286,7 +2301,9 @@
                     activeBooking.dbId = dbRow.id;
                     activeBooking.bookingId = '#' + dbRow.id.slice(0, 8).toUpperCase();
                     currentBookingId = activeBooking.bookingId;
-                    console.log('✅ บันทึกรายการจองลงฐานข้อมูล Supabase สำเร็จ! ID:', dbRow.id);
+                    if (userId) {
+                        localStorage.setItem(`activeCustomerBooking_${userId}`, JSON.stringify(activeBooking));
+                    }
                     localStorage.setItem('activeCustomerBooking', JSON.stringify(activeBooking));
 
                     // Update in appBookingsList with the real DB ID

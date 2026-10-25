@@ -9,7 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-client.js"></script>
-    <script src="../supabase-client.js"></script>
     <script id="tailwind-config">
         tailwind.config = {
           darkMode: "class",
@@ -389,6 +388,23 @@
     </script>
 <!-- Dropdown script removed for cleaner UI -->
 <script>
+    // Robust User ID Resolution for Complete Multi-Device & Account Isolation
+    function getCurrentUserId() {
+        let uid = null;
+        try {
+            uid = localStorage.getItem('lastLoggedInUserId') || localStorage.getItem('currentUserId');
+            if (uid && typeof uid === 'string' && uid.length > 10) return uid;
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+                    const p = JSON.parse(localStorage.getItem(k) || '{}');
+                    if (p?.user?.id) return p.user.id;
+                }
+            }
+        } catch (_) {}
+        return uid;
+    }
+
     function cancelBooking(btn) {
         btn.disabled = true;
         btn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -606,7 +622,9 @@
         // Try resolving shopId if missing
         if (!currentReviewShopId && currentReviewBookingId) {
             try {
-                const hist = JSON.parse(localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
+                const uid = getCurrentUserId();
+                const userKey = uid ? `cachedCustomerCompletedHistory_${uid}` : null;
+                const hist = JSON.parse((userKey && localStorage.getItem(userKey)) || localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
                 const found = hist.find(h => h.rawBookingId === currentReviewBookingId || h.bookingId === currentReviewBookingId || h.id === currentReviewBookingId);
                 if (found?.shopId) currentReviewShopId = found.shopId;
             } catch(e) {}
@@ -760,7 +778,9 @@
             if (!targetShop || targetShop === 'bccb746a-18ba-4802-ac29-eb30b7af7dd1') {
                 if (currentReviewBookingId) {
                     try {
-                        const hist = JSON.parse(localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
+                        const uid = customerId || getCurrentUserId();
+                        const userKey = uid ? `cachedCustomerCompletedHistory_${uid}` : null;
+                        const hist = JSON.parse((userKey && localStorage.getItem(userKey)) || localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
                         const found = hist.find(h => h.rawBookingId === currentReviewBookingId || h.bookingId === currentReviewBookingId || h.id === currentReviewBookingId);
                         if (found?.shopId && found.shopId !== 'bccb746a-18ba-4802-ac29-eb30b7af7dd1') {
                             targetShop = found.shopId;
@@ -940,7 +960,9 @@
 
             // 4. Update cached history and re-render card UI immediately - STRICTLY FOR THIS SPECIFIC BOOKING!
             try {
-                let hist = JSON.parse(localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
+                const uid = customerId || getCurrentUserId();
+                const userKey = uid ? `cachedCustomerCompletedHistory_${uid}` : null;
+                let hist = JSON.parse((userKey && localStorage.getItem(userKey)) || localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
                 if (Array.isArray(hist)) {
                     let updated = false;
                     hist.forEach(h => {
@@ -956,6 +978,7 @@
                         }
                     });
                     if (updated) {
+                        if (userKey) localStorage.setItem(userKey, JSON.stringify(hist));
                         localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(hist));
                         renderCompletedHistory(hist);
                     }
@@ -1799,8 +1822,10 @@
 
             // Immediately cache into cachedCustomerCompletedHistory so history tab shows it
             try {
+                const uid = getCurrentUserId();
+                const userKey = uid ? `cachedCustomerCompletedHistory_${uid}` : null;
                 let cachedHist = [];
-                const histStr = localStorage.getItem('cachedCustomerCompletedHistory');
+                const histStr = (userKey && localStorage.getItem(userKey)) || localStorage.getItem('cachedCustomerCompletedHistory');
                 if (histStr) cachedHist = JSON.parse(histStr) || [];
                 const existIdx = cachedHist.findIndex(item => normBookingId(item.bookingId) === normBookingId(currentActiveBooking.bookingId));
                 if (existIdx !== -1) {
@@ -1810,6 +1835,7 @@
                 } else {
                     cachedHist.unshift({ ...currentActiveBooking });
                 }
+                if (userKey) localStorage.setItem(userKey, JSON.stringify(cachedHist));
                 localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(cachedHist));
             } catch(_) {}
 
@@ -1930,11 +1956,13 @@
         const tabCompleted = document.getElementById('tabCompleted');
         if (!container) return;
 
+        const uid = getCurrentUserId();
         let historyItems = customItems;
         if (!historyItems) {
-            // Check direct completed history cache (0ms)
+            // Check direct completed history cache (user-scoped first)
             try {
-                const directCached = localStorage.getItem('cachedCustomerCompletedHistory');
+                const userKey = uid ? `cachedCustomerCompletedHistory_${uid}` : null;
+                const directCached = (userKey && localStorage.getItem(userKey)) || localStorage.getItem('cachedCustomerCompletedHistory');
                 if (directCached) {
                     const parsed = JSON.parse(directCached);
                     if (Array.isArray(parsed) && parsed.length > 0) {
@@ -1951,18 +1979,28 @@
                 } catch(e) {}
                 if (!Array.isArray(list)) list = [];
 
-                // Filter for finished/cancelled bookings
-                historyItems = list.filter(item => ['completed', 'refunded', 'declined', 'rejected', 'cancelled', 'no_show', 'refund_requested'].includes((item.status || '').toLowerCase()));
+                // Filter for finished/cancelled bookings STRICTLY for this user
+                historyItems = list.filter(item => {
+                    const s = (item.status || '').toLowerCase();
+                    const isFinished = ['completed', 'refunded', 'declined', 'rejected', 'cancelled', 'no_show', 'refund_requested'].includes(s);
+                    if (!isFinished) return false;
+                    if (uid && item.customer_id && item.customer_id !== uid) return false;
+                    if (uid && item.customerId && item.customerId !== uid) return false;
+                    return true;
+                });
 
                 // Also check activeCustomerBooking
-                const activeCustStr = localStorage.getItem('activeCustomerBooking');
+                const activeCustKey = uid ? `activeCustomerBooking_${uid}` : null;
+                const activeCustStr = (activeCustKey && localStorage.getItem(activeCustKey)) || localStorage.getItem('activeCustomerBooking');
                 if (activeCustStr) {
                     try {
                         const activeCust = JSON.parse(activeCustStr);
-                        if (activeCust && ['completed', 'refunded', 'declined', 'rejected', 'cancelled', 'no_show', 'refund_requested'].includes((activeCust.status || '').toLowerCase())) {
-                            const exists = historyItems.some(item => normBookingId(item.bookingId) === normBookingId(activeCust.bookingId));
-                            if (!exists) {
-                                historyItems.unshift(activeCust);
+                        if (activeCust && (!uid || !activeCust.customer_id || activeCust.customer_id === uid || activeCust.customerId === uid)) {
+                            if (['completed', 'refunded', 'declined', 'rejected', 'cancelled', 'no_show', 'refund_requested'].includes((activeCust.status || '').toLowerCase())) {
+                                const exists = historyItems.some(item => normBookingId(item.bookingId) === normBookingId(activeCust.bookingId));
+                                if (!exists) {
+                                    historyItems.unshift(activeCust);
+                                }
                             }
                         }
                     } catch(e) {}
@@ -1971,10 +2009,15 @@
         }
 
         // Guarantee active ongoing queues are NEVER mixed into completed history
+        // AND enforce strict isolation: reject any items belonging to other users
         if (Array.isArray(historyItems)) {
             historyItems = historyItems.filter(item => {
                 const s = (item.status || '').toLowerCase();
-                return ['completed', 'refunded', 'declined', 'rejected', 'cancelled', 'no_show', 'refund_requested'].includes(s);
+                const isFinished = ['completed', 'refunded', 'declined', 'rejected', 'cancelled', 'no_show', 'refund_requested'].includes(s);
+                if (!isFinished) return false;
+                if (uid && item.customer_id && item.customer_id !== uid) return false;
+                if (uid && item.customerId && item.customerId !== uid) return false;
+                return true;
             });
         }
 
@@ -2561,11 +2604,23 @@
 
     // Sync Customer Avatar & Active Booking
     function loadActiveBooking(isInitial = false) {
+        const uid = getCurrentUserId();
         let b = null;
-        // Check active customer booking from session
-        const activeCust = localStorage.getItem('activeCustomerBooking');
+        // Check active customer booking from session (user-scoped first)
+        const activeCustKey = uid ? `activeCustomerBooking_${uid}` : null;
+        const activeCust = (activeCustKey && localStorage.getItem(activeCustKey)) || localStorage.getItem('activeCustomerBooking');
         if (activeCust) {
-            try { b = JSON.parse(activeCust); } catch(e) {}
+            try {
+                const parsed = JSON.parse(activeCust);
+                if (parsed) {
+                    // Strictly verify ownership
+                    if (uid && parsed.customer_id && parsed.customer_id !== uid && parsed.customerId !== uid) {
+                        b = null;
+                    } else {
+                        b = parsed;
+                    }
+                }
+            } catch(e) {}
         }
 
         // Cross-check with shared appBookingsList only if this customer owns that booking
@@ -2575,10 +2630,11 @@
                 const list = JSON.parse(listStr);
                 if (Array.isArray(list) && list.length > 0) {
                     const found = list.find(item =>
-                        matchBookingId(item.bookingId, b.bookingId) ||
+                        (matchBookingId(item.bookingId, b.bookingId) ||
                         matchBookingId(item.id, b.id) ||
                         matchBookingId(item.dbId, b.dbId) ||
-                        matchBookingId(item.rawBookingId, b.rawBookingId)
+                        matchBookingId(item.rawBookingId, b.rawBookingId)) &&
+                        (!uid || !item.customer_id || item.customer_id === uid || item.customerId === uid)
                     );
                     if (found) {
                         const preserveStatus = b.status;
@@ -2595,14 +2651,18 @@
             } catch(e) {}
         }
 
-        // If no active booking in activeCustomerBooking, check appBookingsList for active queue
-        if (!b && listStr) {
+        // If no active booking in activeCustomerBooking, check appBookingsList STRICTLY for this user's active queue
+        if (!b && listStr && uid) {
             try {
                 const list = JSON.parse(listStr);
                 if (Array.isArray(list) && list.length > 0) {
-                    const activeInList = list.find(item => ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready'].includes((item.status || '').toLowerCase()));
+                    const activeInList = list.find(item =>
+                        (item.customer_id === uid || item.customerId === uid) &&
+                        ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready'].includes((item.status || '').toLowerCase())
+                    );
                     if (activeInList) {
                         b = activeInList;
+                        if (activeCustKey) localStorage.setItem(activeCustKey, JSON.stringify(b));
                         localStorage.setItem('activeCustomerBooking', JSON.stringify(b));
                     }
                 }
@@ -2762,12 +2822,20 @@
                     const sessRes = await client.auth.getSession().catch(() => null);
                     user = sessRes?.data?.session?.user;
                 }
-                const uid = user?.id || localStorage.getItem('lastLoggedInUserId');
+                const uid = user?.id || getCurrentUserId();
+                if (uid && user?.id) {
+                    try { localStorage.setItem('lastLoggedInUserId', user.id); } catch(_) {}
+                }
                 const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
-                if (!uid || !fetcher) return;
+                if (!uid) {
+                    renderCompletedHistory([]);
+                    loadActiveBooking();
+                    return;
+                }
 
                 let profile = null;
                 let dbBookings = [];
+                let fetchSuccess = false;
 
                 // 1. Fetch from Supabase client SDK directly (natively authenticated)
                 if (client?.from && uid) {
@@ -2777,7 +2845,10 @@
                             client.from('bookings').select('*, shops(name, phone_number, address, map_link, latitude, longitude)').eq('customer_id', uid).order('created_at', { ascending: false })
                         ]);
                         if (pRes.data && pRes.data.length > 0) profile = pRes.data[0];
-                        if (bRes.data && Array.isArray(bRes.data) && bRes.data.length > 0) dbBookings = bRes.data;
+                        if (bRes.data && Array.isArray(bRes.data)) {
+                            dbBookings = bRes.data;
+                            fetchSuccess = true;
+                        }
                     } catch (sdkErr) {
                         console.warn('[Supabase SDK bookings fetch notice]:', sdkErr);
                     }
@@ -2791,11 +2862,30 @@
                             fetcher(`bookings?customer_id=eq.${uid}&select=*,shops(name,phone_number,address,map_link,latitude,longitude)&order=created_at.desc`)
                         ]);
                         if (!profile && Array.isArray(profRes) && profRes.length > 0) profile = profRes[0];
-                        if (Array.isArray(bookingsRes) && bookingsRes.length > 0) dbBookings = bookingsRes;
-                        else if (bookingsRes?.data && Array.isArray(bookingsRes.data) && bookingsRes.data.length > 0) dbBookings = bookingsRes.data;
+                        if (Array.isArray(bookingsRes)) {
+                            dbBookings = bookingsRes;
+                            fetchSuccess = true;
+                        } else if (bookingsRes?.data && Array.isArray(bookingsRes.data)) {
+                            dbBookings = bookingsRes.data;
+                            fetchSuccess = true;
+                        }
                     } catch (restErr) {
                         console.warn('[Supabase REST bookings fetch notice]:', restErr);
                     }
+                }
+
+                // 3. Fallback without join in case shops relationship or RLS caused issues
+                if (dbBookings.length === 0 && fetcher && uid && !fetchSuccess) {
+                    try {
+                        const directRes = await fetcher(`bookings?customer_id=eq.${uid}&order=created_at.desc&select=*`);
+                        if (Array.isArray(directRes)) {
+                            dbBookings = directRes;
+                            fetchSuccess = true;
+                        } else if (directRes?.data && Array.isArray(directRes.data)) {
+                            dbBookings = directRes.data;
+                            fetchSuccess = true;
+                        }
+                    } catch (_) {}
                 }
 
                 if (profile) {
@@ -2965,6 +3055,9 @@
                             status: effectiveStatus,
                             step: effectiveStep
                         };
+                        if (uid) {
+                            localStorage.setItem(`activeCustomerBooking_${uid}`, JSON.stringify(mappedActive));
+                        }
                         localStorage.setItem('activeCustomerBooking', JSON.stringify(mappedActive));
                     } else {
                         // User has no active ongoing booking in DB, check if they have one locally
@@ -3078,34 +3171,34 @@
                             } : null
                         };
                     });
+                    if (uid) {
+                        localStorage.setItem(`cachedCustomerCompletedHistory_${uid}`, JSON.stringify(mappedList));
+                    }
                     localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(mappedList));
                     renderCompletedHistory(mappedList);
                     loadActiveBooking();
-                } else {
-                    // DB query returned 0 rows or error - PRESERVE active local booking if present!
-                    const activeCustStr = localStorage.getItem('activeCustomerBooking');
+                } else if (fetchSuccess || dbBookings.length === 0) {
+                    // DB query returned 0 rows for this user -> CLEAN CACHE, DO NOT SHOW OTHER USERS' DATA!
+                    if (uid) {
+                        localStorage.removeItem(`cachedCustomerCompletedHistory_${uid}`);
+                    }
+                    localStorage.removeItem('cachedCustomerCompletedHistory');
+                    renderCompletedHistory([]);
+
+                    // Check if user has an active ongoing booking strictly belonging to them
+                    const activeCustKey = uid ? `activeCustomerBooking_${uid}` : null;
+                    const activeCustStr = (activeCustKey && localStorage.getItem(activeCustKey)) || localStorage.getItem('activeCustomerBooking');
                     let hasLocalActive = false;
                     if (activeCustStr) {
                         try {
                             const ac = JSON.parse(activeCustStr);
-                            if (ac && ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready'].includes((ac.status || '').toLowerCase())) {
+                            if (ac && (!uid || !ac.customer_id || ac.customer_id === uid || ac.customerId === uid) && ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready'].includes((ac.status || '').toLowerCase())) {
                                 hasLocalActive = true;
                             }
                         } catch(e) {}
                     }
                     if (!hasLocalActive) {
-                        const listStr = localStorage.getItem('appBookingsList');
-                        if (listStr) {
-                            try {
-                                const l = JSON.parse(listStr);
-                                if (Array.isArray(l) && l.some(item => ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready'].includes((item.status || '').toLowerCase()))) {
-                                    hasLocalActive = true;
-                                }
-                            } catch(_) {}
-                        }
-                    }
-
-                    if (!hasLocalActive) {
+                        if (activeCustKey) localStorage.removeItem(activeCustKey);
                         localStorage.removeItem('activeCustomerBooking');
                     }
                     loadActiveBooking();
@@ -3187,9 +3280,15 @@
     // Realtime Cloud Auto-Sync for Customer Queue Status (Background Worker)
     async function syncCustomerActiveQueue() {
         if (document.hidden) return;
+        const uid = getCurrentUserId();
+        if (!uid) return;
+        const activeCustKey = `activeCustomerBooking_${uid}`;
         let b = null;
         try {
-            b = JSON.parse(localStorage.getItem('activeCustomerBooking') || 'null');
+            b = JSON.parse(localStorage.getItem(activeCustKey) || localStorage.getItem('activeCustomerBooking') || 'null');
+            if (b && b.customer_id && b.customer_id !== uid && b.customerId !== uid) {
+                b = null;
+            }
         } catch (_) {}
 
         const targetId = b ? (b.rawBookingId || b.id || b.dbId) : null;
@@ -3198,16 +3297,8 @@
 
         try {
             let query = (targetId && String(targetId).length > 20)
-                ? `bookings?id=eq.${targetId}&select=*,shops(name,phone_number,address,map_link,latitude,longitude)&limit=1`
-                : null;
-            if (!query && b?.customer_id) {
-                query = `bookings?customer_id=eq.${b.customer_id}&order=created_at.desc&select=*,shops(name,phone_number,address,map_link,latitude,longitude)&limit=1`;
-            }
-            if (!query) {
-                const uid = localStorage.getItem('lastLoggedInUserId');
-                if (uid) query = `bookings?customer_id=eq.${uid}&order=created_at.desc&select=*,shops(name,phone_number,address,map_link,latitude,longitude)&limit=1`;
-            }
-            if (!query) return;
+                ? `bookings?id=eq.${targetId}&customer_id=eq.${uid}&select=*,shops(name,phone_number,address,map_link,latitude,longitude)&limit=1`
+                : `bookings?customer_id=eq.${uid}&order=created_at.desc&select=*,shops(name,phone_number,address,map_link,latitude,longitude)&limit=1`;
 
             const res = await fetcher(query).catch(() => null);
             const rows = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
@@ -3252,8 +3343,11 @@
                             totalAmount: `฿ ${dbRow.total_price || 450}`,
                             depositAmount: `฿ ${dbRow.deposit_amount || 50}`,
                             status: cloudStatus,
-                            step: cloudStep
+                            step: cloudStep,
+                            customer_id: uid,
+                            customerId: uid
                         };
+                        localStorage.setItem(activeCustKey, JSON.stringify(b));
                         localStorage.setItem('activeCustomerBooking', JSON.stringify(b));
                         loadActiveBooking();
                         return;
@@ -3277,14 +3371,17 @@
                         if (vi?.decline_reason) b.declineReason = vi.decline_reason;
 
                         if (['completed', 'refunded', 'declined', 'cancelled', 'refund_requested'].includes(cloudStatus)) {
+                            localStorage.removeItem(activeCustKey);
                             localStorage.removeItem('activeCustomerBooking');
                         } else {
+                            localStorage.setItem(activeCustKey, JSON.stringify(b));
                             localStorage.setItem('activeCustomerBooking', JSON.stringify(b));
                         }
 
                         // Also sync to cachedCustomerCompletedHistory so history cards reflect the new status
                         try {
-                            let hist = JSON.parse(localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
+                            const userHistKey = `cachedCustomerCompletedHistory_${uid}`;
+                            let hist = JSON.parse(localStorage.getItem(userHistKey) || localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
                             if (Array.isArray(hist)) {
                                 const idx = hist.findIndex(item =>
                                     matchBookingId(item.bookingId, b.bookingId) ||
@@ -3299,6 +3396,7 @@
                                 } else if (['completed', 'refunded', 'declined', 'cancelled', 'refund_requested'].includes(cloudStatus)) {
                                     hist.unshift({ ...b, status: cloudStatus, refundSlip: vi?.refund_slip || '', refundedAt: vi?.refunded_at || '' });
                                 }
+                                localStorage.setItem(userHistKey, JSON.stringify(hist));
                                 localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(hist));
                             }
                         } catch(_) {}
