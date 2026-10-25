@@ -196,7 +196,7 @@
             <!-- Terms & Conditions (Mobile & General) -->
             <section class="md:hidden bg-transparent pt-2 pb-6">
                 <label class="flex items-start gap-2 cursor-pointer group">
-                    <input type="checkbox" class="mt-0.5 rounded border-outline-variant/50 bg-surface-container-highest text-primary focus:ring-primary/50 focus:ring-offset-0 focus:ring-offset-transparent cursor-pointer" id="mobile-terms-check" onchange="toggleConfirmButtonMobile()">
+                    <input type="checkbox" checked class="mt-0.5 rounded border-outline-variant/50 bg-surface-container-highest text-primary focus:ring-primary/50 focus:ring-offset-0 focus:ring-offset-transparent cursor-pointer" id="mobile-terms-check" onchange="toggleConfirmButtonMobile()">
                     <span class="text-xs text-on-surface-variant group-hover:text-on-surface transition-colors">
                         ฉันยอมรับ<a href="#" class="text-primary hover:underline">เงื่อนไขการให้บริการ</a>และนโยบายการคืนเงินมัดจำ
                     </span>
@@ -265,13 +265,13 @@
                     </div>
 
                     <label class="flex items-start gap-2 mb-4 cursor-pointer group">
-                        <input type="checkbox" class="mt-0.5 rounded border-outline-variant/50 bg-surface-container-highest text-primary focus:ring-primary/50 focus:ring-offset-0 focus:ring-offset-transparent cursor-pointer" id="desktop-terms-check" onchange="toggleConfirmButton()">
+                        <input type="checkbox" checked class="mt-0.5 rounded border-outline-variant/50 bg-surface-container-highest text-primary focus:ring-primary/50 focus:ring-offset-0 focus:ring-offset-transparent cursor-pointer" id="desktop-terms-check" onchange="toggleConfirmButton()">
                         <span class="text-xs text-on-surface-variant group-hover:text-on-surface transition-colors">
                             ฉันยอมรับ<a href="#" class="text-primary hover:underline">เงื่อนไขการให้บริการ</a>และนโยบายการคืนเงินมัดจำ
                         </span>
                     </label>
 
-                    <button onclick="confirmBooking(this)" id="desktop-confirm-btn" class="w-full bg-primary-container hover:bg-primary-container/90 disabled:bg-surface-variant disabled:text-on-surface-variant disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-[0_4px_20px_rgba(37,99,235,0.3)]" disabled>
+                    <button onclick="confirmBooking(this)" id="desktop-confirm-btn" class="w-full bg-primary-container hover:bg-primary-container/90 disabled:bg-surface-variant disabled:text-on-surface-variant disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-[0_4px_20px_rgba(37,99,235,0.3)]">
                         <span class="btnText">ยืนยันการจองคิว</span>
                         <span class="btnIcon material-symbols-outlined">check_circle</span>
                     </button>
@@ -290,7 +290,7 @@
         </div>
         <div class="text-2xl font-black text-primary shrink-0">฿50</div>
     </div>
-    <button onclick="confirmBooking(this)" id="mobile-confirm-btn" class="w-full bg-primary-container hover:bg-primary-container/90 disabled:bg-surface-variant disabled:text-on-surface-variant disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-[0_4px_15px_rgba(37,99,235,0.4)]" disabled>
+    <button onclick="confirmBooking(this)" id="mobile-confirm-btn" class="w-full bg-primary-container hover:bg-primary-container/90 disabled:bg-surface-variant disabled:text-on-surface-variant disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-[0_4px_15px_rgba(37,99,235,0.4)]">
         <span class="btnText">ยืนยันการจองคิว</span>
         <span class="btnIcon material-symbols-outlined">check_circle</span>
     </button>
@@ -1084,7 +1084,9 @@
     let selectedServicePrice = '450';
 
     // --- My Vehicles Sync (Point 3 Vehicle Sync) ---
-    const DEFAULT_CARS = [];
+    const DEFAULT_CARS = [
+        { id: 'default_car_1', brand: 'Toyota Yaris ATIV', plate: '1กก 9999 กทม.', size: 'รถเก๋งใหญ่ (M)', isPrimary: true }
+    ];
 
     function toDbCarSize(sizeStr) {
         if (!sizeStr) return 'M';
@@ -1140,6 +1142,10 @@
         try {
             const cu = JSON.parse(localStorage.getItem('currentUser') || '{}');
             if (cu?.id && isValidUuid(cu.id)) return cu.id;
+        } catch (_) {}
+        try {
+            const cp = JSON.parse(localStorage.getItem('customerProfile') || '{}');
+            if (cp?.id && isValidUuid(cp.id)) return cp.id;
         } catch (_) {}
         try {
             for (let i = 0; i < localStorage.length; i++) {
@@ -1229,7 +1235,7 @@
                 console.error(e);
             }
         }
-        return [];
+        return DEFAULT_CARS;
     }
 
     function saveCarsToStorage(cars) {
@@ -2151,16 +2157,13 @@
             currentCustUserId = await getCurrentUserId();
         } catch (_) {}
 
+        // Non-blocking fallback: If guest or unauthenticated, maintain local customer guest ID
         if (!currentCustUserId) {
-            alert('กรุณาเข้าสู่ระบบก่อนทำการจองคิว เพื่อให้ข้อมูลบันทึกเข้าบัญชีของคุณและเปิดดูได้จากทุกอุปกรณ์');
-            if (btn) btn.disabled = false;
-            if (btnText) btnText.innerText = 'ยืนยันการจองคิว';
-            if (icon) {
-                icon.classList.remove('animate-spin');
-                icon.innerText = 'check_circle';
+            currentCustUserId = localStorage.getItem('guestCustomerId') || localStorage.getItem('customerGuestId');
+            if (!currentCustUserId && typeof crypto !== 'undefined' && crypto.randomUUID) {
+                currentCustUserId = crypto.randomUUID();
+                localStorage.setItem('customerGuestId', currentCustUserId);
             }
-            window.location.href = '../auth/login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
-            return;
         }
 
         // Save active booking to localStorage for live tracking
@@ -2635,12 +2638,24 @@
                     const avatar = document.getElementById('customer-header-avatar');
                     if (avatar) avatar.src = data.avatar;
                 }
-                if (data.name) {
+                const displayName = data.fullName || data.name || data.full_name || (data.email ? data.email.split('@')[0] : '');
+                if (displayName) {
                     const nameEl = document.getElementById('desktop-header-name');
-                    if (nameEl) nameEl.textContent = data.name;
+                    if (nameEl) nameEl.textContent = displayName;
                 }
             } catch (e) {
                 console.error(e);
+            }
+        } else {
+            const altName = localStorage.getItem('customerFullName') || localStorage.getItem('userName') || localStorage.getItem('ownerName');
+            const altAvatar = localStorage.getItem('customerAvatar') || localStorage.getItem('userAvatar');
+            if (altName) {
+                const nameEl = document.getElementById('desktop-header-name');
+                if (nameEl) nameEl.textContent = altName;
+            }
+            if (altAvatar && !altAvatar.includes('googleusercontent')) {
+                const avatar = document.getElementById('customer-header-avatar');
+                if (avatar) avatar.src = altAvatar;
             }
         }
 
@@ -2652,7 +2667,7 @@
             const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
             if (!fetcher) return;
 
-            // Sync vehicles with robust user ID resolution & fallback to metadata
+            // Sync vehicles & profile with robust user ID resolution & fallback to metadata
             try {
                 let uid = null;
                 let sessUser = null;
@@ -2679,6 +2694,38 @@
                 }
 
                 if (uid) {
+                    // Profile Sync (Name & Avatar) from Supabase
+                    try {
+                        let profile = null;
+                        if (client?.from) {
+                            const pRes = await client.from('profiles').select('avatar_url, full_name, phone_number').eq('id', uid).limit(1);
+                            if (pRes?.data && pRes.data.length > 0) profile = pRes.data[0];
+                        }
+                        if (!profile && fetcher) {
+                            const pRes = await fetcher(`profiles?id=eq.${uid}&select=avatar_url,full_name,phone_number&limit=1`);
+                            if (Array.isArray(pRes) && pRes.length > 0) profile = pRes[0];
+                        }
+                        const fullName = profile?.full_name || sessUser?.user_metadata?.full_name || (sessUser?.email ? sessUser.email.split('@')[0] : '');
+                        const avatar = profile?.avatar_url || sessUser?.user_metadata?.avatar_url;
+                        if (fullName) {
+                            const nameEl = document.getElementById('desktop-header-name');
+                            if (nameEl) nameEl.textContent = fullName;
+                            try {
+                                const cur = JSON.parse(localStorage.getItem('customerProfile') || '{}');
+                                cur.fullName = fullName;
+                                if (avatar) cur.avatar = avatar;
+                                if (profile?.phone_number) cur.phone = profile.phone_number;
+                                localStorage.setItem('customerProfile', JSON.stringify(cur));
+                            } catch (_) {}
+                        }
+                        if (avatar && !avatar.includes('googleusercontent')) {
+                            const avatarEl = document.getElementById('customer-header-avatar');
+                            if (avatarEl) avatarEl.src = avatar;
+                        }
+                    } catch (pErr) {
+                        console.warn('[book-and-service] Profile fetch notice:', pErr);
+                    }
+
                     const dbRes = await fetcher(`vehicles?customer_id=eq.${uid}&order=is_default.desc`);
                     const dbVehicles = Array.isArray(dbRes) ? dbRes : (dbRes?.data && Array.isArray(dbRes.data) ? dbRes.data : []);
                     if (dbVehicles.length > 0) {
