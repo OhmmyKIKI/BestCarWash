@@ -64,13 +64,16 @@
             scrollbar-width: none;
         }
         .tab-active {
-            border-bottom: 2px solid theme('colors.primary');
-            color: theme('colors.primary');
+            border-bottom: 2px solid #2563eb;
+            color: #2563eb;
             font-weight: 700;
+            outline: none !important;
         }
         .tab-inactive {
             border-bottom: 2px solid transparent;
-            color: theme('colors.on-surface-variant');
+            color: #64748b;
+            font-weight: 500;
+            outline: none !important;
         }
         .glass-panel {
             background: rgba(255, 255, 255, 0.95);
@@ -139,10 +142,10 @@
         
         <!-- Tabs -->
         <div class="flex border-b border-outline-variant/30 mb-6">
-            <button class="flex-1 py-3.5 text-center text-base sm:text-lg tab-active transition-colors" id="tabUpcoming" onclick="switchTab('upcoming')">
+            <button class="flex-1 py-3.5 text-center text-base sm:text-lg tab-active transition-colors focus:outline-none focus:ring-0 select-none" id="tabUpcoming" onclick="switchTab('upcoming')">
                 กำลังดำเนินการ
             </button>
-            <button class="flex-1 py-3.5 text-center text-base sm:text-lg tab-inactive transition-colors hover:text-primary/80 font-medium" id="tabCompleted" onclick="switchTab('completed')">
+            <button class="flex-1 py-3.5 text-center text-base sm:text-lg tab-inactive transition-colors hover:text-primary/80 font-medium focus:outline-none focus:ring-0 select-none" id="tabCompleted" onclick="switchTab('completed')">
                 ประวัติที่ผ่านมา
             </button>
         </div>
@@ -361,15 +364,15 @@
             const coContent = document.getElementById('contentCompleted');
 
             if (tabId === 'upcoming') {
-                upTab.className = 'flex-1 py-3 text-center tab-active transition-colors';
-                coTab.className = 'flex-1 py-3 text-center tab-inactive transition-colors hover:text-primary/80';
+                upTab.className = 'flex-1 py-3.5 text-center text-base sm:text-lg tab-active transition-colors focus:outline-none focus:ring-0 select-none';
+                coTab.className = 'flex-1 py-3.5 text-center text-base sm:text-lg tab-inactive transition-colors hover:text-primary/80 font-medium focus:outline-none focus:ring-0 select-none';
                 upContent.classList.remove('hidden');
                 upContent.classList.add('flex');
                 coContent.classList.add('hidden');
                 coContent.classList.remove('flex');
             } else {
-                coTab.className = 'flex-1 py-3 text-center tab-active transition-colors';
-                upTab.className = 'flex-1 py-3 text-center tab-inactive transition-colors hover:text-primary/80';
+                coTab.className = 'flex-1 py-3.5 text-center text-base sm:text-lg tab-active transition-colors focus:outline-none focus:ring-0 select-none';
+                upTab.className = 'flex-1 py-3.5 text-center text-base sm:text-lg tab-inactive transition-colors hover:text-primary/80 font-medium focus:outline-none focus:ring-0 select-none';
                 coContent.classList.remove('hidden');
                 coContent.classList.add('flex');
                 upContent.classList.add('hidden');
@@ -1423,6 +1426,47 @@
     // --- Shop Contact / Phone Modal Logic ---
     let currentActiveBooking = null;
 
+    // Helper to normalize booking IDs for loose matching
+    function normBookingId(id) {
+        return String(id || '').replace('#', '').trim().toLowerCase();
+    }
+
+    function matchBookingId(id1, id2) {
+        if (!id1 || !id2) return false;
+        const a = normBookingId(id1);
+        const b = normBookingId(id2);
+        if (a === b) return true;
+        if (a.length >= 8 && b.length >= 8) {
+            if (a.slice(0, 8) === b.slice(0, 8)) return true;
+        }
+        return false;
+    }
+
+    function isSameBooking(item1, item2) {
+        if (!item1 || !item2) return false;
+        // Direct ID checks
+        if (matchBookingId(item1.bookingId, item2.bookingId)) return true;
+        if (matchBookingId(item1.rawBookingId, item2.rawBookingId)) return true;
+        if (matchBookingId(item1.id, item2.id)) return true;
+        if (matchBookingId(item1.dbId, item2.dbId)) return true;
+        // Cross ID checks
+        if (item1.id && matchBookingId(item1.id, item2.rawBookingId || item2.dbId || item2.bookingId)) return true;
+        if (item2.id && matchBookingId(item2.id, item1.rawBookingId || item1.dbId || item1.bookingId)) return true;
+        if (item1.rawBookingId && matchBookingId(item1.rawBookingId, item2.id || item2.dbId || item2.bookingId)) return true;
+        if (item2.rawBookingId && matchBookingId(item2.rawBookingId, item1.id || item1.dbId || item1.bookingId)) return true;
+        if (item1.bookingId && matchBookingId(item1.bookingId, item2.rawBookingId || item2.id || item2.dbId)) return true;
+        if (item2.bookingId && matchBookingId(item2.bookingId, item1.rawBookingId || item1.id || item1.dbId)) return true;
+        // Fallback: match by shopName + dateTime
+        const s1 = String(item1.shopName || '').trim().toLowerCase();
+        const s2 = String(item2.shopName || '').trim().toLowerCase();
+        const dt1 = String(item1.dateTime || `${item1.bookingDate || ''} ${item1.bookingTime || ''}`).replace(/[\s•,]/g, '').toLowerCase();
+        const dt2 = String(item2.dateTime || `${item2.bookingDate || ''} ${item2.bookingTime || ''}`).replace(/[\s•,]/g, '').toLowerCase();
+        if (s1 && s2 && dt1 && dt2 && s1 === s2 && dt1 === dt2) {
+            return true;
+        }
+        return false;
+    }
+
     let activeShopRawPhone = '0812345678';
 
     function callCurrentShop() {
@@ -1644,7 +1688,7 @@
             if (node && label) {
                 if (step === 0) {
                     if (i === 1) {
-                        node.className = 'w-8 h-8 rounded-full bg-amber-500/20 text-amber-300 font-bold flex items-center justify-center border-2 border-amber-500/40 shadow-sm animate-pulse';
+                        node.className = 'w-8 h-8 rounded-full bg-surface-container-highest text-amber-300 font-bold flex items-center justify-center border-2 border-amber-400 shadow-sm animate-pulse relative z-10';
                         node.innerHTML = '<span class="material-symbols-outlined text-[16px]">hourglass_top</span>';
                         label.className = 'text-[10px] sm:text-[11px] font-bold text-amber-300 mt-1.5 whitespace-nowrap text-center';
                     } else {
@@ -1786,78 +1830,144 @@
         btn.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">refresh</span> กำลังส่งคำขอ...';
 
         const promptpayInput = document.getElementById('refundPromptpayId')?.value;
-        const refundAccount = promptpayInput || currentActiveBooking.customerPhone || '089-123-4567';
+        const refundAccount = promptpayInput || currentActiveBooking?.customerPhone || '089-123-4567';
 
         setTimeout(() => {
             closeCancelModal();
 
-            // Update in localStorage
-            currentActiveBooking.status = 'refund_requested';
-            currentActiveBooking.refundReason = reason;
-            currentActiveBooking.refundPromptPay = refundAccount;
-            localStorage.setItem('activeCustomerBooking', JSON.stringify(currentActiveBooking));
+            if (!currentActiveBooking) {
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-symbols-outlined text-[16px]">check_circle</span><span>ยืนยันยกเลิก & ขอคืนเงิน</span>';
+                return;
+            }
 
-            // Sync with shared appBookingsList
+            const uid = getCurrentUserId();
+            const cancelledAt = new Date().toISOString();
+            const cancelledBooking = {
+                ...currentActiveBooking,
+                status: 'refund_requested',
+                refundReason: reason,
+                refundPromptPay: refundAccount,
+                cancelledAt: cancelledAt
+            };
+
+            // 1. Permanently remove from active customer booking caches (both global and user-scoped)
+            localStorage.removeItem('activeCustomerBooking');
+            if (uid) {
+                localStorage.removeItem(`activeCustomerBooking_${uid}`);
+            }
+
+            // 2. Sync & update in shared appBookingsList (update in-place if exists, otherwise unshift)
             try {
                 let list = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
-                const b = list.find(item => normBookingId(item.bookingId) === normBookingId(currentActiveBooking.bookingId));
-                if (b) {
-                    b.status = 'refund_requested';
-                    b.refundReason = reason;
-                    b.refundPromptPay = refundAccount;
-                } else {
-                    list.unshift({ ...currentActiveBooking });
+                if (Array.isArray(list)) {
+                    let found = false;
+                    list = list.map(item => {
+                        if (isSameBooking(item, cancelledBooking)) {
+                            found = true;
+                            return {
+                                ...item,
+                                status: 'refund_requested',
+                                refundReason: reason,
+                                refundPromptPay: refundAccount,
+                                cancelledAt: cancelledAt
+                            };
+                        }
+                        return item;
+                    });
+                    if (!found) {
+                        list.unshift(cancelledBooking);
+                    }
+                    localStorage.setItem('appBookingsList', JSON.stringify(list));
                 }
-                localStorage.setItem('appBookingsList', JSON.stringify(list));
             } catch(e) {}
 
-            // Immediately cache into cachedCustomerCompletedHistory so history tab shows it
+            // 3. Immediately cache & deduplicate in completed history (both user-scoped and global)
             try {
-                const uid = getCurrentUserId();
                 const userKey = uid ? `cachedCustomerCompletedHistory_${uid}` : null;
                 let cachedHist = [];
                 const histStr = (userKey && localStorage.getItem(userKey)) || localStorage.getItem('cachedCustomerCompletedHistory');
-                if (histStr) cachedHist = JSON.parse(histStr) || [];
-                const existIdx = cachedHist.findIndex(item => normBookingId(item.bookingId) === normBookingId(currentActiveBooking.bookingId));
-                if (existIdx !== -1) {
-                    cachedHist[existIdx].status = 'refund_requested';
-                    cachedHist[existIdx].refundReason = reason;
-                    cachedHist[existIdx].refundPromptPay = refundAccount;
-                } else {
-                    cachedHist.unshift({ ...currentActiveBooking });
+                if (histStr) {
+                    try { cachedHist = JSON.parse(histStr) || []; } catch(_) {}
                 }
-                if (userKey) localStorage.setItem(userKey, JSON.stringify(cachedHist));
-                localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(cachedHist));
+                if (!Array.isArray(cachedHist)) cachedHist = [];
+
+                const existIdx = cachedHist.findIndex(item => isSameBooking(item, cancelledBooking));
+                if (existIdx !== -1) {
+                    cachedHist[existIdx] = {
+                        ...cachedHist[existIdx],
+                        ...cancelledBooking,
+                        status: 'refund_requested',
+                        refundReason: reason,
+                        refundPromptPay: refundAccount,
+                        cancelledAt: cancelledAt
+                    };
+                } else {
+                    cachedHist.unshift(cancelledBooking);
+                }
+
+                // Deduplicate to guarantee only ONE single card exists for this booking slot
+                const cleanHist = [];
+                for (const h of cachedHist) {
+                    const cIdx = cleanHist.findIndex(ch => isSameBooking(ch, h));
+                    if (cIdx === -1) {
+                        cleanHist.push(h);
+                    } else {
+                        cleanHist[cIdx] = {
+                            ...h,
+                            ...cleanHist[cIdx],
+                            status: 'refund_requested',
+                            refundReason: reason || cleanHist[cIdx].refundReason,
+                            refundPromptPay: refundAccount || cleanHist[cIdx].refundPromptPay,
+                            cancelledAt: cancelledAt
+                        };
+                    }
+                }
+
+                if (userKey) localStorage.setItem(userKey, JSON.stringify(cleanHist));
+                localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(cleanHist));
             } catch(_) {}
 
-            // Sync with Supabase DB (use 'CANCELLED' for DB status constraint, rich status in vehicle_info)
-            const targetDbId = currentActiveBooking.rawBookingId || currentActiveBooking.id || currentActiveBooking.dbId;
-            if (targetDbId) {
-                (async () => {
-                    const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
-                    const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+            // 4. Update memory & immediately clear the active card in DOM
+            currentActiveBooking = null;
+            const upcomingCard = document.getElementById('upcomingCard');
+            const emptyUpcoming = document.getElementById('emptyUpcoming');
+            if (upcomingCard) upcomingCard.classList.add('hidden');
+            if (emptyUpcoming) {
+                emptyUpcoming.classList.remove('hidden');
+                emptyUpcoming.classList.add('flex');
+            }
+            const tabUpEl = document.getElementById('tabUpcoming');
+            if (tabUpEl) tabUpEl.innerHTML = `กำลังดำเนินการ`;
 
-                    let vi = {};
-                    if (currentActiveBooking.raw_vehicle_info) {
-                        try {
-                            vi = typeof currentActiveBooking.raw_vehicle_info === 'string' ? JSON.parse(currentActiveBooking.raw_vehicle_info) : currentActiveBooking.raw_vehicle_info;
-                        } catch(_) {}
-                    }
-                    vi.service_status = 'refund_requested';
-                    vi.refund_reason = reason;
-                    vi.refund_promptpay = refundAccount;
-                    vi.cancel_reason = reason;
-                    vi.service_name = currentActiveBooking.serviceName || vi.service_name || 'บริการล้างรถ';
-                    vi.brand = currentActiveBooking.carBrand || vi.brand || '';
-                    vi.plate = currentActiveBooking.carPlate || vi.plate || '';
-                    vi.updated_at = new Date().toISOString();
+            // 5. Sync with Supabase DB (use 'CANCELLED' for DB status constraint, rich status in vehicle_info)
+            const targetDbId = cancelledBooking.rawBookingId || cancelledBooking.id || cancelledBooking.dbId;
+            (async () => {
+                const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
 
-                    const patchPayload = {
-                        status: 'CANCELLED',
-                        vehicle_info: JSON.stringify(vi),
-                        updated_at: new Date().toISOString()
-                    };
+                let vi = {};
+                if (cancelledBooking.raw_vehicle_info) {
+                    try {
+                        vi = typeof cancelledBooking.raw_vehicle_info === 'string' ? JSON.parse(cancelledBooking.raw_vehicle_info) : cancelledBooking.raw_vehicle_info;
+                    } catch(_) {}
+                }
+                vi.service_status = 'refund_requested';
+                vi.refund_reason = reason;
+                vi.refund_promptpay = refundAccount;
+                vi.cancel_reason = reason;
+                vi.service_name = cancelledBooking.serviceName || vi.service_name || 'บริการล้างรถ';
+                vi.brand = cancelledBooking.carBrand || vi.brand || '';
+                vi.plate = cancelledBooking.carPlate || vi.plate || '';
+                vi.updated_at = cancelledAt;
 
+                const patchPayload = {
+                    status: 'CANCELLED',
+                    vehicle_info: JSON.stringify(vi),
+                    updated_at: cancelledAt
+                };
+
+                if (targetDbId) {
                     try {
                         if (fetcher) {
                             await fetcher(`bookings?id=eq.${targetDbId}`, {
@@ -1874,24 +1984,36 @@
                             await client.from('bookings').update(patchPayload).eq('id', targetDbId);
                         }
                     } catch(_) {}
-                })();
-            }
+                } else if (uid) {
+                    // Fallback: patch any pending booking for this user
+                    try {
+                        if (fetcher) {
+                            await fetcher(`bookings?customer_id=eq.${uid}&status=in.(PENDING,CONFIRMED)`, {
+                                method: 'PATCH',
+                                headers: { Prefer: 'return=minimal' },
+                                body: JSON.stringify(patchPayload)
+                            });
+                        }
+                    } catch (_) {}
+                }
+            })();
 
+            // 6. BroadcastChannel sync
             try {
                 if (typeof BroadcastChannel !== 'undefined') {
                     const bc = new BroadcastChannel('carwash_booking_sync');
-                    bc.postMessage({ type: 'REFUND_REQUESTED', bookingId: targetDbId, reason, refundAccount });
+                    bc.postMessage({ type: 'REFUND_REQUESTED', bookingId: targetDbId || cancelledBooking.bookingId, reason, refundAccount });
                     bc.close();
                 }
             } catch (_) {}
 
-            loadActiveBooking();
+            // 7. Refresh UI, Switch to History tab and toast
             renderCompletedHistory();
             showCustomerToast('✅ ส่งคำขอยกเลิกและแจ้งบัญชีรับเงินคืนมัดจำเรียบร้อยแล้ว!', 'done');
             switchTab('completed');
             btn.disabled = false;
             btn.innerHTML = '<span class="material-symbols-outlined text-[16px]">check_circle</span><span>ยืนยันยกเลิก & ขอคืนเงิน</span>';
-        }, 1200);
+        }, 800);
     }
 
     // Format date-time into localized Thai string (e.g. 24 ต.ค. 2569 • 09:30 น.)
@@ -1988,7 +2110,7 @@
                         const activeCust = JSON.parse(activeCustStr);
                         if (activeCust && (!uid || !activeCust.customer_id || activeCust.customer_id === uid || activeCust.customerId === uid)) {
                             if (['completed', 'refunded', 'declined', 'rejected', 'cancelled', 'no_show', 'refund_requested'].includes((activeCust.status || '').toLowerCase())) {
-                                const exists = historyItems.some(item => normBookingId(item.bookingId) === normBookingId(activeCust.bookingId));
+                                const exists = historyItems.some(item => isSameBooking(item, activeCust));
                                 if (!exists) {
                                     historyItems.unshift(activeCust);
                                 }
@@ -2010,6 +2132,33 @@
                 if (uid && item.customerId && item.customerId !== uid) return false;
                 return true;
             });
+
+            // Self-healing deduplication pass: merge duplicate entries so only ONE card exists per booking
+            const deduped = [];
+            for (const item of historyItems) {
+                const existingIdx = deduped.findIndex(d => isSameBooking(d, item));
+                if (existingIdx === -1) {
+                    deduped.push(item);
+                } else {
+                    deduped[existingIdx] = {
+                        ...deduped[existingIdx],
+                        ...item,
+                        status: (item.status === 'refunded' || deduped[existingIdx].status === 'refunded') ? 'refunded' : (item.status || deduped[existingIdx].status),
+                        refundReason: item.refundReason || deduped[existingIdx].refundReason,
+                        refundPromptPay: item.refundPromptPay || deduped[existingIdx].refundPromptPay,
+                        refundSlip: item.refundSlip || deduped[existingIdx].refundSlip,
+                        refundedAt: item.refundedAt || deduped[existingIdx].refundedAt
+                    };
+                }
+            }
+            if (deduped.length !== historyItems.length) {
+                historyItems = deduped;
+                try {
+                    const userKey = uid ? `cachedCustomerCompletedHistory_${uid}` : null;
+                    if (userKey) localStorage.setItem(userKey, JSON.stringify(historyItems));
+                    localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(historyItems));
+                } catch(_) {}
+            }
         }
 
         if (Array.isArray(historyItems)) {
@@ -2604,8 +2753,10 @@
             try {
                 const parsed = JSON.parse(activeCust);
                 if (parsed) {
-                    // Strictly verify ownership
+                    // Strictly verify ownership and reject non-active statuses
                     if (uid && parsed.customer_id && parsed.customer_id !== uid && parsed.customerId !== uid) {
+                        b = null;
+                    } else if (['completed', 'refunded', 'declined', 'rejected', 'cancelled', 'no_show', 'refund_requested'].includes((parsed.status || '').toLowerCase())) {
                         b = null;
                     } else {
                         b = parsed;
@@ -2621,10 +2772,7 @@
                 const list = JSON.parse(listStr);
                 if (Array.isArray(list) && list.length > 0) {
                     const found = list.find(item =>
-                        (matchBookingId(item.bookingId, b.bookingId) ||
-                        matchBookingId(item.id, b.id) ||
-                        matchBookingId(item.dbId, b.dbId) ||
-                        matchBookingId(item.rawBookingId, b.rawBookingId)) &&
+                        isSameBooking(item, b) &&
                         (!uid || !item.customer_id || item.customer_id === uid || item.customerId === uid)
                     );
                     if (found) {
@@ -2647,9 +2795,14 @@
             try {
                 const list = JSON.parse(listStr);
                 if (Array.isArray(list) && list.length > 0) {
+                    const userHistKey = `cachedCustomerCompletedHistory_${uid}`;
+                    let existingHist = [];
+                    try { existingHist = JSON.parse(localStorage.getItem(userHistKey) || localStorage.getItem('cachedCustomerCompletedHistory') || '[]'); } catch(_) {}
+
                     const activeInList = list.find(item =>
                         (item.customer_id === uid || item.customerId === uid) &&
-                        ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready'].includes((item.status || '').toLowerCase())
+                        ['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready'].includes((item.status || '').toLowerCase()) &&
+                        !(Array.isArray(existingHist) && existingHist.some(histItem => isSameBooking(histItem, item)))
                     );
                     if (activeInList) {
                         b = activeInList;
@@ -3214,18 +3367,22 @@
             const bc = new BroadcastChannel('carwash_booking_sync');
             bc.onmessage = (ev) => {
                 if (ev.data && ev.data.type === 'STATUS_UPDATE') {
-                    const activeCustStr = localStorage.getItem('activeCustomerBooking');
+                    const uid = getCurrentUserId();
+                    const activeCustKey = uid ? `activeCustomerBooking_${uid}` : null;
+                    const activeCustStr = (activeCustKey && localStorage.getItem(activeCustKey)) || localStorage.getItem('activeCustomerBooking');
                     if (activeCustStr) {
                         try {
                             const ac = JSON.parse(activeCustStr);
-                            if (matchBookingId(ac.bookingId, ev.data.bookingId) || matchBookingId(ac.id, ev.data.bookingId) || matchBookingId(ac.rawBookingId, ev.data.bookingId)) {
+                            if (isSameBooking(ac, { bookingId: ev.data.bookingId, id: ev.data.bookingId, rawBookingId: ev.data.bookingId })) {
                                 ac.status = ev.data.status;
                                 if (ev.data.step) ac.step = ev.data.step;
                                 if (ev.data.refundSlip) ac.refundSlip = ev.data.refundSlip;
                                 if (ev.data.refundedAt) ac.refundedAt = ev.data.refundedAt;
                                 if (['completed', 'refunded', 'declined', 'cancelled', 'refund_requested'].includes((ev.data.status || '').toLowerCase())) {
+                                    if (activeCustKey) localStorage.removeItem(activeCustKey);
                                     localStorage.removeItem('activeCustomerBooking');
                                 } else {
+                                    if (activeCustKey) localStorage.setItem(activeCustKey, JSON.stringify(ac));
                                     localStorage.setItem('activeCustomerBooking', JSON.stringify(ac));
                                 }
                             }
@@ -3234,12 +3391,11 @@
 
                     // Update cachedCustomerCompletedHistory so history cards reflect the new status immediately
                     try {
-                        let hist = JSON.parse(localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
+                        const userHistKey = uid ? `cachedCustomerCompletedHistory_${uid}` : null;
+                        let hist = JSON.parse((userHistKey && localStorage.getItem(userHistKey)) || localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
                         if (Array.isArray(hist)) {
                             const matchIdx = hist.findIndex(item =>
-                                matchBookingId(item.bookingId, ev.data.bookingId) ||
-                                matchBookingId(item.id, ev.data.bookingId) ||
-                                matchBookingId(item.rawBookingId, ev.data.bookingId)
+                                isSameBooking(item, { bookingId: ev.data.bookingId, id: ev.data.bookingId, rawBookingId: ev.data.bookingId })
                             );
                             if (matchIdx !== -1) {
                                 hist[matchIdx].status = ev.data.status;
@@ -3248,10 +3404,18 @@
                                 if (ev.data.declineReason) hist[matchIdx].declineReason = ev.data.declineReason;
                             } else if (['completed', 'refunded', 'declined', 'cancelled'].includes(ev.data.status)) {
                                 const allList = JSON.parse(localStorage.getItem('appBookingsList') || '[]');
-                                const foundInApp = allList.find(item => matchBookingId(item.bookingId, ev.data.bookingId) || matchBookingId(item.id, ev.data.bookingId));
+                                const foundInApp = allList.find(item => isSameBooking(item, { bookingId: ev.data.bookingId, id: ev.data.bookingId, rawBookingId: ev.data.bookingId }));
                                 if (foundInApp) hist.unshift({ ...foundInApp, status: ev.data.status, refundSlip: ev.data.refundSlip || '', refundedAt: ev.data.refundedAt || '' });
                             }
-                            localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(hist));
+                            // Deduplicate
+                            const cleanH = [];
+                            for (const h of hist) {
+                                const cIdx = cleanH.findIndex(ch => isSameBooking(ch, h));
+                                if (cIdx === -1) cleanH.push(h);
+                                else cleanH[cIdx] = { ...cleanH[cIdx], ...h };
+                            }
+                            if (userHistKey) localStorage.setItem(userHistKey, JSON.stringify(cleanH));
+                            localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(cleanH));
                         }
                     } catch(_) {}
 
@@ -3313,6 +3477,23 @@
                 }
 
                 if (!b) {
+                    // Check if this booking row was already finished or cancelled by the user locally
+                    const userHistKey = `cachedCustomerCompletedHistory_${uid}`;
+                    let existingHist = [];
+                    try { existingHist = JSON.parse(localStorage.getItem(userHistKey) || localStorage.getItem('cachedCustomerCompletedHistory') || '[]'); } catch(_) {}
+                    const isAlreadyFinished = Array.isArray(existingHist) && existingHist.some(item => isSameBooking(item, {
+                        bookingId: '#' + dbRow.id.substring(0, 8).toUpperCase(),
+                        rawBookingId: dbRow.id,
+                        id: dbRow.id,
+                        dbId: dbRow.id,
+                        shopName: dbRow.shops?.name,
+                        dateTime: `${dbRow.booking_date || ''} ${dbRow.booking_time || ''}`.trim()
+                    }));
+
+                    if (isAlreadyFinished) {
+                        return;
+                    }
+
                     if (['pending', 'incoming', 'confirmed', 'arrived', 'washing', 'ready'].includes(cloudStatus) && !['refund_requested', 'declined', 'cancelled', 'refunded', 'completed', 'no_show'].includes(cloudStatus)) {
                         b = {
                             bookingId: '#' + dbRow.id.substring(0, 8).toUpperCase(),
@@ -3374,11 +3555,7 @@
                             const userHistKey = `cachedCustomerCompletedHistory_${uid}`;
                             let hist = JSON.parse(localStorage.getItem(userHistKey) || localStorage.getItem('cachedCustomerCompletedHistory') || '[]');
                             if (Array.isArray(hist)) {
-                                const idx = hist.findIndex(item =>
-                                    matchBookingId(item.bookingId, b.bookingId) ||
-                                    matchBookingId(item.id, b.id) ||
-                                    matchBookingId(item.rawBookingId, b.rawBookingId)
-                                );
+                                const idx = hist.findIndex(item => isSameBooking(item, b));
                                 if (idx !== -1) {
                                     hist[idx].status = cloudStatus;
                                     if (vi?.refund_slip) hist[idx].refundSlip = vi.refund_slip;
@@ -3387,8 +3564,16 @@
                                 } else if (['completed', 'refunded', 'declined', 'cancelled', 'refund_requested'].includes(cloudStatus)) {
                                     hist.unshift({ ...b, status: cloudStatus, refundSlip: vi?.refund_slip || '', refundedAt: vi?.refunded_at || '' });
                                 }
-                                localStorage.setItem(userHistKey, JSON.stringify(hist));
-                                localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(hist));
+
+                                // Deduplicate before saving
+                                const cleanHist = [];
+                                for (const h of hist) {
+                                    const cIdx = cleanHist.findIndex(ch => isSameBooking(ch, h));
+                                    if (cIdx === -1) cleanHist.push(h);
+                                    else cleanHist[cIdx] = { ...cleanHist[cIdx], ...h };
+                                }
+                                localStorage.setItem(userHistKey, JSON.stringify(cleanHist));
+                                localStorage.setItem('cachedCustomerCompletedHistory', JSON.stringify(cleanHist));
                             }
                         } catch(_) {}
 
