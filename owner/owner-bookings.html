@@ -1148,7 +1148,8 @@
 
             // Dispatch notification to customer for status update
             try {
-                const targetCustId = b?.customerId || b?.customer_id || b?.userId || b?.user_id || 'da839dcc-9bca-47d0-b178-29351930fff6';
+                const targetCustId = b?.customerId || b?.customer_id || b?.userId || b?.user_id;
+                if (!targetCustId) return;
                 let notifTitle = '';
                 let notifMessage = '';
                 if (updates.status === 'confirmed') {

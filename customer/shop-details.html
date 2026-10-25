@@ -1363,7 +1363,6 @@
                     const savedUser = localStorage.getItem('supabase_user') || localStorage.getItem('user');
                     if (savedUser) try { uid = JSON.parse(savedUser).id; } catch (_) {}
                 }
-                if (!uid) uid = "da839dcc-9bca-47d0-b178-29351930fff6";
 
                 const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
                 if (fetcher && uid) {

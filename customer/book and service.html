@@ -1147,15 +1147,7 @@
                 }
             }
         } catch (_) {}
-        try {
-            const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
-            if (fetcher) {
-                const profs = await fetcher('profiles?role=eq.CUSTOMER&limit=1&select=id');
-                const list = Array.isArray(profs) ? profs : profs?.data;
-                if (list && list.length > 0 && isValidUuid(list[0]?.id)) return list[0].id;
-            }
-        } catch (_) {}
-        return "da839dcc-9bca-47d0-b178-29351930fff6";
+        return null;
     }
 
     async function getValidShopId() {
@@ -2151,9 +2143,16 @@
 
         const realServiceName = selectedServiceName || document.getElementById('summary-service-name')?.innerText?.trim() || 'ล้างสี ดูดฝุ่น';
 
+        let currentCustUserId = null;
+        try {
+            currentCustUserId = await getCurrentUserId();
+        } catch (_) {}
+
         // Save active booking to localStorage for live tracking
         const activeBooking = {
             bookingId: currentBookingId || ('#BK-' + Math.floor(1000 + Math.random() * 9000)),
+            customerId: currentCustUserId || null,
+            customer_id: currentCustUserId || null,
             shopId: currentShop?.id || (typeof paramShopId !== 'undefined' ? paramShopId : null) || 'bccb746a-18ba-4802-ac29-eb30b7af7dd1',
             shopName: currentShop?.name || 'ohm Car Wash 1',
             shopPhone: currentShop?.phone || currentShop?.phone_number || '065-027-2381',
@@ -2202,11 +2201,7 @@
         // Sync to Supabase bookings table
         try {
             const validShopId = await getValidShopId();
-            let userId = await getCurrentUserId();
-            // Ensure userId is a real registered customer UUID in profiles table
-            if (!userId || userId.length < 20) {
-                userId = "da839dcc-9bca-47d0-b178-29351930fff6";
-            }
+            let userId = currentCustUserId || await getCurrentUserId();
 
             if (userId && validShopId) {
                 const rawTime = (selectedTimeText || '10:00').replace(/[^0-9:]/g, '');
