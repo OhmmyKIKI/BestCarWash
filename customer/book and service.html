@@ -1191,13 +1191,43 @@
         return "bccb746a-18ba-4802-ac29-eb30b7af7dd1";
     }
 
+    function deduplicateCarList(list) {
+        if (!Array.isArray(list)) return [];
+        const seen = new Set();
+        const unique = [];
+        let primaryFound = false;
+
+        list.map(normalizeCar).filter(Boolean).forEach(c => {
+            const bKey = (c.brand || '').trim().toLowerCase();
+            const pKey = (c.plate || '').trim().toLowerCase();
+            const key = `${bKey}|${pKey}`;
+
+            if (!seen.has(key)) {
+                seen.add(key);
+                if (c.isPrimary && !primaryFound) {
+                    primaryFound = true;
+                    c.isPrimary = true;
+                } else {
+                    c.isPrimary = false;
+                }
+                unique.push(c);
+            }
+        });
+
+        if (unique.length > 0 && !primaryFound) {
+            unique[0].isPrimary = true;
+        }
+
+        return unique;
+    }
+
     function getCars() {
         const stored = localStorage.getItem('customerCars');
         if (stored) {
             try {
                 const parsed = JSON.parse(stored);
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                    const cleaned = parsed.map(normalizeCar).filter(Boolean);
+                    const cleaned = deduplicateCarList(parsed);
                     if (cleaned.length > 0) return cleaned;
                 }
             } catch (e) {
@@ -1208,8 +1238,8 @@
     }
 
     function saveCarsToStorage(cars) {
-        const normalized = (cars || []).map(normalizeCar).filter(Boolean);
-        localStorage.setItem('customerCars', JSON.stringify(normalized));
+        const unique = deduplicateCarList(cars);
+        localStorage.setItem('customerCars', JSON.stringify(unique));
     }
 
     let hasCheckedVehicles = false;
@@ -2643,8 +2673,42 @@
                     const dbRes = await fetcher(`vehicles?customer_id=eq.${uid}&order=is_default.desc`);
                     const dbVehicles = Array.isArray(dbRes) ? dbRes : (dbRes?.data && Array.isArray(dbRes.data) ? dbRes.data : []);
                     if (dbVehicles.length > 0) {
-                        const mapped = dbVehicles.map(normalizeCar).filter(Boolean);
-                        saveCarsToStorage(mapped);
+                        const seen = new Set();
+                        const uniqueVehicles = [];
+                        const duplicateIdsToDelete = [];
+                        let primaryFound = false;
+
+                        for (const v of dbVehicles) {
+                            const norm = normalizeCar(v);
+                            if (!norm) continue;
+                            const key = `${norm.brand.trim().toLowerCase()}|${norm.plate.trim().toLowerCase()}`;
+                            if (!seen.has(key)) {
+                                seen.add(key);
+                                if (norm.isPrimary && !primaryFound) {
+                                    primaryFound = true;
+                                } else {
+                                    norm.isPrimary = false;
+                                }
+                                uniqueVehicles.push(norm);
+                            } else {
+                                if (v.id && !String(v.id).startsWith('car_')) {
+                                    duplicateIdsToDelete.push(v.id);
+                                }
+                            }
+                        }
+
+                        if (uniqueVehicles.length > 0 && !primaryFound) {
+                            uniqueVehicles[0].isPrimary = true;
+                        }
+
+                        // Auto cleanup duplicates from Supabase
+                        if (duplicateIdsToDelete.length > 0) {
+                            duplicateIdsToDelete.forEach(dupId => {
+                                fetcher(`vehicles?id=eq.${dupId}`, { method: 'DELETE' }).catch(() => {});
+                            });
+                        }
+
+                        saveCarsToStorage(uniqueVehicles);
                         hasCheckedVehicles = true;
                         renderCarsList();
                     } else {

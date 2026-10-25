@@ -557,21 +557,38 @@
                     const res = await safeSupabaseRest(`vehicles?customer_id=eq.${user.id}&order=is_default.desc`);
                     const vList = Array.isArray(res) ? res : (res?.data && Array.isArray(res.data) ? res.data : []);
                     if (vList && vList.length > 0) {
-                        const mapped = vList.map(v => {
-                            let sz = v.car_size || v.size || 'ไซส์ M';
-                            if (sz === 'S') sz = 'รถเก๋งเล็ก (S)';
-                            else if (sz === 'M') sz = 'รถเก๋งใหญ่ (M)';
-                            else if (sz === 'L') sz = 'SUV / PPV (L)';
-                            else if (sz === 'XL') sz = 'รถกระบะ / รถตู้ (XL)';
-                            return {
-                                id: v.id,
-                                brand: v.brand_model || v.brand || 'รถยนต์',
-                                plate: v.plate_number || v.plate || '-',
-                                size: sz,
-                                isPrimary: Boolean(v.is_default || v.isPrimary)
-                            };
+                        const seen = new Set();
+                        const unique = [];
+                        let primaryFound = false;
+
+                        vList.forEach(v => {
+                            const b = (v.brand_model || v.brand || 'รถยนต์').trim();
+                            const p = (v.plate_number || v.plate || '-').trim();
+                            const key = `${b.toLowerCase()}|${p.toLowerCase()}`;
+
+                            if (!seen.has(key)) {
+                                seen.add(key);
+                                let sz = v.car_size || v.size || 'ไซส์ M';
+                                if (sz === 'S') sz = 'รถเก๋งเล็ก (S)';
+                                else if (sz === 'M') sz = 'รถเก๋งใหญ่ (M)';
+                                else if (sz === 'L') sz = 'SUV / PPV (L)';
+                                else if (sz === 'XL') sz = 'รถกระบะ / รถตู้ (XL)';
+                                const isPrimary = Boolean(v.is_default || v.isPrimary);
+                                unique.push({
+                                    id: v.id,
+                                    brand: b,
+                                    plate: p,
+                                    size: sz,
+                                    isPrimary: isPrimary && !primaryFound ? (primaryFound = true, true) : false
+                                });
+                            }
                         });
-                        localStorage.setItem('customerCars', JSON.stringify(mapped));
+
+                        if (unique.length > 0 && !primaryFound) {
+                            unique[0].isPrimary = true;
+                        }
+
+                        localStorage.setItem('customerCars', JSON.stringify(unique));
                     } else if (user.user_metadata?.vehicle_model) {
                         const defaultCar = [{
                             id: 'car_signup',

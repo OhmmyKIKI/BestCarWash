@@ -351,13 +351,45 @@
         };
     }
 
+    function deduplicateCarList(list) {
+        if (!Array.isArray(list)) return [];
+        const seen = new Set();
+        const unique = [];
+        let primaryFound = false;
+
+        list.map(normalizeCar).filter(Boolean).forEach(c => {
+            const bKey = (c.brand || '').trim().toLowerCase();
+            const pKey = (c.plate || '').trim().toLowerCase();
+            const key = `${bKey}|${pKey}`;
+
+            // Allow unique vehicles; ignore duplicates of the exact same vehicle
+            if (!seen.has(key)) {
+                seen.add(key);
+                if (c.isPrimary && !primaryFound) {
+                    primaryFound = true;
+                    c.isPrimary = true;
+                } else {
+                    c.isPrimary = false;
+                }
+                unique.push(c);
+            }
+        });
+
+        // Ensure at least one vehicle is primary if list is not empty
+        if (unique.length > 0 && !primaryFound) {
+            unique[0].isPrimary = true;
+        }
+
+        return unique;
+    }
+
     function getCars() {
         const stored = localStorage.getItem('customerCars');
         if (stored) {
             try {
                 const parsed = JSON.parse(stored);
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                    const cleaned = parsed.map(normalizeCar).filter(Boolean);
+                    const cleaned = deduplicateCarList(parsed);
                     if (cleaned.length > 0) return cleaned;
                 }
             } catch (e) {
@@ -368,8 +400,8 @@
     }
 
     function saveCarsToStorage(cars) {
-        const normalized = (cars || []).map(normalizeCar).filter(Boolean);
-        localStorage.setItem('customerCars', JSON.stringify(normalized));
+        const unique = deduplicateCarList(cars);
+        localStorage.setItem('customerCars', JSON.stringify(unique));
     }
 
     function getShortSize(size) {
@@ -602,15 +634,32 @@
             if (currentUser && !editId.startsWith('car_')) {
                 const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
                 if (fetcher) {
-                    fetcher(`vehicles?id=eq.${editId}`, {
-                        method: 'PATCH',
-                        body: {
-                            brand_model: brand,
-                            plate_number: plate,
-                            car_size: toDbCarSize(size),
-                            is_default: isPrimary
-                        }
-                    }).catch(e => console.warn(e));
+                    if (isPrimary) {
+                        fetcher(`vehicles?customer_id=eq.${currentUser.id}`, {
+                            method: 'PATCH',
+                            body: { is_default: false }
+                        }).then(() => {
+                            fetcher(`vehicles?id=eq.${editId}`, {
+                                method: 'PATCH',
+                                body: {
+                                    brand_model: brand,
+                                    plate_number: plate,
+                                    car_size: toDbCarSize(size),
+                                    is_default: true
+                                }
+                            });
+                        }).catch(e => console.warn(e));
+                    } else {
+                        fetcher(`vehicles?id=eq.${editId}`, {
+                            method: 'PATCH',
+                            body: {
+                                brand_model: brand,
+                                plate_number: plate,
+                                car_size: toDbCarSize(size),
+                                is_default: false
+                            }
+                        }).catch(e => console.warn(e));
+                    }
                 }
             }
         } else {
@@ -634,15 +683,24 @@
             if (uid) {
                 const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
                 const dbCarSize = toDbCarSize(size);
+                const isDefault = isPrimary || cars.length === 1;
                 const vehiclePayload = {
                     customer_id: uid,
                     brand_model: brand,
                     plate_number: plate,
                     car_size: dbCarSize,
-                    is_default: isPrimary || cars.length === 0
+                    is_default: isDefault
                 };
 
                 (async () => {
+                    const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
+                    if (isDefault && fetcher) {
+                        await fetcher(`vehicles?customer_id=eq.${uid}`, {
+                            method: 'PATCH',
+                            body: { is_default: false }
+                        }).catch(() => {});
+                    }
+
                     let insertedRow = null;
                     if (client?.from) {
                         try {
@@ -651,7 +709,6 @@
                         } catch (_) {}
                     }
                     if (!insertedRow) {
-                        const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
                         if (fetcher) {
                             try {
                                 const newV = await fetcher('vehicles', {
@@ -692,7 +749,12 @@
         // Background sync to Supabase
         (async () => {
             try {
-                const uid = currentUser?.id || localStorage.getItem('lastLoggedInUserId');
+                const client = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+                let uid = localStorage.getItem('lastLoggedInUserId') || localStorage.getItem('currentUserId');
+                if (!uid && client?.auth) {
+                    const sess = await client.auth.getSession().catch(() => null);
+                    uid = sess?.data?.session?.user?.id;
+                }
                 const fetcher = window.safeSupabaseRest || window.fetchSupabaseRest;
                 if (uid && fetcher) {
                     await fetcher(`vehicles?customer_id=eq.${uid}`, {
@@ -887,8 +949,43 @@
                 const dbRes = await fetcher(`vehicles?customer_id=eq.${uid}&order=is_default.desc`);
                 const dbVehicles = Array.isArray(dbRes) ? dbRes : (dbRes?.data && Array.isArray(dbRes.data) ? dbRes.data : []);
                 if (dbVehicles.length > 0) {
-                    const mapped = dbVehicles.map(normalizeCar).filter(Boolean);
-                    saveCarsToStorage(mapped);
+                    const seen = new Set();
+                    const uniqueVehicles = [];
+                    const duplicateIdsToDelete = [];
+                    let primaryFound = false;
+
+                    for (const v of dbVehicles) {
+                        const norm = normalizeCar(v);
+                        if (!norm) continue;
+                        const key = `${norm.brand.trim().toLowerCase()}|${norm.plate.trim().toLowerCase()}`;
+                        if (!seen.has(key)) {
+                            seen.add(key);
+                            if (norm.isPrimary && !primaryFound) {
+                                primaryFound = true;
+                            } else {
+                                norm.isPrimary = false;
+                            }
+                            uniqueVehicles.push(norm);
+                        } else {
+                            // Redundant duplicate record in Supabase: collect ID to auto-clean
+                            if (v.id && !String(v.id).startsWith('car_')) {
+                                duplicateIdsToDelete.push(v.id);
+                            }
+                        }
+                    }
+
+                    if (uniqueVehicles.length > 0 && !primaryFound) {
+                        uniqueVehicles[0].isPrimary = true;
+                    }
+
+                    // Auto clean duplicate records in Supabase database
+                    if (duplicateIdsToDelete.length > 0) {
+                        duplicateIdsToDelete.forEach(dupId => {
+                            fetcher(`vehicles?id=eq.${dupId}`, { method: 'DELETE' }).catch(err => console.warn('Clean duplicate vehicle err:', err));
+                        });
+                    }
+
+                    saveCarsToStorage(uniqueVehicles);
                     renderCars();
                 } else if (getCars().length === 0) {
                     const metaModel = sessUser?.user_metadata?.vehicle_model || sessUser?.user_metadata?.car_model;

@@ -559,24 +559,30 @@
                     }
                 }
                 if (carModel) {
-                    if (restFetcher) {
-                        postTasks.push(restFetcher('vehicles', {
-                            method: 'POST',
-                            body: {
-                                customer_id: data.user.id,
-                                brand_model: carModel,
-                                plate_number: licensePlate || '-',
-                                is_default: true
+                    postTasks.push((async () => {
+                        try {
+                            if (restFetcher) {
+                                // Allow DB trigger on_auth_user_created a moment to settle
+                                await new Promise(r => setTimeout(r, 200));
+                                const existing = await restFetcher(`vehicles?customer_id=eq.${data.user.id}`);
+                                const list = Array.isArray(existing) ? existing : (existing?.data || []);
+                                if (list.length === 0) {
+                                    await restFetcher('vehicles', {
+                                        method: 'POST',
+                                        body: {
+                                            customer_id: data.user.id,
+                                            brand_model: carModel,
+                                            plate_number: licensePlate || '-',
+                                            car_size: 'M',
+                                            is_default: true
+                                        }
+                                    });
+                                }
                             }
-                        }).catch(e => console.warn('Vehicle insert error:', e)));
-                    } else if (client.from) {
-                        postTasks.push(client.from('vehicles').insert({
-                            customer_id: data.user.id,
-                            brand_model: carModel,
-                            plate_number: licensePlate || '-',
-                            is_default: true
-                        }).catch(e => console.warn('Vehicle insert error:', e)));
-                    }
+                        } catch (vErr) {
+                            console.warn('Vehicle check/insert error:', vErr);
+                        }
+                    })());
                 }
                 if (postTasks.length > 0) {
                     await Promise.all(postTasks);
@@ -600,13 +606,22 @@
                     'ownerAvatarUpdatedAt', 'ownerOperatingHours', 'ownerServices', 'ownerSpecialHolidays'
                 ].forEach(k => localStorage.removeItem(k));
 
-                // Store fresh customerProfile cache & remember email for 0ms login prefill
+                // Store fresh customerProfile cache & single registered vehicle
                 localStorage.setItem('customerProfile', JSON.stringify({
                     fullName,
                     phone,
                     email,
                     avatar: uploadedCustomerAvatarBase64 || null
                 }));
+                if (carModel) {
+                    localStorage.setItem('customerCars', JSON.stringify([{
+                        id: 'car_signup',
+                        brand: carModel,
+                        plate: licensePlate || '-',
+                        size: 'รถเก๋งใหญ่ (M)',
+                        isPrimary: true
+                    }]));
+                }
                 localStorage.setItem('rememberedEmail', email);
 
                 // Clear un-scoped IndexedDB media from any old session
