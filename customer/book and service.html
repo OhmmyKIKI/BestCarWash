@@ -657,6 +657,12 @@
 </div>
 
 <script>
+    // Global helper for UUID validation
+    function isValidUuid(id) {
+        return typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    }
+    window.isValidUuid = isValidUuid;
+
     // Global State for Booking, Calendar & Real-Time Availability
     let selectedDate = new Date();
     let selectedDateText = "";
@@ -1658,11 +1664,13 @@
         }
 
         // 2.5 Live Cloud Fallback if not yet present in cached object
-        if (shopId && isValidUuid(shopId)) {
+        const isShopUuid = (typeof isValidUuid === 'function') ? isValidUuid(shopId) : (typeof shopId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(shopId));
+        if (shopId && isShopUuid) {
             try {
                 const fetcher = (typeof safeSupabaseRest === 'function') ? safeSupabaseRest : (typeof callRest === 'function' ? callRest : null);
                 if (fetcher) {
-                    const { data: dbData } = await fetcher(`shops?select=id,name,description,phone_number&id=eq.${shopId}&limit=1`);
+                    const res = await fetcher(`shops?select=id,name,description,phone_number&id=eq.${shopId}&limit=1`);
+                    const dbData = Array.isArray(res) ? res : (res?.data && Array.isArray(res.data) ? res.data : []);
                     if (dbData && dbData.length > 0 && dbData[0].description) {
                         const cloudMeta = extractShopMetadata(dbData[0].description);
                         const cloudQr = cloudMeta?.promptpay_qr || cloudMeta?.qr_code || cloudMeta?.bank_info?.qr_code;
@@ -1749,7 +1757,12 @@
         if (payBookingId) payBookingId.innerText = currentBookingId;
 
         // Load Shop QR Code recorded and uploaded by the owner
-        const shopQr = await resolveShopQrCode(currentShop);
+        let shopQr = null;
+        try {
+            shopQr = await resolveShopQrCode(currentShop);
+        } catch (qrErr) {
+            console.warn('[book-and-service] QR code resolution notice:', qrErr);
+        }
         const qrWrapper = document.getElementById('shop-qr-wrapper');
         const qrImgEl = document.getElementById('shop-qr-image');
         const noQrFallback = document.getElementById('no-qr-fallback');
