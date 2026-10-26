@@ -108,7 +108,7 @@
             </a>
             <a href="Owner%20Profile.html" class="flex items-center gap-3 pl-3 pr-4 py-1.5 rounded-full bg-surface-container hover:bg-surface-variant transition-all border border-outline-variant/30 group">
                 <div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden border-2 border-outline-variant group-hover:border-secondary transition-colors flex-shrink-0">
-                    <img id="owner-desktop-avatar" alt="Owner profile" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
+                    <img id="owner-desktop-avatar" alt="Owner profile" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><rect width=\'100\' height=\'100\' fill=\'%23cbd5e1\'/><circle cx=\'50\' cy=\'38\' r=\'18\' fill=\'%23ffffff\'/><path d=\'M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z\' fill=\'%23ffffff\'/></svg>';" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
                 </div>
                 <div class="flex flex-col text-left">
                     <span class="hidden md:inline-block text-sm font-bold text-on-surface leading-tight" id="owner-desktop-name">เจ้าของร้าน</span>
@@ -135,7 +135,7 @@
                 <span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-error animate-pulse"></span>
             </a>
             <a href="Owner%20Profile.html" class="w-9 h-9 rounded-full overflow-hidden border border-secondary block">
-                <img id="owner-header-avatar" alt="User profile avatar" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
+                <img id="owner-header-avatar" alt="User profile avatar" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><rect width=\'100\' height=\'100\' fill=\'%23cbd5e1\'/><circle cx=\'50\' cy=\'38\' r=\'18\' fill=\'%23ffffff\'/><path d=\'M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z\' fill=\'%23ffffff\'/></svg>';" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23cbd5e1'/><circle cx='50' cy='38' r='18' fill='%23ffffff'/><path d='M50 62c-20 0 -34 12 -34 28v10h68v-10c0-16-14-28-34-28z' fill='%23ffffff'/></svg>"/>
             </a>
         </div>
     </div>
@@ -326,6 +326,41 @@
         let currentShop = null;
         let allReviews = [];
 
+        // Media Storage & Avatar helpers
+        const IDB_NAME = 'BestCarWashMedia';
+        const IDB_STORE = 'shop_media';
+
+        function getIDBMedia(key) {
+            return new Promise((resolve) => {
+                if (typeof indexedDB === 'undefined') return resolve(null);
+                try {
+                    const req = indexedDB.open(IDB_NAME, 2);
+                    req.onerror = () => resolve(null);
+                    req.onsuccess = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains(IDB_STORE)) return resolve(null);
+                        const tx = db.transaction(IDB_STORE, 'readonly');
+                        const store = tx.objectStore(IDB_STORE);
+                        const g = store.get(key);
+                        g.onsuccess = () => resolve(g.result || null);
+                        g.onerror = () => resolve(null);
+                    };
+                } catch (_) {
+                    resolve(null);
+                }
+            });
+        }
+
+        function setOwnerHeaderAvatar(url) {
+            if (!url || typeof url !== 'string') return;
+            const cleanUrl = url.trim();
+            if (!cleanUrl || cleanUrl.includes('googleusercontent') || cleanUrl.startsWith('data:image/svg')) return;
+            const mAvatar = document.getElementById('owner-header-avatar');
+            const dAvatar = document.getElementById('owner-desktop-avatar');
+            if (mAvatar && mAvatar.src !== cleanUrl) mAvatar.src = cleanUrl;
+            if (dAvatar && dAvatar.src !== cleanUrl) dAvatar.src = cleanUrl;
+        }
+
         // Immediately populate shop name and avatars in headers
         const savedShopName = localStorage.getItem('ownerShopName');
         if (savedShopName) {
@@ -334,13 +369,29 @@
             if (dShop) dShop.textContent = savedShopName;
             if (mShop) mShop.textContent = savedShopName;
         }
-        const savedAvatar = localStorage.getItem('ownerProfileAvatar');
+
+        const currentUid = localStorage.getItem('lastLoggedInUserId');
+        const savedAvatar = (currentUid ? localStorage.getItem('ownerProfileAvatar_' + currentUid) : null) || 
+                            localStorage.getItem('ownerProfileAvatar') || 
+                            (currentUid ? localStorage.getItem('ownerShopLogo_' + currentUid) : null) ||
+                            localStorage.getItem('ownerShopLogo');
         if (savedAvatar) {
-            const mAvatar = document.getElementById('owner-header-avatar');
-            const dAvatar = document.getElementById('owner-desktop-avatar');
-            if (mAvatar) mAvatar.src = savedAvatar;
-            if (dAvatar) dAvatar.src = savedAvatar;
+            setOwnerHeaderAvatar(savedAvatar);
         }
+
+        // Instant IDB avatar retrieval for fast render (in case image is stored as base64 in IDB)
+        (async () => {
+            try {
+                const idbAvatar = (currentUid ? await getIDBMedia('ownerProfileAvatar_' + currentUid) : null) || 
+                                  await getIDBMedia('ownerProfileAvatar') || 
+                                  (currentUid ? await getIDBMedia('ownerShopLogo_' + currentUid) : null) ||
+                                  await getIDBMedia('ownerShopLogo');
+                if (idbAvatar) {
+                    setOwnerHeaderAvatar(idbAvatar);
+                }
+            } catch (_) {}
+        })();
+
         const savedName = localStorage.getItem('ownerProfileName');
         if (savedName) {
             const dName = document.getElementById('owner-desktop-name');
@@ -658,7 +709,7 @@
                 let fastShopPromise = null;
                 if (savedShopId && savedShopId.length > 20) {
                     fastReviewsPromise = safeSupabaseRest(`reviews?select=*,customer:customer_id(full_name,avatar_url)&shop_id=eq.${savedShopId}&order=created_at.desc`);
-                    fastShopPromise = safeSupabaseRest(`shops?select=id,name,rating&id=eq.${savedShopId}&limit=1`);
+                    fastShopPromise = safeSupabaseRest(`shops?select=id,name,rating,logo_url&id=eq.${savedShopId}&limit=1`);
                 }
 
                 const sessionPromise = (async () => {
@@ -684,9 +735,9 @@
                     return;
                 }
 
-                // Non-blocking Role Guard in background via safeSupabaseRest
+                // Non-blocking Profile Sync & Role Guard in background via safeSupabaseRest
                 if (effectiveUserId) {
-                    safeSupabaseRest(`profiles?select=role&id=eq.${effectiveUserId}&limit=1`).then(pList => {
+                    safeSupabaseRest(`profiles?select=id,full_name,avatar_url,role&id=eq.${effectiveUserId}&limit=1`).then(pList => {
                         const profList = Array.isArray(pList) ? pList : (pList?.data || []);
                         const prof = profList.length > 0 ? profList[0] : null;
                         if (prof?.role === 'CUSTOMER' || user?.user_metadata?.role === 'CUSTOMER') {
@@ -710,6 +761,21 @@
                                     </div>
                                 `;
                             }
+                            return;
+                        }
+
+                        if (prof?.avatar_url) {
+                            setOwnerHeaderAvatar(prof.avatar_url);
+                            if (effectiveUserId) localStorage.setItem('ownerProfileAvatar_' + effectiveUserId, prof.avatar_url);
+                            localStorage.setItem('ownerProfileAvatar', prof.avatar_url);
+                        } else if (user?.user_metadata?.avatar_url) {
+                            setOwnerHeaderAvatar(user.user_metadata.avatar_url);
+                        }
+
+                        if (prof?.full_name) {
+                            const dName = document.getElementById('owner-desktop-name');
+                            if (dName) dName.textContent = prof.full_name;
+                            localStorage.setItem('ownerProfileName', prof.full_name);
                         }
                     }).catch(() => {});
                 }
@@ -718,12 +784,12 @@
                 const fastShops = Array.isArray(shopRes) ? shopRes : (shopRes?.data || []);
                 let shop = fastShops.length > 0 ? fastShops[0] : null;
                 if (!shop && effectiveUserId) {
-                    const sList = await safeSupabaseRest(`shops?select=id,name,rating&owner_id=eq.${effectiveUserId}&limit=1`);
+                    const sList = await safeSupabaseRest(`shops?select=id,name,rating,logo_url&owner_id=eq.${effectiveUserId}&limit=1`);
                     const list = Array.isArray(sList) ? sList : (sList?.data || []);
                     if (list.length > 0) shop = list[0];
                 }
                 if (!shop && cachedShopName) {
-                    const sList = await safeSupabaseRest(`shops?select=id,name,rating&name=eq.${encodeURIComponent(cachedShopName)}&limit=1`);
+                    const sList = await safeSupabaseRest(`shops?select=id,name,rating,logo_url&name=eq.${encodeURIComponent(cachedShopName)}&limit=1`);
                     const list = Array.isArray(sList) ? sList : (sList?.data || []);
                     if (list.length > 0) shop = list[0];
                 }
@@ -742,6 +808,16 @@
                     if (dShop) dShop.textContent = shop.name;
                     if (mShop) mShop.textContent = shop.name;
                     localStorage.setItem('ownerShopName', shop.name);
+                }
+
+                if (shop.logo_url) {
+                    const userExplicitSet = (effectiveUserId ? localStorage.getItem('ownerAvatarUserSet_' + effectiveUserId) : null) === 'true' || localStorage.getItem('ownerAvatarUserSet') === 'true';
+                    const curAv = (effectiveUserId ? localStorage.getItem('ownerProfileAvatar_' + effectiveUserId) : null) || localStorage.getItem('ownerProfileAvatar') || localStorage.getItem('ownerShopLogo');
+                    if (!userExplicitSet && (!curAv || curAv.includes('googleusercontent') || curAv.startsWith('data:image/svg'))) {
+                        setOwnerHeaderAvatar(shop.logo_url);
+                        if (effectiveUserId) localStorage.setItem('ownerProfileAvatar_' + effectiveUserId, shop.logo_url);
+                        localStorage.setItem('ownerProfileAvatar', shop.logo_url);
+                    }
                 }
 
                 let reviews = Array.isArray(reviewsRes) ? reviewsRes : (reviewsRes?.data || null);
@@ -1086,7 +1162,20 @@
 
         // Cross-tab Synchronization
         window.addEventListener('storage', (e) => {
-            if (e.key === 'ownerReviewsReplies' || e.key === 'appBookingsList') {
+            if (e.key === 'ownerProfileName') {
+                const dName = document.getElementById('owner-desktop-name');
+                if (dName && e.newValue) dName.textContent = e.newValue;
+            }
+            if (e.key === 'ownerProfileAvatar' || e.key === 'ownerShopLogo' || (currentUid && e.key === 'ownerProfileAvatar_' + currentUid)) {
+                if (e.newValue) setOwnerHeaderAvatar(e.newValue);
+            }
+            if (e.key === 'ownerShopName') {
+                const dShop = document.getElementById('owner-desktop-shop-name');
+                const mShop = document.getElementById('owner-mobile-shop-name');
+                if (dShop && e.newValue) dShop.textContent = e.newValue;
+                if (mShop && e.newValue) mShop.textContent = e.newValue;
+            }
+            if (e.key === 'ownerReviewsReplies' || e.key === 'appBookingsList' || e.key === 'cachedOwnerReviews') {
                 loadReviews();
             }
         });
