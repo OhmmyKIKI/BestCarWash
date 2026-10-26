@@ -4,18 +4,10 @@ var SUPABASE_DIRECT_URL = 'https://mrmtbzbfmgdfjsrdnzbv.supabase.co';
 var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybXRiemJmbWdkZmpzcmRuemJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDE4NDcsImV4cCI6MjEwNDg3Nzg0N30.HXCGJ4byqFdEERHEOo_YaQA2DdF0-AsvRi1F54Uj0eI';
 
 function getPreferredSupabaseUrl() {
-    try {
-        if (typeof window !== 'undefined' && window.location) {
-            const host = window.location.hostname;
-            if (host && (host.endsWith('vercel.app') || host.includes('bestcarwash'))) {
-                return window.location.origin + '/api/supabase';
-            }
-        }
-    } catch (_) {}
     return SUPABASE_DIRECT_URL;
 }
 
-var SUPABASE_URL = getPreferredSupabaseUrl();
+var SUPABASE_URL = SUPABASE_DIRECT_URL;
 
 // Quota-Safe LocalStorage Cleaner to prevent DOMException on setItem
 function cleanupBloatedLocalStorage() {
