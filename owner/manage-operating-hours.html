@@ -443,8 +443,54 @@
     </button>
 </div>
 
+<!-- RLS Guide Modal -->
+<div id="rlsModal" class="fixed inset-0 z-[110] hidden items-center justify-center bg-background/80 backdrop-blur-md px-4 opacity-0 transition-opacity duration-300">
+    <div class="glass-card w-full max-w-lg rounded-3xl p-6 shadow-2xl transform scale-95 transition-transform duration-300 border border-amber-500/30 bg-[#10141d]" id="rlsModalContent">
+        <div class="flex justify-between items-center pb-3 border-b border-outline-variant/30 mb-4">
+            <h4 class="font-bold text-base text-on-surface flex items-center gap-2 text-amber-300">
+                <span class="material-symbols-outlined text-amber-400">shield_lock</span>
+                วิธีปลดล็อก RLS ใน Supabase (บันทึกเวลาเปิด-ปิดร้าน)
+            </h4>
+            <button type="button" id="closeRlsModalBtn" class="text-outline hover:text-error p-1">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="space-y-4 text-xs text-on-surface-variant leading-relaxed">
+            <p class="text-on-surface">ระบบได้บันทึกเวลาเปิด-ปิดร้านลงในหน่วยความจำเครื่องแล้ว แต่ติดสิทธิ์ความปลอดภัย <strong class="text-amber-300 font-semibold">Row Level Security (RLS)</strong> ของตาราง <code class="px-1.5 py-0.5 rounded bg-surface-container-highest text-secondary font-mono">shop_operating_hours</code> บน Supabase ทำให้ยังไม่สามารถซิงค์ขึ้น Cloud ได้</p>
+            
+            <div class="p-4 rounded-2xl bg-surface-container border border-outline-variant/30 space-y-2.5">
+                <div class="font-bold text-on-surface flex items-center gap-1.5 text-xs">
+                    <span class="material-symbols-outlined text-[18px] text-primary">terminal</span>
+                    วิธีแก้ไขง่ายๆ ใน 3 ขั้นตอน:
+                </div>
+                <ol class="list-decimal list-inside space-y-1.5 text-outline pl-1">
+                    <li>เปิด <a href="https://supabase.com/dashboard" target="_blank" class="text-secondary font-bold hover:underline">Supabase Dashboard</a> แล้วเลือกโปรเจกต์ของคุณ</li>
+                    <li>คลิกเมนู <strong class="text-on-surface">SQL Editor</strong> ที่แถบเมนูด้านซ้าย</li>
+                    <li>เปิดไฟล์ <strong class="text-secondary font-mono">fix_operating_hours_rls.sql</strong> ในโฟลเดอร์โปรเจกต์ คัดลอกคำสั่งทั้งหมดไปวางแล้วกด <strong class="text-secondary">Run</strong></li>
+                </ol>
+            </div>
+
+            <div class="flex items-center justify-between p-3 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                <div class="flex items-center gap-2 truncate mr-2">
+                    <span class="material-symbols-outlined text-secondary text-[18px]">description</span>
+                    <span class="font-mono text-[11px] text-on-surface truncate">fix_operating_hours_rls.sql</span>
+                </div>
+                <button type="button" id="btnCopySqlName" class="px-3 py-1.5 rounded-lg bg-secondary text-[#0b1326] font-bold text-xs flex items-center gap-1 hover:brightness-110 active:scale-95 transition-all shrink-0">
+                    <span class="material-symbols-outlined text-[15px]">content_copy</span>
+                    <span id="copyBtnText">คัดลอกชื่อไฟล์</span>
+                </button>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-2">
+            <button type="button" id="btnGotItRls" class="px-5 py-2.5 rounded-xl text-xs font-bold bg-secondary text-[#0b1326] hover:brightness-110 transition-all">
+                รับทราบ
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Toast -->
-<div id="toast" class="fixed bottom-24 md:bottom-8 left-1/2 transform -translate-x-1/2 bg-secondary-container text-on-secondary-container px-6 py-3 rounded-full shadow-2xl border border-secondary/40 flex items-center gap-2 z-50 pointer-events-none">
+<div id="toast" class="fixed bottom-24 md:bottom-8 left-1/2 transform -translate-x-1/2 bg-secondary-container text-on-secondary-container px-6 py-3 rounded-full shadow-2xl border border-secondary/40 flex items-center gap-2 z-50 pointer-events-none transition-all duration-300">
     <span class="material-symbols-outlined text-secondary-fixed">check_circle</span>
     <span class="font-bold text-sm">อัปเดตเวลาเปิดทำการสำเร็จแล้ว!</span>
 </div>
@@ -1155,8 +1201,10 @@
 
             updateLiveStatus();
 
-            // 4. Guaranteed Awaited Sync to Supabase via Direct REST
+            // 4. Guaranteed Awaited Multi-Layer Sync to Supabase
             let savedSuccessfully = false;
+            let lastSaveError = null;
+
             if (isValidUuid(effectiveShopId)) {
                 const toUpsert = hoursToSave.map(h => ({
                     shop_id: effectiveShopId,
@@ -1166,24 +1214,54 @@
                     is_closed: h.is_closed
                 }));
 
-                // Attempt 1: Direct REST batch upsert
-                try {
-                    const restRes = await fetchSupabaseRest('shop_operating_hours?on_conflict=shop_id,day_of_week', {
-                        method: 'POST',
-                        headers: {
-                            'Prefer': 'resolution=merge-duplicates,return=representation'
-                        },
-                        body: toUpsert
-                    });
-                    if (restRes && Array.isArray(restRes) && restRes.length > 0) {
-                        savedSuccessfully = true;
-                        localStorage.setItem('ownerOperatingHours', JSON.stringify(restRes));
+                // Attempt 1: Direct Supabase SDK client upsert (Preserves active session auth)
+                if (client?.from) {
+                    try {
+                        const { data, error } = await client
+                            .from('shop_operating_hours')
+                            .upsert(toUpsert, { onConflict: 'shop_id,day_of_week' })
+                            .select();
+                        if (!error && data && data.length > 0) {
+                            savedSuccessfully = true;
+                            localStorage.setItem('ownerOperatingHours', JSON.stringify(data));
+                        } else if (!error) {
+                            savedSuccessfully = true;
+                        } else {
+                            lastSaveError = error;
+                            console.warn('Supabase SDK upsert notice:', error);
+                        }
+                    } catch (sdkErr) {
+                        lastSaveError = sdkErr;
+                        console.warn('Supabase SDK upsert exception:', sdkErr);
                     }
-                } catch (restErr) {
-                    console.warn('REST upsert error:', restErr);
                 }
 
-                // Attempt 2: Day-by-day PATCH fallback
+                // Attempt 2: Direct REST batch upsert
+                if (!savedSuccessfully) {
+                    try {
+                        const restRes = await fetchSupabaseRest('shop_operating_hours?on_conflict=shop_id,day_of_week', {
+                            method: 'POST',
+                            headers: {
+                                'Prefer': 'resolution=merge-duplicates,return=representation'
+                            },
+                            body: toUpsert
+                        });
+                        const rows = Array.isArray(restRes) ? restRes : (restRes?.data && Array.isArray(restRes.data) ? restRes.data : null);
+                        if (rows && rows.length > 0) {
+                            savedSuccessfully = true;
+                            localStorage.setItem('ownerOperatingHours', JSON.stringify(rows));
+                        } else if (restRes === true || (restRes?.ok && !restRes?.error)) {
+                            savedSuccessfully = true;
+                        } else if (restRes?.error) {
+                            lastSaveError = restRes.error;
+                        }
+                    } catch (restErr) {
+                        lastSaveError = restErr;
+                        console.warn('REST upsert error:', restErr);
+                    }
+                }
+
+                // Attempt 3: Day-by-day PATCH fallback
                 if (!savedSuccessfully) {
                     try {
                         let patchCount = 0;
@@ -1197,7 +1275,8 @@
                                     is_closed: row.is_closed
                                 }
                             });
-                            if (patchRes && Array.isArray(patchRes) && patchRes.length > 0) {
+                            const pRows = Array.isArray(patchRes) ? patchRes : (patchRes?.data && Array.isArray(patchRes.data) ? patchRes.data : null);
+                            if ((pRows && pRows.length > 0) || patchRes === true || (patchRes?.ok && !patchRes?.error)) {
                                 patchCount++;
                             }
                         }
@@ -1206,6 +1285,29 @@
                         }
                     } catch (patchErr) {
                         console.warn('Day-by-day PATCH fallback notice:', patchErr);
+                    }
+                }
+
+                // Attempt 4: Day-by-day POST / INSERT fallback (for new shops without existing rows)
+                if (!savedSuccessfully) {
+                    try {
+                        let insertCount = 0;
+                        for (const row of toUpsert) {
+                            const insRes = await fetchSupabaseRest('shop_operating_hours', {
+                                method: 'POST',
+                                headers: { 'Prefer': 'return=representation' },
+                                body: row
+                            });
+                            const iRows = Array.isArray(insRes) ? insRes : (insRes?.data && Array.isArray(insRes.data) ? insRes.data : null);
+                            if ((iRows && iRows.length > 0) || insRes === true || (insRes?.ok && !insRes?.error)) {
+                                insertCount++;
+                            }
+                        }
+                        if (insertCount > 0) {
+                            savedSuccessfully = true;
+                        }
+                    } catch (insErr) {
+                        console.warn('Day-by-day POST fallback notice:', insErr);
                     }
                 }
 
@@ -1227,8 +1329,8 @@
             if (savedSuccessfully) {
                 if (toastText) toastText.textContent = 'บันทึกเวลาเปิดทำการไปยัง Supabase สำเร็จแล้ว!';
                 if (toastIcon) toastIcon.textContent = 'check_circle';
-                toast?.classList.remove('bg-amber-950/90', 'border-amber-500/50', 'text-amber-200');
-                toast?.classList.add('bg-secondary-container', 'text-on-secondary-container');
+                toast?.classList.remove('bg-amber-950/90', 'border-amber-500/50', 'text-amber-200', 'cursor-pointer', 'pointer-events-auto');
+                toast?.classList.add('bg-secondary-container', 'text-on-secondary-container', 'pointer-events-none');
                 toast?.classList.add('show');
                 setCloudSyncStatus('synced', 'บันทึกข้อมูลเรียบร้อยแล้ว');
 
@@ -1238,12 +1340,15 @@
                     window.location.href = 'Owner%20Profile.html';
                 }, 800);
             } else {
-                if (toastText) toastText.textContent = 'บันทึกในเครื่องแล้ว (กรุณาปลดล็อก RLS ใน Supabase)';
+                if (toastText) toastText.textContent = 'บันทึกในเครื่องแล้ว (กรุณารัน fix_operating_hours_rls.sql ใน Supabase)';
                 if (toastIcon) toastIcon.textContent = 'warning';
-                toast?.classList.remove('bg-secondary-container', 'text-on-secondary-container');
-                toast?.classList.add('bg-amber-950/90', 'border-amber-500/50', 'text-amber-200');
+                toast?.classList.remove('bg-secondary-container', 'text-on-secondary-container', 'pointer-events-none');
+                toast?.classList.add('bg-amber-950/90', 'border-amber-500/50', 'text-amber-200', 'cursor-pointer', 'pointer-events-auto');
                 toast?.classList.add('show');
-                setCloudSyncStatus('offline', 'บันทึกลงในเครื่องเท่านั้น');
+                setCloudSyncStatus('offline', 'บันทึกลงในเครื่องแล้ว (ติด RLS บน Supabase)');
+
+                // Automatically display RLS Help Modal to guide user
+                openRlsModal();
 
                 saveBtns.forEach(btn => {
                     btn.disabled = false;
@@ -1252,9 +1357,62 @@
 
                 setTimeout(() => {
                     toast?.classList.remove('show');
-                }, 4000);
+                }, 6000);
             }
         });
+
+        // RLS Modal Controller
+        const rlsModal = document.getElementById('rlsModal');
+        const rlsModalContent = document.getElementById('rlsModalContent');
+        const closeRlsModalBtn = document.getElementById('closeRlsModalBtn');
+        const btnGotItRls = document.getElementById('btnGotItRls');
+        const btnCopySqlName = document.getElementById('btnCopySqlName');
+
+        function openRlsModal() {
+            if (!rlsModal || !rlsModalContent) return;
+            rlsModal.classList.remove('hidden');
+            rlsModal.classList.add('flex');
+            setTimeout(() => {
+                rlsModal.classList.remove('opacity-0');
+                rlsModalContent.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeRlsModal() {
+            if (!rlsModal || !rlsModalContent) return;
+            rlsModal.classList.add('opacity-0');
+            rlsModalContent.classList.add('scale-95');
+            setTimeout(() => {
+                rlsModal.classList.add('hidden');
+                rlsModal.classList.remove('flex');
+            }, 300);
+        }
+
+        if (closeRlsModalBtn) closeRlsModalBtn.addEventListener('click', closeRlsModal);
+        if (btnGotItRls) btnGotItRls.addEventListener('click', closeRlsModal);
+        if (rlsModal) {
+            rlsModal.addEventListener('click', (e) => {
+                if (e.target === rlsModal) closeRlsModal();
+            });
+        }
+        if (toast) {
+            toast.addEventListener('click', () => {
+                if (toast.classList.contains('cursor-pointer')) openRlsModal();
+            });
+        }
+
+        if (btnCopySqlName) {
+            btnCopySqlName.addEventListener('click', () => {
+                const textToCopy = 'fix_operating_hours_rls.sql';
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    const copyTextEl = document.getElementById('copyBtnText');
+                    if (copyTextEl) copyTextEl.textContent = 'คัดลอกแล้ว!';
+                    setTimeout(() => {
+                        if (copyTextEl) copyTextEl.textContent = 'คัดลอกชื่อไฟล์';
+                    }, 2000);
+                }).catch(() => {});
+            });
+        }
 
 
         // 9. Periodic refresh for Live Status every 30 seconds

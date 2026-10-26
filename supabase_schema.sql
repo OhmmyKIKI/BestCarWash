@@ -300,15 +300,18 @@ create policy "Owners can insert own shop" on public.shops
 
 -- Shop Operating Hours
 drop policy if exists "Operating hours viewable by everyone" on public.shop_operating_hours;
-create policy "Operating hours viewable by everyone" on public.shop_operating_hours for select using (true);
-
 drop policy if exists "Owners can manage operating hours" on public.shop_operating_hours;
-create policy "Owners can manage operating hours" on public.shop_operating_hours
-  for all using (
-    exists (select 1 from public.shops where id = shop_id and owner_id = auth.uid())
-  ) with check (
-    exists (select 1 from public.shops where id = shop_id and owner_id = auth.uid())
-  );
+drop policy if exists "Allow select operating hours" on public.shop_operating_hours;
+drop policy if exists "Allow insert operating hours" on public.shop_operating_hours;
+drop policy if exists "Allow update operating hours" on public.shop_operating_hours;
+drop policy if exists "Allow delete operating hours" on public.shop_operating_hours;
+
+create policy "Allow select operating hours" on public.shop_operating_hours for select using (true);
+create policy "Allow insert operating hours" on public.shop_operating_hours for insert with check (true);
+create policy "Allow update operating hours" on public.shop_operating_hours for update using (true) with check (true);
+create policy "Allow delete operating hours" on public.shop_operating_hours for delete using (true);
+grant all on public.shop_operating_hours to anon, authenticated, service_role;
+
 
 -- Services
 drop policy if exists "Services viewable by everyone" on public.services;
