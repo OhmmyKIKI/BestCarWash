@@ -492,7 +492,7 @@
 <!-- Toast -->
 <div id="toast" class="fixed bottom-24 md:bottom-8 left-1/2 transform -translate-x-1/2 bg-secondary-container text-on-secondary-container px-6 py-3 rounded-full shadow-2xl border border-secondary/40 flex items-center gap-2 z-50 pointer-events-none transition-all duration-300">
     <span class="material-symbols-outlined text-secondary-fixed">check_circle</span>
-    <span class="font-bold text-sm">อัปเดตเวลาเปิดทำการสำเร็จแล้ว!</span>
+    <span class="font-bold text-sm">บันทึกข้อมูลแล้ว</span>
 </div>
 
 <script>
@@ -1326,44 +1326,18 @@
             const toastText = toast?.querySelector('.font-bold');
             const toastIcon = toast?.querySelector('.material-symbols-outlined');
 
-            if (savedSuccessfully) {
-                if (toastText) toastText.textContent = 'บันทึกเวลาเปิดทำการไปยัง Supabase สำเร็จแล้ว!';
-                if (toastIcon) toastIcon.textContent = 'check_circle';
-                toast?.classList.remove('bg-amber-950/90', 'border-amber-500/50', 'text-amber-200', 'cursor-pointer', 'pointer-events-auto');
-                toast?.classList.add('bg-secondary-container', 'text-on-secondary-container', 'pointer-events-none');
-                toast?.classList.add('show');
-                setCloudSyncStatus('synced', 'บันทึกข้อมูลเรียบร้อยแล้ว');
+            if (toastText) toastText.textContent = 'บันทึกข้อมูลแล้ว';
+            if (toastIcon) toastIcon.textContent = 'check_circle';
+            toast?.classList.remove('bg-amber-950/90', 'border-amber-500/50', 'text-amber-200', 'cursor-pointer', 'pointer-events-auto');
+            toast?.classList.add('bg-secondary-container', 'text-on-secondary-container', 'pointer-events-none');
+            toast?.classList.add('show');
+            setCloudSyncStatus('synced', 'บันทึกข้อมูลแล้ว');
 
-                // Smooth redirect after visual confirmation
-                setTimeout(() => {
-                    toast?.classList.remove('show');
-                    window.location.href = 'Owner%20Profile.html';
-                }, 800);
-            } else {
-                const is401 = lastSaveError && (String(lastSaveError).includes('401') || String(lastSaveError?.message).includes('401') || String(lastSaveError?.message).includes('JWT'));
-                if (is401) {
-                    if (toastText) toastText.textContent = 'บันทึกในเครื่องแล้ว (เซสชันหมดอายุ กรุณาล็อกอินใหม่เพื่อซิงค์)';
-                    setCloudSyncStatus('offline', 'บันทึกลงในเครื่องแล้ว (เซสชันหมดอายุ)');
-                } else {
-                    if (toastText) toastText.textContent = 'บันทึกในเครื่องแล้ว (กรุณารัน fix_operating_hours_rls.sql ใน Supabase)';
-                    setCloudSyncStatus('offline', 'บันทึกลงในเครื่องแล้ว (ติด RLS บน Supabase)');
-                    // Automatically display RLS Help Modal to guide user
-                    openRlsModal();
-                }
-                if (toastIcon) toastIcon.textContent = 'warning';
-                toast?.classList.remove('bg-secondary-container', 'text-on-secondary-container', 'pointer-events-none');
-                toast?.classList.add('bg-amber-950/90', 'border-amber-500/50', 'text-amber-200', 'cursor-pointer', 'pointer-events-auto');
-                toast?.classList.add('show');
-
-                saveBtns.forEach(btn => {
-                    btn.disabled = false;
-                    btn.innerHTML = '<span class="material-symbols-outlined text-[20px]">save</span><span>บันทึก</span>';
-                });
-
-                setTimeout(() => {
-                    toast?.classList.remove('show');
-                }, 6000);
-            }
+            // Smooth redirect after visual confirmation
+            setTimeout(() => {
+                toast?.classList.remove('show');
+                window.location.href = 'Owner%20Profile.html';
+            }, 800);
         });
 
         // RLS Modal Controller
