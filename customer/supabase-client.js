@@ -442,9 +442,6 @@ async function safeSupabaseRest(endpoint, options = {}) {
     if (isHttp) {
         // Primary Tunnel: Serverless Proxy (Zero-494 guarantee, payload in body)
         candidateBases.push('/api/proxy');
-        if (window.location.hostname && window.location.hostname.includes('vercel.app')) {
-            candidateBases.push(window.location.origin + '/api/supabase');
-        }
     }
     candidateBases.push(SUPABASE_URL || SUPABASE_DIRECT_URL);
     candidateBases.push(SUPABASE_DIRECT_URL);
@@ -479,6 +476,25 @@ async function safeSupabaseRest(endpoint, options = {}) {
                 if (proxyRes.ok) {
                     const parsed = await proxyRes.json().catch(() => true);
                     return formatRestResponse(parsed);
+                }
+
+                // If 401/403 due to expired token, retry proxy with anon key
+                if ((proxyRes.status === 401 || proxyRes.status === 403) && token) {
+                    const fallbackProxy = await fetch('/api/proxy', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'omit',
+                        body: JSON.stringify({
+                            endpoint: cleanEndpoint,
+                            method: method,
+                            token: null,
+                            body: options.body
+                        })
+                    });
+                    if (fallbackProxy.ok) {
+                        const parsed = await fallbackProxy.json().catch(() => true);
+                        return formatRestResponse(parsed);
+                    }
                 }
             } catch (proxyErr) {
                 console.warn('Serverless proxy notice:', proxyErr.message || proxyErr);

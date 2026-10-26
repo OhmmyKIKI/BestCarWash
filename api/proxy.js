@@ -76,6 +76,12 @@ export default async function handler(req, res) {
 
         let targetRes = await fetch(targetUrl, fetchOpts);
 
+        // If 401 (JWT expired or invalid) or 403 (Auth rejected token), retry with anon key
+        if (!targetRes.ok && (targetRes.status === 401 || targetRes.status === 403) && token) {
+            fetchHeaders['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
+            targetRes = await fetch(targetUrl, fetchOpts);
+        }
+
         // If 400 due to non-existent columns (e.g. cover_image_url or logo_url in schema cache), retry without them
         if (!targetRes.ok && targetRes.status === 400 && body) {
             let retryBody = null;

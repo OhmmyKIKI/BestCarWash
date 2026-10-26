@@ -1340,15 +1340,20 @@
                     window.location.href = 'Owner%20Profile.html';
                 }, 800);
             } else {
-                if (toastText) toastText.textContent = 'บันทึกในเครื่องแล้ว (กรุณารัน fix_operating_hours_rls.sql ใน Supabase)';
+                const is401 = lastSaveError && (String(lastSaveError).includes('401') || String(lastSaveError?.message).includes('401') || String(lastSaveError?.message).includes('JWT'));
+                if (is401) {
+                    if (toastText) toastText.textContent = 'บันทึกในเครื่องแล้ว (เซสชันหมดอายุ กรุณาล็อกอินใหม่เพื่อซิงค์)';
+                    setCloudSyncStatus('offline', 'บันทึกลงในเครื่องแล้ว (เซสชันหมดอายุ)');
+                } else {
+                    if (toastText) toastText.textContent = 'บันทึกในเครื่องแล้ว (กรุณารัน fix_operating_hours_rls.sql ใน Supabase)';
+                    setCloudSyncStatus('offline', 'บันทึกลงในเครื่องแล้ว (ติด RLS บน Supabase)');
+                    // Automatically display RLS Help Modal to guide user
+                    openRlsModal();
+                }
                 if (toastIcon) toastIcon.textContent = 'warning';
                 toast?.classList.remove('bg-secondary-container', 'text-on-secondary-container', 'pointer-events-none');
                 toast?.classList.add('bg-amber-950/90', 'border-amber-500/50', 'text-amber-200', 'cursor-pointer', 'pointer-events-auto');
                 toast?.classList.add('show');
-                setCloudSyncStatus('offline', 'บันทึกลงในเครื่องแล้ว (ติด RLS บน Supabase)');
-
-                // Automatically display RLS Help Modal to guide user
-                openRlsModal();
 
                 saveBtns.forEach(btn => {
                     btn.disabled = false;
